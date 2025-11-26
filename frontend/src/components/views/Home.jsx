@@ -1,41 +1,32 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import { useAuth } from "@/context/AuthContext"
+import Landing from "@/pages/Landing"
 
-const Home = () => {
-  return (
-    <div className="home-container">
-      <div className="hero-section">
-        <h1>Nepal Career Guidance Platform</h1>
-        <p>Discover your ideal career path based on your skills, interests, and academic performance</p>
-        <div className="cta-buttons">
-          <Link to="/careers" className="btn btn-primary">
-            Explore Careers
-          </Link>
-          <Link to="/universities" className="btn btn-secondary">
-            Find Universities
-          </Link>
+export default function Home() {
+  const navigate = useNavigate()
+  const { user, loading } = useAuth()
+
+  useEffect(() => {
+    if (!loading && user) {
+      if (user.role === "admin") {
+        navigate("/admin")
+      } else {
+        navigate("/dashboard")
+      }
+    }
+  }, [user, loading, navigate])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
+    )
+  }
 
-      <div className="features-section">
-        <h2>Platform Features</h2>
-        <div className="features-grid">
-          <div className="feature-card">
-            <h3>Career Suggestions</h3>
-            <p>Get personalized career recommendations based on your profile</p>
-          </div>
-          <div className="feature-card">
-            <h3>Education Paths</h3>
-            <p>Discover the best educational institutions in Nepal for your chosen career</p>
-          </div>
-          <div className="feature-card">
-            <h3>Skill Assessment</h3>
-            <p>Evaluate your soft skills and get improvement recommendations</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default Home;
+  return <Landing />
+}
