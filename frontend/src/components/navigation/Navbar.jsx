@@ -1,8 +1,8 @@
 "use client"
 import { Link, useLocation } from "react-router-dom"
-import { useAuth } from "../../context/AuthContext"
+import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "../../context/ThemeContext"
-import "../../styles/Navbar.css"
+import "@/styles/Navbar.css"
 
 const Navbar = () => {
   const location = useLocation()

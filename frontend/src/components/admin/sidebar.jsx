@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { LayoutDashboard, Users, BookOpen, Building2, Users2, Gift, Zap, FileText, LogOut, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useAuth } from "../../context/AuthContext"
+import { useAuth } from "@/context/AuthContext"
 
 export function AdminSidebar() {
   const location = useLocation()

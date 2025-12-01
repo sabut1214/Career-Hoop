@@ -1,13 +1,60 @@
 "use client"
 
-import { useAuth } from "../context/AuthContext"
+import { useAuth } from "@/context/AuthContext"
 import { Navigate, useLocation } from "react-router-dom"
+import { refreshAccessToken } from "@/lib/api"
+import { useState, useEffect } from "react"
 
 export function ProtectedRoute({ children, requiredRole = null }) {
   const { user, loading } = useAuth()
   const location = useLocation()
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
-  if (loading) {
+  // Check if token is expired
+  const isTokenExpired = (token) => {
+    if (!token) return true
+    try {
+      const parts = token.split(".")
+      if (parts.length !== 3) return true
+      const payload = JSON.parse(atob(parts[1]))
+      const exp = payload.exp * 1000
+      return Date.now() >= exp
+    } catch (error) {
+      return true
+    }
+  }
+
+  useEffect(() => {
+    const checkAndRefreshToken = async () => {
+      const token = localStorage.getItem("authToken")
+      const refreshToken = localStorage.getItem("refreshToken")
+
+      if (token && isTokenExpired(token)) {
+        if (refreshToken) {
+          setIsRefreshing(true)
+          try {
+            await refreshAccessToken()
+          } catch (error) {
+            // Refresh failed, tokens will be cleared by refreshAccessToken
+            console.error("Token refresh failed:", error)
+          } finally {
+            setIsRefreshing(false)
+          }
+        } else {
+          // No refresh token, clear everything
+          localStorage.removeItem("authToken")
+          localStorage.removeItem("refreshToken")
+          localStorage.removeItem("user")
+        }
+      }
+    }
+
+    if (!loading) {
+      checkAndRefreshToken()
+    }
+  }, [loading])
+
+  if (loading || isRefreshing) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
