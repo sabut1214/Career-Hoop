@@ -1,284 +1,205 @@
+import { motion } from "framer-motion"
+import { Link } from "react-router-dom"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { GraduationCap, Target, BookOpen, ArrowRight, Users, Award, TrendingUp } from "lucide-react"
 
-import { Link } from "react-router-dom";
-import { createPageUrl } from "../utils/utils.js";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Target,
-  BookOpen,
-  School,
-  Award,
-  Users,
-  TrendingUp,
-  ArrowRight,
-  CheckCircle,
-  Lightbulb,
-  Globe
-} from "lucide-react";
-
-const features = [
-  {
-    icon: Target,
-    title: "Career Guidance",
-    description: "AI-powered recommendations based on your grades, interests, and aspirations.",
-    color: "from-blue-500 to-blue-600"
-  },
-  {
-    icon: School,
-    title: "College Suggestions",
-    description: "Find the perfect colleges and courses that match your profile and preferences.",
-    color: "from-green-500 to-green-600"
-  },
-  {
-    icon: Award,
-    title: "Skills Training",
-    description: "Access curated training programs to build industry-relevant skills.",
-    color: "from-yellow-500 to-yellow-600"
-  }
-];
-
-const stats = [
-  { number: "10K+", label: "Students Guided" },
-  { number: "500+", label: "Career Paths" },
-  { number: "200+", label: "Partner Colleges" },
-  { number: "95%", label: "Success Rate" }
-];
-
-const benefits = [
-  "Personalized career recommendations",
-  "Grade-based college matching",
-  "Industry skill development",
-  "Expert mentorship access",
-  "Real-time job market insights"
-];
-
-export default function Landing() {
+export default function LandingPage() {
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-50 via-white to-green-50 py-20 lg:py-32">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center"
-          >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-              className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full text-sm font-medium mb-6"
-            >
-              <Lightbulb className="w-4 h-4" />
-              Discover Your Perfect Career Path
-            </motion.div>
-
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-              Find Your Future,<br />
-              <span className="bg-gradient-to-r from-blue-600 to-green-500 bg-clip-text text-transparent">
-                Build Your Career
-              </span>
-            </h1>
-
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Transform your academic achievements into career success with AI-powered guidance,
-              personalized college recommendations, and industry-relevant skill training.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-              <Link to={createPageUrl("Dashboard")}>
-                <Button
-                  size="lg"
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group"
-                >
-                  Start Your Journey
-                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-              <Link to={createPageUrl("Colleges")}>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="border-2 border-gray-300 hover:border-blue-300 text-gray-700 hover:text-blue-700 px-8 py-4 text-lg font-semibold rounded-xl"
-                >
-                  Explore Colleges
-                </Button>
-              </Link>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 max-w-4xl mx-auto">
-              {stats.map((stat, index) => (
-                <motion.div
-                  key={stat.label}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 + index * 0.1 }}
-                  className="text-center"
-                >
-                  <div className="text-3xl font-bold text-blue-600 mb-1">{stat.number}</div>
-                  <div className="text-gray-500 text-sm">{stat.label}</div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-card to-background">
+      {/* Navigation */}
+      <nav className="flex items-center justify-between p-6 max-w-7xl mx-auto">
+        <div className="flex items-center space-x-2">
+          <GraduationCap className="h-8 w-8 text-primary" />
+          <span className="text-2xl font-bold text-primary">CareerHoop</span>
         </div>
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost">About</Button>
+          <Button variant="ghost">Contact</Button>
+          <Link to="/login">
+            <Button>Get Started</Button>
+          </Link>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="max-w-7xl mx-auto px-6 py-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center space-y-8"
+        >
+          <h1 className="text-5xl md:text-7xl font-bold text-balance">
+            Find Your <span className="text-primary">Future</span>,<br />
+            Build Your <span className="text-secondary">Career</span>
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto text-pretty">
+            Discover your ideal career path with personalized guidance, college recommendations, and skill development
+            programs tailored just for you.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link to="/login">
+              <Button size="lg" className="text-lg px-8 py-6">
+                Start Your Journey
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Button variant="outline" size="lg" className="text-lg px-8 py-6 bg-transparent">
+              Watch Demo
+            </Button>
+          </div>
+        </motion.div>
+
+        {/* Hero Image Placeholder */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="mt-16 flex justify-center"
+        >
+          <div className="w-full max-w-4xl h-96 bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 rounded-2xl flex items-center justify-center border border-border">
+            <img
+              src="/students-exploring-career-paths.jpg"
+              alt="Students exploring career paths"
+              className="w-full h-full object-cover rounded-2xl"
+              onError={(e) => {
+                e.target.style.display = 'none'
+              }}
+            />
+          </div>
+        </motion.div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Everything You Need to Succeed
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Our comprehensive platform provides all the tools and guidance you need
-              to make informed career decisions.
-            </p>
-          </motion.div>
+      <section className="max-w-7xl mx-auto px-6 py-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="text-center space-y-4 mb-16"
+        >
+          <h2 className="text-4xl font-bold text-balance">Everything You Need to Succeed</h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto text-pretty">
+            Our comprehensive platform guides you through every step of your career discovery journey.
+          </p>
+        </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
+        <div className="grid md:grid-cols-3 gap-8">
+          {[
+            {
+              icon: Target,
+              title: "Career Guidance",
+              description:
+                "Get personalized career recommendations based on your interests, skills, and academic performance.",
+              color: "text-primary",
+            },
+            {
+              icon: BookOpen,
+              title: "College Suggestions",
+              description:
+                "Discover the best colleges and universities that align with your career goals and academic profile.",
+              color: "text-secondary",
+            },
+            {
+              icon: TrendingUp,
+              title: "Skills Training",
+              description:
+                "Access curated training programs and courses to develop the skills needed for your dream career.",
+              color: "text-accent",
+            },
+          ].map((feature, index) => (
+            <motion.div
+              key={feature.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.6 + index * 0.1 }}
+            >
+              <Card className="h-full hover:shadow-lg transition-shadow duration-300 border-2 hover:border-primary/20">
+                <CardHeader className="text-center">
+                  <feature.icon className={`h-12 w-12 mx-auto mb-4 ${feature.color}`} />
+                  <CardTitle className="text-xl">{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-center text-base">{feature.description}</CardDescription>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="bg-card py-20">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-3 gap-8 text-center">
+            {[
+              { number: "10,000+", label: "Students Guided", icon: Users },
+              { number: "500+", label: "Career Paths", icon: Target },
+              { number: "95%", label: "Success Rate", icon: Award },
+            ].map((stat, index) => (
               <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.2 }}
-                whileHover={{ y: -8 }}
-                className="group cursor-pointer"
+                key={stat.label}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.8 + index * 0.1 }}
+                className="space-y-4"
               >
-                <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300">
-                  <CardContent className="p-8 text-center">
-                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-r ${feature.color} mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                      <feature.icon className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-4 group-hover:text-blue-600 transition-colors">
-                      {feature.title}
-                    </h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      {feature.description}
-                    </p>
-                  </CardContent>
-                </Card>
+                <stat.icon className="h-8 w-8 mx-auto text-primary" />
+                <div className="text-4xl font-bold text-primary">{stat.number}</div>
+                <div className="text-lg text-muted-foreground">{stat.label}</div>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="py-20 bg-gradient-to-br from-blue-50 to-green-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="text-4xl font-bold text-gray-900 mb-6">
-                Why Choose CareerHoop?
-              </h2>
-              <p className="text-lg text-gray-600 mb-8">
-                We combine cutting-edge technology with expert guidance to provide
-                the most comprehensive career planning experience for students.
-              </p>
+      {/* CTA Section */}
+      <section className="max-w-7xl mx-auto px-6 py-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 1.0 }}
+          className="text-center space-y-8"
+        >
+          <h2 className="text-4xl font-bold text-balance">Ready to Discover Your Future?</h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto text-pretty">
+            Join thousands of students who have found their perfect career path with CareerHoop.
+          </p>
+          <Link to="/login">
+            <Button size="lg" className="text-lg px-8 py-6">
+              Start Your Journey Today
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
+        </motion.div>
+      </section>
 
-              <div className="space-y-4">
-                {benefits.map((benefit, index) => (
-                  <motion.div
-                    key={benefit}
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-center gap-3"
-                  >
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span className="text-gray-700">{benefit}</span>
-                  </motion.div>
-                ))}
-              </div>
-
-              <Link to={createPageUrl("Assessment")}>
-                <Button className="mt-8 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl">
-                  Take Assessment Now
-                </Button>
-              </Link>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="relative"
-            >
-              <div className="bg-white rounded-3xl shadow-2xl p-8">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl flex items-center justify-center">
-                    <Globe className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900">Career Match</h3>
-                    <p className="text-sm text-gray-500">AI-Powered Analysis</p>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                    <span className="text-sm font-medium">Software Engineer</span>
-                    <span className="text-blue-600 font-bold">95%</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                    <span className="text-sm font-medium">Data Scientist</span>
-                    <span className="text-green-600 font-bold">88%</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
-                    <span className="text-sm font-medium">Product Manager</span>
-                    <span className="text-yellow-600 font-bold">82%</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+      {/* Footer */}
+      <footer className="bg-card border-t py-12">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <div className="flex items-center space-x-2">
+              <GraduationCap className="h-6 w-6 text-primary" />
+              <span className="text-lg font-semibold text-primary">CareerHoop</span>
+            </div>
+            <div className="flex space-x-6 text-sm text-muted-foreground">
+              <a href="#" className="hover:text-primary transition-colors">
+                Privacy Policy
+              </a>
+              <a href="#" className="hover:text-primary transition-colors">
+                Terms of Service
+              </a>
+              <a href="#" className="hover:text-primary transition-colors">
+                Contact Us
+              </a>
+            </div>
+          </div>
+          <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
+            © 2025 CareerHoop. All rights reserved. Empowering students to find their future.
           </div>
         </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-green-500">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-4xl font-bold text-white mb-6">
-              Ready to Shape Your Future?
-            </h2>
-            <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-              Join thousands of students who have discovered their perfect career path
-              with CareerHoop's personalized guidance.
-            </p>
-            <Link to={createPageUrl("Dashboard")}>
-              <Button
-                size="lg"
-                className="bg-white text-blue-600 hover:bg-gray-50 px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                Get Started Today
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </Link>
-          </motion.div>
-        </div>
-      </section>
+      </footer>
     </div>
-  );
+  )
 }

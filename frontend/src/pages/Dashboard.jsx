@@ -1,290 +1,309 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import { Student } from "@/entities/Student";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { useEffect, useState } from "react"
+import { motion } from "framer-motion"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
 import {
+  GraduationCap,
   BookOpen,
   Target,
-  School,
-  Award,
-  CheckCircle,
-  Clock,
-  TrendingUp,
-  Users,
+  User,
+  BarChart3,
   ArrowRight,
-  Lightbulb,
-  FileText
-} from "lucide-react";
-
-const actionCards = [
-  {
-    title: "Complete Assessment",
-    description: "Enter your grades and select interests to get personalized recommendations",
-    icon: FileText,
-    action: "Start Assessment",
-    link: "Assessment",
-    color: "from-blue-500 to-blue-600",
-    bgColor: "bg-blue-50"
-  },
-  {
-    title: "View Recommendations",
-    description: "Explore career paths matched to your profile and interests",
-    icon: Target,
-    action: "View Careers",
-    link: "Recommendations",
-    color: "from-green-500 to-green-600",
-    bgColor: "bg-green-50"
-  },
-  {
-    title: "Explore Colleges",
-    description: "Find colleges and courses that match your career goals",
-    icon: School,
-    action: "Browse Colleges",
-    link: "Colleges",
-    color: "from-purple-500 to-purple-600",
-    bgColor: "bg-purple-50"
-  }
-];
-
-const progressSteps = [
-  { title: "Profile Setup", completed: true },
-  { title: "Assessment", completed: false },
-  { title: "Recommendations", completed: false },
-  { title: "College Selection", completed: false }
-];
+  CheckCircle,
+  Circle,
+  Clock,
+  Briefcase,
+  Building2,
+} from "lucide-react"
+import { Sidebar } from "@/components/dashboard/sidebar"
+import { ProtectedRoute } from "@/components/protected-route"
+import { Link } from "react-router-dom"
+import { useAuth } from "@/context/AuthContext"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export default function Dashboard() {
-  const [studentData, setStudentData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth()
+  const userName = user?.name || user?.fullName || "Alex"
+  const [showProfilePrompt, setShowProfilePrompt] = useState(false)
+  const profileCompletion = user?.profileCompletionPercent ?? 0
 
   useEffect(() => {
-    loadStudentData();
-  }, []);
-
-  const loadStudentData = async () => {
-    try {
-      const students = await Student.list();
-      if (students.length > 0) {
-        setStudentData(students[0]);
-      }
-    } catch (error) {
-      console.error("Error loading student data:", error);
+    if (!user || user.role !== "student") {
+      setShowProfilePrompt(false)
+      return
     }
-    setIsLoading(false);
-  };
+    if (profileCompletion < 100) {
+      setShowProfilePrompt(true)
+    } else {
+      setShowProfilePrompt(false)
+    }
+  }, [user?.id, user?.role, profileCompletion])
+  
+  const progressSteps = [
+    { id: 1, title: "Enter Grades", completed: true, current: false },
+    { id: 2, title: "Select Interests", completed: true, current: false },
+    { id: 3, title: "Get Recommendations", completed: false, current: true },
+    { id: 4, title: "Explore Colleges", completed: false, current: false },
+    { id: 5, title: "Build Skills", completed: false, current: false },
+  ]
 
-  const calculateProgress = () => {
-    if (!studentData) return 25;
-    let progress = 25; // Profile setup
-    if (studentData.grade_10_percentage) progress += 25; // Assessment partially done
-    if (studentData.interests && studentData.interests.length > 0) progress += 25; // Assessment complete
-    if (studentData.assessment_completed) progress += 25; // Ready for recommendations
-    return progress;
-  };
-
-  const getNextStep = () => {
-    if (!studentData) return "Complete your profile setup";
-    if (!studentData.grade_10_percentage) return "Enter your academic grades";
-    if (!studentData.interests || studentData.interests.length === 0) return "Select your career interests";
-    if (!studentData.assessment_completed) return "Complete your assessment";
-    return "Explore your career recommendations";
-  };
+  const actionCards = [
+    {
+      title: "View Recommendations",
+      description: "Discover career paths tailored to your profile",
+      icon: BarChart3,
+      color: "bg-accent",
+      textColor: "text-accent-foreground",
+      borderColor: "border-accent/20",
+      href: "/recommendations",
+      completed: false,
+      size: "lg", // Large card
+    },
+    {
+      title: "Enter Your Grades",
+      description: "Input your academic performance",
+      icon: BookOpen,
+      color: "bg-primary",
+      textColor: "text-primary-foreground",
+      borderColor: "border-primary/20",
+      href: "/grades",
+      completed: true,
+      size: "md",
+    },
+    {
+      title: "Select Interests",
+      description: "Choose fields that excite you",
+      icon: Target,
+      color: "bg-secondary",
+      textColor: "text-secondary-foreground",
+      borderColor: "border-secondary/20",
+      href: "/interests",
+      completed: true,
+      size: "md",
+    },
+    {
+      title: "Explore Colleges",
+      description: "Find universities that match you",
+      icon: Building2,
+      color: "bg-blue-500",
+      textColor: "text-white",
+      borderColor: "border-blue-500/20",
+      href: "/colleges",
+      completed: false,
+      size: "md",
+    },
+    {
+      title: "Find Mentors",
+      description: "Connect with experienced guides",
+      icon: User,
+      color: "bg-purple-500",
+      textColor: "text-white",
+      borderColor: "border-purple-500/20",
+      href: "/mentors",
+      completed: false,
+      size: "md",
+    },
+    {
+      title: "Skill Training",
+      description: "Build in-demand skills",
+      icon: Briefcase,
+      color: "bg-green-500",
+      textColor: "text-white",
+      borderColor: "border-green-500/20",
+      href: "/trainings",
+      completed: false,
+      size: "md",
+    },
+  ]
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Welcome back{studentData ? `, ${studentData.full_name}` : ''}! 👋
-              </h1>
-              <p className="text-gray-600 mt-2">
-                Ready to take the next step in your career journey?
+    <ProtectedRoute requiredRole="student">
+      <>
+        <Dialog open={showProfilePrompt} onOpenChange={setShowProfilePrompt}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Complete your profile</DialogTitle>
+              <DialogDescription>
+                You're {profileCompletion}% done. Add your school, location, contact, and academic details to unlock
+                better recommendations.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowProfilePrompt(false)}>
+                Later
+              </Button>
+              <Button asChild>
+                <Link to="/profile">Update Profile</Link>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <div className="flex min-h-screen bg-background">
+          <Sidebar />
+
+        <main className="flex-1 p-4 sm:p-6 lg:ml-64">
+          <div className="max-w-7xl mx-auto space-y-8">
+            {/* Header */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="space-y-2"
+            >
+              <h1 className="text-4xl font-bold text-balance">Welcome back, {userName}!</h1>
+              <p className="text-xl text-muted-foreground text-pretty">
+                Continue your career discovery journey. You're making great progress!
               </p>
-            </div>
-            <div className="hidden md:flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-sm text-gray-500">Progress</p>
-                <p className="font-semibold text-blue-600">{calculateProgress()}% Complete</p>
-              </div>
-            </div>
-          </div>
+            </motion.div>
 
-          {/* Progress Bar */}
-          <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-none">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">Your Journey Progress</h3>
-                <span className="text-sm font-medium text-blue-600">{calculateProgress()}%</span>
-              </div>
-              <Progress value={calculateProgress()} className="mb-4 h-3" />
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Clock className="w-4 h-4" />
-                Next step: {getNextStep()}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+            {/* Progress Tracker */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              <Card className="border-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <GraduationCap className="h-6 w-6 text-primary" />
+                    Your Career Journey
+                  </CardTitle>
+                  <CardDescription>Track your progress through the career discovery process</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Overall Progress</span>
+                    <span className="text-sm text-muted-foreground">40% Complete</span>
+                  </div>
+                  <Progress value={40} className="h-2" />
 
-        {/* Action Cards */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="mb-8"
-        >
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {actionCards.map((card, index) => (
-              <motion.div
-                key={card.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + index * 0.1 }}
-                whileHover={{ y: -4, scale: 1.02 }}
-                className="group cursor-pointer"
-              >
-                <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300">
-                  <CardContent className="p-6">
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${card.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                      <card.icon className="w-6 h-6 text-white" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-                      {card.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-4 leading-relaxed">
-                      {card.description}
-                    </p>
-                    <Link to={createPageUrl(card.link)}>
-                      <Button
-                        className="w-full bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 group-hover:border-blue-300 group-hover:text-blue-600 transition-all duration-300"
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    {progressSteps.map((step, index) => (
+                      <motion.div
+                        key={step.id}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.4, delay: 0.2 + index * 0.1 }}
+                        className={`flex flex-col items-center text-center space-y-2 p-4 rounded-lg border-2 transition-all duration-300 ${
+                          step.completed
+                            ? "bg-primary/5 border-primary/20"
+                            : step.current
+                              ? "bg-accent/5 border-accent/20"
+                              : "bg-muted/50 border-border"
+                        }`}
                       >
-                        {card.action}
-                        <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Stats and Overview */}
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Journey Steps */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
-            className="lg:col-span-2"
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="w-5 h-5 text-blue-600" />
-                  Your Career Journey
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {progressSteps.map((step, index) => (
-                    <div key={step.title} className="flex items-center gap-4">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        step.completed
-                          ? 'bg-green-500 text-white'
-                          : index === progressSteps.findIndex(s => !s.completed)
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-200 text-gray-500'
-                      }`}>
                         {step.completed ? (
-                          <CheckCircle className="w-4 h-4" />
+                          <CheckCircle className="h-8 w-8 text-primary" />
+                        ) : step.current ? (
+                          <Clock className="h-8 w-8 text-accent" />
                         ) : (
-                          <span className="text-sm font-semibold">{index + 1}</span>
+                          <Circle className="h-8 w-8 text-muted-foreground" />
                         )}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className={`font-medium ${
-                          step.completed ? 'text-green-600' : 'text-gray-900'
-                        }`}>
+                        <span
+                          className={`text-sm font-medium ${
+                            step.completed ? "text-primary" : step.current ? "text-accent" : "text-muted-foreground"
+                          }`}
+                        >
                           {step.title}
-                        </h4>
-                        {step.completed && (
-                          <p className="text-sm text-gray-500">Completed</p>
-                        )}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="space-y-6"
+            >
+              <h2 className="text-2xl font-bold">Quick Actions</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-max">
+                {actionCards.map((card, index) => (
+                  <motion.div
+                    key={card.title}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 + index * 0.1 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={card.size === "lg" ? "md:col-span-2 lg:col-span-2 lg:row-span-2" : ""}
+                  >
+                    <Link to={card.href}>
+                      <Card
+                        className={`h-full hover:shadow-lg transition-all duration-300 border-2 ${card.borderColor} group cursor-pointer`}
+                      >
+                        <CardHeader className={card.size === "lg" ? "space-y-6" : "space-y-4"}>
+                          <div
+                            className={`w-12 h-12 rounded-lg ${card.color} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}
+                          >
+                            <card.icon className={`h-6 w-6 ${card.textColor}`} />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <CardTitle className={card.size === "lg" ? "text-2xl" : "text-xl"}>{card.title}</CardTitle>
+                            {card.completed && <CheckCircle className="h-5 w-5 text-primary" />}
+                          </div>
+                        </CardHeader>
+                        <CardContent className={card.size === "lg" ? "space-y-6" : "space-y-4"}>
+                          <CardDescription className={card.size === "lg" ? "text-base" : "text-sm"}>
+                            {card.description}
+                          </CardDescription>
+                          <Button
+                            className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300"
+                            variant={card.completed ? "outline" : "default"}
+                          >
+                            {card.completed ? "Review" : "Start"}
+                            <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Recent Activity */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <Card className="border-2">
+                <CardHeader>
+                  <CardTitle>Recent Activity</CardTitle>
+                  <CardDescription>Your latest actions and achievements</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {[
+                    { action: "Completed Grade Entry", time: "2 hours ago", icon: BookOpen },
+                    { action: "Selected 5 Interest Areas", time: "1 day ago", icon: Target },
+                    { action: "Joined CareerHoop", time: "3 days ago", icon: User },
+                  ].map((activity, index) => (
+                    <motion.div
+                      key={activity.action}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.4, delay: 0.5 + index * 0.1 }}
+                      className="flex items-center space-x-4 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors duration-200"
+                    >
+                      <activity.icon className="h-5 w-5 text-primary" />
+                      <div className="flex-1">
+                        <p className="font-medium">{activity.action}</p>
+                        <p className="text-sm text-muted-foreground">{activity.time}</p>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Quick Stats */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.6 }}
-            className="space-y-6"
-          >
-            <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <Lightbulb className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-bold text-gray-900 mb-2">Career Tip</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Complete your assessment to unlock personalized career recommendations
-                </p>
-                <Link to={createPageUrl("Assessment")}>
-                  <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-white">
-                    Get Started
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold text-gray-900 mb-4">Platform Stats</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-blue-500" />
-                      <span className="text-sm text-gray-600">Students</span>
-                    </div>
-                    <span className="font-semibold">10,000+</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Target className="w-4 h-4 text-green-500" />
-                      <span className="text-sm text-gray-600">Careers</span>
-                    </div>
-                    <span className="font-semibold">500+</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <School className="w-4 h-4 text-purple-500" />
-                      <span className="text-sm text-gray-600">Colleges</span>
-                    </div>
-                    <span className="font-semibold">200+</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </main>
       </div>
-    </div>
-  );
+      </>
+    </ProtectedRoute>
+  )
 }

@@ -1,240 +1,27 @@
-/* Variables */
-:root {
-  --primary-color: #2D5F7C;
-  --secondary-color: #4CAF50;
-  --accent-color: #FF6B35;
-  --light-color: #F5F7FA;
-  --dark-color: #2D3748;
-  --gray-color: #A0AEC0;
-}
+/* This file is kept for backward compatibility but most styles are now handled by Tailwind CSS */
+/* Only keep essential global styles that don't conflict with Tailwind */
 
-/* Global styles */
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
 
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  line-height: 1.6;
-  color: var(--dark-color);
-  background-color: #f8f9fa;
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
 }
 
+#root {
+  min-height: 100vh;
+}
+
+/* Ensure proper layout for pages with sidebars */
 .app {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
 .main-content {
-  flex: 1;
-  padding: 20px;
+  min-height: 100vh;
 }
 
-/* Button styles */
-.btn {
-  display: inline-block;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-
-.btn:hover {
-  opacity: 0.9;
-  transform: translateY(-2px);
-}
-
-.btn-primary {
-  background-color: var(--primary-color);
-  color: white;
-}
-
-.btn-secondary {
-  background-color: var(--secondary-color);
-  color: white;
-}
-
-/* Utility classes */
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-.text-center {
-  text-align: center;
-}
-
-.mt-1 { margin-top: 0.5rem; }
-.mt-2 { margin-top: 1rem; }
-.mt-3 { margin-top: 1.5rem; }
-.mt-4 { margin-top: 2rem; }
-
-.mb-1 { margin-bottom: 0.5rem; }
-.mb-2 { margin-bottom: 1rem; }
-.mb-3 { margin-bottom: 1.5rem; }
-.mb-4 { margin-bottom: 2rem; }
-
-/* Navbar styles */
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  background-color: var(--primary-color);
-  color: white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.navbar-brand {
-  font-size: 1.5rem;
-  font-weight: bold;
-}
-
-.navbar-brand a {
-  color: white;
-  text-decoration: none;
-}
-
-.navbar-nav {
-  display: flex;
-  list-style: none;
-}
-
-.nav-item {
-  margin-left: 1.5rem;
-}
-
-.nav-link {
-  color: white;
-  text-decoration: none;
-  padding: 0.5rem 0;
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.nav-link:hover {
-  opacity: 0.8;
-}
-
-.nav-link.active {
-  font-weight: bold;
-}
-
-.nav-link.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background-color: white;
-}
-
-/* Home page styles */
-.home-container .hero-section {
-  text-align: center;
-  padding: 4rem 0;
-  background: linear-gradient(135deg, var(--primary-color) 0%, #1e465e 100%);
-  color: white;
-  border-radius: 8px;
-  margin-bottom: 3rem;
-}
-
-.home-container .hero-section h1 {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-}
-
-.home-container .hero-section p {
-  font-size: 1.2rem;
-  margin-bottom: 2rem;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.home-container .hero-section .cta-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-}
-
-.home-container .hero-section .cta-buttons .btn {
-  min-width: 150px;
-}
-
-.home-container .features-section h2 {
-  text-align: center;
-  margin-bottom: 2rem;
-  color: var(--dark-color);
-}
-
-.home-container .features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-}
-
-.home-container .feature-card {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  transition: transform 0.3s ease;
-}
-
-.home-container .feature-card:hover {
-  transform: translateY(-5px);
-}
-
-.home-container .feature-card h3 {
-  color: var(--primary-color);
-  margin-bottom: 1rem;
-}
-
-.home-container .feature-card p {
-  color: var(--dark-color);
-}
-
-/* Health check styles */
-.health-check {
-  padding: 20px;
-}
-
-.health-check h2 {
-  margin-bottom: 1rem;
-}
-
-.health-check .error-message {
-  color: red;
-  margin: 10px 0;
-  padding: 10px;
-  background-color: #ffebee;
-  border-radius: 4px;
-}
-
-.health-check .careers-list {
-  list-style: none;
-  margin-top: 1rem;
-}
-
-.health-check .career-item {
-  background: white;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.loading {
-  text-align: center;
-  padding: 2rem;
-  font-size: 1.2rem;
-}
+/* Remove any conflicting styles - Tailwind handles most of this now */

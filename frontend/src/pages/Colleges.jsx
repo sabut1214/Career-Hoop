@@ -1,313 +1,465 @@
-
-import React, { useState, useEffect, useCallback } from "react";
-import { College } from "@/entities/College";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useEffect, useState } from "react"
+import { motion } from "framer-motion"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
+  Building2,
   MapPin,
+  Users,
   Star,
-  DollarSign,
-  ExternalLink,
   Search,
   Filter,
-  BookOpen,
-  Award
-} from "lucide-react";
+  GraduationCap,
+  DollarSign,
+  Clock,
+  ExternalLink,
+} from "lucide-react"
+import { Sidebar } from "@/components/dashboard/sidebar"
+import { getColleges } from "@/lib/api"
+import Pagination from "@/components/common/pagination"
 
-export default function Colleges() {
-  const [colleges, setColleges] = useState([]);
-  const [filteredColleges, setFilteredColleges] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all");
-  const [filterLocation, setFilterLocation] = useState("all");
+const PUBLIC_KEYWORDS = ["campus", "public", "government", "constituent", "state", "community"]
+const PRIVATE_KEYWORDS = ["college", "academy", "institute", "school", "private"]
 
-  const filterColleges = useCallback(() => {
-    let filtered = [...colleges];
+const parsePrograms = (programs) => {
+  if (!programs) return []
+  
+  // If it's already an array
+  if (Array.isArray(programs)) {
+    return programs.map((program, index) => {
+      if (typeof program === "string") return program
+      if (typeof program === "object" && program !== null) {
+        return program.name || program.title || program.program || ""
+      }
+      return ""
+    }).filter(Boolean)
+  }
 
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(college =>
-        college.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        college.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        college.courses_offered.some(course =>
-          course.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      );
+  // If it's a string, try to parse as JSON
+  if (typeof programs === "string") {
+    // Check if it's a JSON string
+    const trimmed = programs.trim()
+    if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(programs)
+        if (Array.isArray(parsed)) {
+          return parsed.map((item, index) => {
+            if (typeof item === "string") return item
+            if (typeof item === "object" && item !== null) {
+              return item.name || item.title || item.program || ""
+            }
+            return ""
+          }).filter(Boolean)
+        }
+      } catch (error) {
+        // If JSON parsing fails, try comma-separated
+        return programs.split(",").map((item) => item.trim()).filter(Boolean)
+      }
+    } else {
+      // Not JSON, treat as comma-separated
+      return programs.split(",").map((item) => item.trim()).filter(Boolean)
     }
+  }
 
-    // Type filter
-    if (filterType !== "all") {
-      filtered = filtered.filter(college => college.type === filterType);
-    }
+  return []
+}
 
-    // Location filter
-    if (filterLocation !== "all") {
-      filtered = filtered.filter(college =>
-        college.location.toLowerCase().includes(filterLocation.toLowerCase())
-      );
-    }
+const inferCollegeType = (college) => {
+  const rawType = (college.type || "").toString().trim().toLowerCase()
+  if (rawType.includes("public")) return "public"
+  if (rawType.includes("private")) return "private"
 
-    setFilteredColleges(filtered);
-  }, [colleges, searchTerm, filterType, filterLocation]);
+  const name = (college.name || "").toLowerCase()
+  const overview = (college.overview || "").toLowerCase()
+  const description = (college.description || "").toLowerCase()
+  const combinedText = `${name} ${overview} ${description}`
 
-  useEffect(() => {
-    loadColleges();
-  }, []);
+  if (PUBLIC_KEYWORDS.some((keyword) => combinedText.includes(keyword))) {
+    return "public"
+  }
 
-  useEffect(() => {
-    filterColleges();
-  }, [filterColleges]);
+  if (PRIVATE_KEYWORDS.some((keyword) => combinedText.includes(keyword))) {
+    return "private"
+  }
 
-  const loadColleges = async () => {
-    try {
-      const data = await College.list();
-      setColleges(data);
-    } catch (error) {
-      console.error("Error loading colleges:", error);
-    }
-    setIsLoading(false);
-  };
+  return "unknown"
+}
 
-  const getUniqueLocations = () => {
-    const locations = colleges.map(college => college.location);
-    return [...new Set(locations)].sort();
-  };
+const formatCollegeType = (type) => {
+  if (type === "public") return "Public"
+  if (type === "private") return "Private"
+  return "Unknown"
+}
 
-  const renderStars = (rating) => {
-    return (
-      <div className="flex items-center gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={`w-4 h-4 ${
-              star <= rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
-            }`}
+const transformCollege = (college) => {
+  // Ensure overview is properly mapped to description
+  const description = college.overview || college.description || ""
+  
+  // Parse programs
+  const programs = parsePrograms(college.programs)
+  const inferredType = inferCollegeType(college)
+  
+  return {
+    ...college,
+    programs,
+    description: description.trim(),
+    // Keep overview for backward compatibility
+    overview: college.overview || "",
+    type: inferredType,
+    displayType: formatCollegeType(inferredType),
+  }
+}
+
+const hasCompleteData = (college) => {
+  // Check if college has essential data
+  const hasDescription = (college.description && college.description.trim().length > 0) || 
+                         (college.overview && college.overview.trim().length > 0)
+  const hasPrograms = college.programs && Array.isArray(college.programs) && college.programs.length > 0
+  const hasName = college.name && college.name.trim().length > 0
+  
+  // Only show colleges with description and programs
+  return hasName && hasDescription && hasPrograms
+}
+
+const dedupeColleges = (colleges) => {
+  const seen = new Set()
+  return colleges.filter((college) => {
+    const key =
+      (college.id && String(college.id).toLowerCase()) ||
+      (college.detailUrl && college.detailUrl.toLowerCase()) ||
+      (college.name && college.name.toLowerCase())
+
+    if (!key) return false
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+const CollegeCard = ({ college, index }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.6, delay: index * 0.1 }}
+    whileHover={{ scale: 1.02 }}
+    className="group"
+  >
+    <Card className="h-full min-h-[460px] flex flex-col border-2 hover:border-primary/20 hover:shadow-lg transition-all duration-300">
+      <CardHeader className="space-y-4 pb-0">
+        <div className="flex items-start space-x-4">
+          <img
+            src={college.logo || "/placeholder.svg"}
+            alt={`${college.name} logo`}
+            className="w-16 h-16 rounded-lg object-cover border border-border"
+            onError={(e) => {
+              e.target.style.display = 'none'
+            }}
           />
-        ))}
-        <span className="text-sm text-gray-600 ml-1">({rating}/5)</span>
-      </div>
-    );
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-4 lg:p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {Array(6).fill(0).map((_, i) => (
-                <div key={i} className="bg-gray-200 h-80 rounded-xl"></div>
-              ))}
+          <div className="flex-1 space-y-2">
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="text-xl group-hover:text-primary transition-colors">{college.name}</CardTitle>
+                <div className="flex items-center space-x-2 mt-1">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">{college.location || "Location not available"}</span>
+                </div>
+                {college.affiliation && (
+                  <div className="flex items-center space-x-2 mt-1">
+                    <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">{college.affiliation}</span>
+                  </div>
+                )}
+              </div>
+              <Star className="h-5 w-5 text-muted-foreground group-hover:text-accent transition-colors cursor-pointer" />
+            </div>
+            <div className="flex items-center space-x-4 text-sm">
+              <div className="flex items-center space-x-1">
+                <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                <span className="font-medium">{college.rating || "4.5"}</span>
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                {college.displayType || "Unknown"}
+              </Badge>
             </div>
           </div>
         </div>
-      </div>
-    );
-  }
+      </CardHeader>
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-4 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Colleges & Universities</h1>
-          <p className="text-gray-600">
-            Discover top institutions that match your career goals
-          </p>
-        </motion.div>
+      <CardContent className="flex-1 flex flex-col space-y-6 pt-6">
+        <CardDescription className="text-base leading-relaxed line-clamp-4">
+          {college.description || college.overview || "No description available"}
+        </CardDescription>
 
-        {/* Filters */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-8"
-        >
-          <Card className="p-6">
-            <div className="grid md:grid-cols-4 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search colleges, courses..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+        <div className="grid grid-cols-2 gap-4 flex-shrink-0">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+              <div className="flex items-center space-x-1">
+                <Users className="h-4 w-4 text-blue-600" />
+                <span className="text-xs">Students</span>
               </div>
-
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="College Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="government">Government</SelectItem>
-                  <SelectItem value="private">Private</SelectItem>
-                  <SelectItem value="deemed">Deemed University</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={filterLocation} onValueChange={setFilterLocation}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Location" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Locations</SelectItem>
-                  {getUniqueLocations().map((location) => (
-                    <SelectItem key={location} value={location.toLowerCase()}>
-                      {location}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchTerm("");
-                  setFilterType("all");
-                  setFilterLocation("all");
-                }}
-                className="flex items-center gap-2"
-              >
-                <Filter className="w-4 h-4" />
-                Clear Filters
-              </Button>
+              <span className="text-xs font-medium">{college.students || "N/A"}</span>
             </div>
-          </Card>
-        </motion.div>
-
-        {/* Results Count */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="mb-6"
-        >
-          <p className="text-gray-600">
-            Showing <span className="font-semibold">{filteredColleges.length}</span> colleges
-          </p>
-        </motion.div>
-
-        {/* Colleges Grid */}
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredColleges.map((college, index) => (
-            <motion.div
-              key={college.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ y: -4 }}
-            >
-              <Card className="h-full shadow-lg hover:shadow-xl transition-all duration-300 border-0">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
-                        <BookOpen className="w-6 h-6 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <CardTitle className="text-lg leading-tight">{college.name}</CardTitle>
-                        <div className="flex items-center gap-1 mt-1">
-                          <MapPin className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm text-gray-600">{college.location}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    {renderStars(college.rating)}
-
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant="outline"
-                        className={`${
-                          college.type === "government"
-                            ? "bg-green-50 text-green-700 border-green-200"
-                            : college.type === "private"
-                            ? "bg-blue-50 text-blue-700 border-blue-200"
-                            : "bg-purple-50 text-purple-700 border-purple-200"
-                        }`}
-                      >
-                        {college.type}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-gray-600">Fees:</span>
-                    <span className="text-sm font-medium">{college.fees_range}</span>
-                  </div>
-
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Popular Courses:</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {college.courses_offered.slice(0, 3).map((course, courseIndex) => (
-                        <Badge key={courseIndex} variant="secondary" className="text-xs">
-                          {course}
-                        </Badge>
-                      ))}
-                      {college.courses_offered.length > 3 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{college.courses_offered.length - 3} more
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t">
-                    <div className="flex gap-2">
-                      {college.website && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 flex items-center gap-2"
-                          onClick={() => window.open(college.website, "_blank")}
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          Website
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
-                      >
-                        <Award className="w-4 h-4 mr-2" />
-                        Apply
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+            <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+              <div className="flex items-center space-x-1">
+                <DollarSign className="h-4 w-4 text-green-600" />
+                <span className="text-xs">Tuition</span>
+              </div>
+              <span className="text-xs font-medium">{college.tuition || "N/A"}</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+              <div className="flex items-center space-x-1">
+                <GraduationCap className="h-4 w-4 text-purple-600" />
+                <span className="text-xs">Acceptance</span>
+              </div>
+              <span className="text-xs font-medium">{college.acceptanceRate || "N/A"}</span>
+            </div>
+            <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+              <div className="flex items-center space-x-1">
+                <Clock className="h-4 w-4 text-orange-600" />
+                <span className="text-xs">Founded</span>
+              </div>
+              <span className="text-xs font-medium">{college.establishedYear || college.established || "N/A"}</span>
+            </div>
+          </div>
         </div>
 
-        {filteredColleges.length === 0 && !isLoading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-12"
-          >
-            <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No colleges found</h3>
-            <p className="text-gray-600">Try adjusting your search filters to see more results.</p>
-          </motion.div>
+        {college.programs && Array.isArray(college.programs) && college.programs.length > 0 && (
+          <div className="space-y-3">
+            <div>
+              <h4 className="text-sm font-medium mb-2">Popular Programs</h4>
+              <div className="flex flex-wrap gap-1">
+                {college.programs.slice(0, 4).map((program, idx) => (
+                  <Badge key={`${college.id || idx}-${program}`} variant="secondary" className="text-xs">
+                    {typeof program === "string" ? program : program.name || program.title || program}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
-      </div>
+
+        <div className="flex space-x-2 mt-auto">
+          <Button className="flex-1" onClick={() => college.detailUrl && window.open(college.detailUrl, '_blank')}>
+            <ExternalLink className="mr-2 h-4 w-4" />
+            {college.detailUrl ? "View Details" : "Visit Website"}
+          </Button>
+          <Button variant="outline" className="flex-1 bg-transparent">
+            Save College
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  </motion.div>
+)
+
+export default function CollegesPage() {
+  const [colleges, setColleges] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterType, setFilterType] = useState("all")
+  const [sortBy, setSortBy] = useState("rating")
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
+  const [pageMeta, setPageMeta] = useState({ totalPages: 1, totalElements: 0 })
+
+  useEffect(() => {
+    const fetchColleges = async (pageNumber) => {
+      setLoading(true)
+      setError(null)
+      try {
+        // Fetch a larger batch to account for filtering out incomplete data
+        const fetchSize = pageSize * 3 // Fetch 3x to ensure we get enough complete colleges
+        const response = await getColleges({ page: pageNumber - 1, size: fetchSize })
+        const transformed = (response.data || []).map(transformCollege)
+        const normalized = dedupeColleges(transformed)
+        // Filter to only show colleges with complete data
+        const completeColleges = normalized.filter(hasCompleteData).slice(0, pageSize)
+        setColleges(completeColleges)
+        
+        // Update pagination metadata
+        // Since we're filtering client-side, we approximate the total
+        const originalTotal = response.meta?.totalElements || normalized.length
+        setPageMeta(
+          response.meta ? {
+            ...response.meta,
+            totalElements: originalTotal, // Keep original total for pagination
+            // Adjust totalPages calculation to account for filtering
+            totalPages: Math.ceil(originalTotal / pageSize),
+          } : {
+            totalPages: 1,
+            totalElements: completeColleges.length,
+            page: pageNumber - 1,
+            size: pageSize,
+          }
+        )
+      } catch (err) {
+        console.error("Failed to fetch colleges:", err)
+        setColleges([])
+        setPageMeta({ totalPages: 1, totalElements: 0 })
+        setError("Unable to load colleges right now. Please try again later.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchColleges(currentPage)
+  }, [currentPage])
+
+  const handlePageChange = (page) => {
+    if (page < 1) return
+    if (pageMeta.totalPages && page > pageMeta.totalPages) return
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const filteredColleges = colleges
+    .filter((college) => {
+      const matchesSearch =
+        college.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        college.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (college.programs && college.programs.some((program) => program.toLowerCase().includes(searchTerm.toLowerCase())))
+
+      const matchesType = filterType === "all" || (college.type && college.type.toLowerCase() === filterType)
+
+      return matchesSearch && matchesType
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "rating":
+          return (b.rating || 0) - (a.rating || 0)
+        case "tuition":
+          const aTuition = parseInt(a.tuition?.replace(/[^0-9]/g, "") || "0")
+          const bTuition = parseInt(b.tuition?.replace(/[^0-9]/g, "") || "0")
+          return aTuition - bTuition
+        case "acceptance":
+          const aAcceptance = parseInt(a.acceptanceRate?.replace(/[^0-9]/g, "") || "100")
+          const bAcceptance = parseInt(b.acceptanceRate?.replace(/[^0-9]/g, "") || "100")
+          return aAcceptance - bAcceptance
+        default:
+          return 0
+      }
+    })
+
+  return (
+    <div className="flex min-h-screen bg-background">
+      <Sidebar />
+
+      <main className="flex-1 p-4 sm:p-6 lg:ml-64">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="space-y-2"
+          >
+            <div className="flex items-center space-x-2">
+              <Building2 className="h-8 w-8 text-primary" />
+              <h1 className="text-4xl font-bold">Recommended Colleges</h1>
+            </div>
+            <p className="text-xl text-muted-foreground">
+              Discover colleges and universities that align with your career goals and academic profile
+            </p>
+          </motion.div>
+
+          {/* Search and Filters */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="flex flex-col md:flex-row gap-4"
+          >
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search colleges, programs, or locations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-full md:w-48">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="private">Private</SelectItem>
+                <SelectItem value="public">Public</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="rating">Rating</SelectItem>
+                <SelectItem value="tuition">Tuition (Low to High)</SelectItem>
+                <SelectItem value="acceptance">Acceptance Rate</SelectItem>
+              </SelectContent>
+            </Select>
+          </motion.div>
+
+          {/* Results Summary */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="flex items-center justify-between"
+          >
+            <p className="text-muted-foreground">
+              Showing {filteredColleges.length} of {pageMeta.totalElements || colleges.length} colleges
+            </p>
+            <Badge variant="secondary" className="bg-primary/10 text-primary">
+              Personalized for you
+            </Badge>
+          </motion.div>
+
+          {error && (
+            <Card>
+              <CardContent className="text-center text-destructive py-4">{error}</CardContent>
+            </Card>
+          )}
+
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          )}
+
+          {/* Colleges Grid */}
+          {!loading && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {filteredColleges.map((college, index) => (
+                <CollegeCard key={college.id} college={college} index={index} />
+              ))}
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loading && filteredColleges.length === 0 && (
+            <Card>
+              <CardContent className="pt-12 text-center">
+                <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No colleges found matching your criteria.</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Load More */}
+          {!loading && (pageMeta.totalPages || 1) > 1 && (
+            <Pagination currentPage={currentPage} totalPages={pageMeta.totalPages || 1} onPageChange={handlePageChange} />
+          )}
+        </div>
+      </main>
     </div>
-  );
+  )
 }

@@ -1,0 +1,95 @@
+/* Layout fixes to prevent overlapping and ensure proper spacing */
+
+/* Initialize CSS variables for sidebar widths */
+:root {
+  --sidebar-width: 16rem;
+  --admin-sidebar-width: 16rem;
+}
+
+/* Ensure sidebars don't overlap content */
+.fixed {
+  position: fixed;
+}
+
+/* Ensure main content has proper spacing for fixed sidebars */
+main.ml-64 {
+  margin-left: var(--sidebar-width, 16rem); /* Default to 16rem, use CSS variable if set */
+  transition: margin-left 0.3s ease;
+}
+
+/* Admin pages margin */
+.admin-main.ml-64 {
+  margin-left: var(--admin-sidebar-width, 16rem);
+  transition: margin-left 0.3s ease;
+}
+
+/* Ensure full height for pages with sidebars */
+.flex.min-h-screen {
+  min-height: 100vh;
+}
+
+/* Prevent body scroll issues */
+body {
+  overflow-x: hidden;
+}
+
+/* Ensure proper stacking context */
+.z-40 {
+  z-index: 40;
+}
+
+.z-50 {
+  z-index: 50;
+}
+
+/* Ensure cards and content don't overflow */
+.max-w-7xl {
+  max-width: 80rem;
+}
+
+.max-w-6xl {
+  max-width: 72rem;
+}
+
+.max-w-4xl {
+  max-width: 56rem;
+}
+
+/* Ensure proper spacing in flex layouts */
+.space-y-8 > * + * {
+  margin-top: 2rem;
+}
+
+.space-y-6 > * + * {
+  margin-top: 1.5rem;
+}
+
+.space-y-4 > * + * {
+  margin-top: 1rem;
+}
+
+/* Ensure proper padding for main content */
+main.p-6 {
+  padding: 1.5rem;
+}
+
+main.p-8 {
+  padding: 2rem;
+}
+
+/* Ensure sidebars are properly positioned */
+aside.fixed {
+  top: 0;
+  left: 0;
+  height: 100vh;
+}
+
+/* Prevent content from being hidden behind sidebar */
+@media (max-width: 1024px) {
+  main.ml-64 {
+    margin-left: 0;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+

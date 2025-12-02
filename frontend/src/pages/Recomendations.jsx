@@ -1,424 +1,474 @@
-
-import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import { Student, Career } from "@/entities/all";
-import { InvokeLLM } from "@/integrations/Core";
-import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+import { useEffect, useMemo, useState } from "react"
+import { motion } from "framer-motion"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  Target,
+  BarChart3,
   TrendingUp,
   DollarSign,
-  BookOpen,
+  Clock,
+  MapPin,
   Star,
-  Lightbulb,
-  BarChart,
-  Brain,
-  Heart,
-  FileText,
-  Sparkles
-} from "lucide-react";
+  BookOpen,
+  Target,
+  Briefcase,
+  Code,
+  Stethoscope,
+  Palette,
+  Wrench,
+  Beaker,
+  Users,
+  Sparkles,
+  Loader2,
+} from "lucide-react"
+import { Sidebar } from "@/components/dashboard/sidebar"
+import { recommendationService } from "@/services/recommendationService"
+import { useAuth } from "@/context/AuthContext"
+import { getUserStorageKey } from "@/utils/utils"
 
-const confidenceLevels = {
-  high: { color: "text-green-600", bg: "bg-green-100", label: "Excellent Match" },
-  medium: { color: "text-yellow-600", bg: "bg-yellow-100", label: "Good Match" },
-  low: { color: "text-orange-600", bg: "bg-orange-100", label: "Consider" }
-};
+const categoryIconMap = {
+  technology: Code,
+  data: BarChart3,
+  healthcare: Stethoscope,
+  design: Palette,
+  engineering: Wrench,
+  science: Beaker,
+  business: Briefcase,
+  general: Target,
+  media: BookOpen,
+}
 
-export default function Recommendations() {
-  const navigate = useNavigate();
-  const [studentData, setStudentData] = useState(null);
-  const [careers, setCareers] = useState([]);
-  const [aiRecommendations, setAiRecommendations] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingAI, setIsLoadingAI] = useState(false);
-  const [activeTab, setActiveTab] = useState("ai-based");
+const categoryColorMap = {
+  technology: "bg-blue-500",
+  data: "bg-green-500",
+  healthcare: "bg-red-500",
+  design: "bg-purple-500",
+  engineering: "bg-orange-500",
+  science: "bg-teal-500",
+  business: "bg-indigo-500",
+  media: "bg-pink-500",
+  general: "bg-gray-500",
+}
 
-  useEffect(() => {
-    loadData();
-  }, []);
+const getConfidenceColor = (level) => {
+  switch (level) {
+    case "High":
+      return "text-green-600 bg-green-100"
+    case "Medium":
+      return "text-yellow-600 bg-yellow-100"
+    case "Low":
+      return "text-red-600 bg-red-100"
+    default:
+      return "text-gray-600 bg-gray-100"
+  }
+}
 
-  const loadData = async () => {
-    try {
-      const [students, careersData] = await Promise.all([
-        Student.list(),
-        Career.list()
-      ]);
+const CareerCard = ({ career, index }) => {
+  const Icon = categoryIconMap[career.category] || Target
+  const color = categoryColorMap[career.category] || "bg-gray-500"
 
-      if (students.length > 0) {
-        setStudentData(students[0]);
-      }
-      setCareers(careersData);
-    } catch (error) {
-      console.error("Error loading data:", error);
-    }
-    setIsLoading(false);
-  };
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: index * 0.1 }}
+      whileHover={{ scale: 1.02 }}
+      className="group"
+    >
+      <Card className="h-full border-2 hover:border-primary/20 hover:shadow-lg transition-all duration-300">
+        <CardHeader className="space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-3">
+              <div className={`w-12 h-12 rounded-lg ${color} flex items-center justify-center`}>
+                <Icon className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-xl group-hover:text-primary transition-colors">{career.title}</CardTitle>
+                <div className="flex items-center space-x-2 mt-1">
+                  <Badge className={`${getConfidenceColor(career.confidenceLevel)} border-0`}>
+                    {career.confidenceLevel} Match
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">{career.confidence}%</span>
+                </div>
+              </div>
+            </div>
+            <Star className="h-5 w-5 text-muted-foreground group-hover:text-accent transition-colors cursor-pointer" />
+          </div>
 
-  const generateAIRecommendations = useCallback(async () => {
-    if (!studentData?.extracted_grades) return;
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Match Confidence</span>
+              <span className="font-medium">{career.confidence}%</span>
+            </div>
+            <Progress value={career.confidence} className="h-2" />
+          </div>
+        </CardHeader>
 
-    setIsLoadingAI(true);
-    try {
-      const prompt = `
-        Analyze this student's academic profile and recommend the top 6 most suitable career paths:
+        <CardContent className="space-y-6">
+          <CardDescription className="text-base leading-relaxed">{career.description}</CardDescription>
 
-        Academic Data:
-        - Grade 10: ${studentData.extracted_grades.grade_10_percentage}%
-        - Grade 12: ${studentData.extracted_grades.grade_12_percentage}%
-        - Stream: ${studentData.extracted_grades.stream}
-        - Subjects: ${studentData.extracted_grades.subjects?.join(", ")}
-        - Subject Grades: ${JSON.stringify(studentData.extracted_grades.subject_grades)}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <DollarSign className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium">Salary Range</span>
+              </div>
+              <span className="text-sm font-semibold">{career.salary}</span>
+            </div>
 
-        For each career recommendation, provide:
-        1. Career title
-        2. Match percentage (realistic based on grades and subjects)
-        3. Confidence level (high/medium/low)
-        4. Detailed reasoning for why this career suits the student
-        5. Required skills for this career
-        6. Salary range in Indian context
-        7. Growth prospects
-        8. Education pathway needed
-
-        Focus on careers that align with their academic strengths, stream, and performance level.
-        Be realistic about match percentages based on actual academic performance.
-      `;
-
-      const responseSchema = {
-        type: "object",
-        properties: {
-          recommendations: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                title: { type: "string" },
-                match_percentage: { type: "number" },
-                confidence: { type: "string", enum: ["high", "medium", "low"] },
-                reasoning: { type: "string" },
-                required_skills: { type: "array", items: { type: "string" } },
-                salary_range: { type: "string" },
-                growth_prospects: { type: "string" },
-                education_required: { type: "string" },
-                category: { type: "string" }
-              }
-            }
-          }
-        }
-      };
-
-      const result = await InvokeLLM({
-        prompt,
-        response_json_schema: responseSchema
-      });
-
-      if (result?.recommendations) {
-        setAiRecommendations(result.recommendations);
-      }
-    } catch (error) {
-      console.error("Error generating AI recommendations:", error);
-    }
-    setIsLoadingAI(false);
-  }, [studentData]); // studentData is a dependency because it's used inside the callback
-
-  useEffect(() => {
-    if (studentData && studentData.extracted_grades && activeTab === "ai-based" && aiRecommendations.length === 0) {
-      generateAIRecommendations();
-    }
-  }, [studentData, activeTab, aiRecommendations.length, generateAIRecommendations]); // Added aiRecommendations.length and generateAIRecommendations as dependencies
-
-  const getInterestBasedRecommendations = () => {
-    if (!studentData || !studentData.interests) return [];
-
-    return careers.map(career => {
-      const isInterestMatch = studentData.interests.includes(career.category);
-      let confidence = "low";
-      let percentage = Math.random() * 25 + 40; // Base 40-65%
-
-      if (isInterestMatch) {
-        percentage += 35;
-        confidence = "high";
-      } else {
-        // Check if there's partial interest alignment
-        const relatedInterests = {
-          technology: ["engineering", "science"],
-          healthcare: ["science"],
-          engineering: ["technology", "science"],
-          business: ["marketing"],
-          creative: ["marketing"],
-        };
-
-        const careerRelated = relatedInterests[career.category] || [];
-        const hasRelatedInterest = studentData.interests.some(interest =>
-          careerRelated.includes(interest)
-        );
-
-        if (hasRelatedInterest) {
-          percentage += 15;
-          confidence = "medium";
-        }
-      }
-
-      return {
-        ...career,
-        confidence,
-        match_percentage: Math.min(98, Math.round(percentage))
-      };
-    }).sort((a, b) => b.match_percentage - a.match_percentage);
-  };
-
-  const getCurrentRecommendations = () => {
-    return activeTab === "ai-based" ? aiRecommendations : getInterestBasedRecommendations();
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-4 lg:p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array(6).fill(0).map((_, i) => (
-                <div key={i} className="bg-gray-200 h-64 rounded-xl"></div>
-              ))}
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium">Job Growth</span>
+              </div>
+              <span className="text-sm font-semibold text-green-600">{career.growth}</span>
             </div>
           </div>
-        </div>
-      </div>
-    );
+
+          <div className="space-y-3">
+            <div>
+              <h4 className="text-sm font-medium mb-2 flex items-center">
+                <Target className="h-4 w-4 mr-1" />
+                Key Skills
+              </h4>
+              <div className="flex flex-wrap gap-1">
+                {career.skills.map((skill) => (
+                  <Badge key={skill} variant="secondary" className="text-xs">
+                    {skill}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-medium mb-2 flex items-center">
+                <Briefcase className="h-4 w-4 mr-1" />
+                Opportunities
+              </h4>
+              <div className="flex flex-wrap gap-1">
+                {career.opportunities.map((opportunity) => (
+                  <Badge key={opportunity} variant="outline" className="text-xs">
+                    {opportunity}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+            <p className="text-sm text-primary font-medium mb-1">Why this matches you:</p>
+            <p className="text-sm text-muted-foreground">{career.matchReason}</p>
+          </div>
+
+          <div className="flex space-x-2">
+            <Button className="flex-1">Learn More</Button>
+            <Button variant="outline" className="flex-1 bg-transparent">
+              Save Career
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}
+
+export default function RecommendationsPage() {
+  const { user } = useAuth()
+  const [activeTab, setActiveTab] = useState("grades")
+  const [gradeRecs, setGradeRecs] = useState([])
+  const [interestRecs, setInterestRecs] = useState([])
+  const [gradeError, setGradeError] = useState(null)
+  const [interestError, setInterestError] = useState(null)
+  const [loadingGrades, setLoadingGrades] = useState(false)
+  const [loadingInterests, setLoadingInterests] = useState(false)
+  const [analysisSummary, setAnalysisSummary] = useState(null)
+  const [interestSummary, setInterestSummary] = useState(null)
+
+  useEffect(() => {
+    if (!user?.id) {
+      // Don't load data if user is not logged in
+      return
+    }
+
+    const analysisKey = getUserStorageKey("aiGradesAnalysis", user.id)
+    const storedAnalysis = localStorage.getItem(analysisKey)
+    if (storedAnalysis) {
+      try {
+        const parsed = JSON.parse(storedAnalysis)
+        setAnalysisSummary(parsed)
+        fetchGradeRecommendations(parsed)
+      } catch (error) {
+        console.error("Failed to parse stored analysis:", error)
+        localStorage.removeItem(analysisKey)
+      }
+    }
+
+    const interestsKey = getUserStorageKey("userInterests", user.id)
+    const storedInterests = localStorage.getItem(interestsKey)
+    if (storedInterests) {
+      try {
+        const parsed = JSON.parse(storedInterests)
+        setInterestSummary(parsed)
+        fetchInterestRecommendations(parsed)
+      } catch (error) {
+        console.error("Failed to parse stored interests:", error)
+        localStorage.removeItem(interestsKey)
+      }
+    }
+  }, [user?.id])
+
+  const stats = useMemo(() => {
+    const allRecs = [...gradeRecs, ...interestRecs]
+    const total = allRecs.length
+    const high = allRecs.filter((rec) => rec.confidenceLevel === "High").length
+    const medium = allRecs.filter((rec) => rec.confidenceLevel === "Medium").length
+    return { total, high, medium }
+  }, [gradeRecs, interestRecs])
+
+  const fetchGradeRecommendations = async (analysis) => {
+    setLoadingGrades(true)
+    setGradeError(null)
+    try {
+      const subjects =
+        Array.isArray(analysis.subjects)
+          ? analysis.subjects
+              .map((subject) => {
+                if (typeof subject === "string") return subject
+                if (subject && typeof subject === "object") return subject.name
+                return null
+              })
+              .filter(Boolean)
+          : []
+
+      const payload = {
+        grade10: analysis.grade10 ?? null,
+        grade12: analysis.grade12 ?? null,
+        stream: analysis.stream || "general",
+        subjects,
+      }
+      const response = await recommendationService.getByGrades(payload)
+      setGradeRecs(response.data?.recommendations || [])
+    } catch (error) {
+      console.error("Failed to fetch grade recommendations:", error)
+      setGradeError("Unable to load grade-based recommendations right now.")
+    } finally {
+      setLoadingGrades(false)
+    }
   }
 
-  if (!studentData || !studentData.assessment_completed) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-4 lg:p-8 flex items-center justify-center">
-        <Card className="text-center p-8">
-          <CardContent>
-            <Lightbulb className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Assessment Required</h2>
-            <p className="text-gray-600 mb-4">Complete your assessment first to see personalized recommendations.</p>
-            <Button onClick={() => navigate(createPageUrl("Assessment"))}>
-              Start Assessment
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  const fetchInterestRecommendations = async (interests) => {
+    setLoadingInterests(true)
+    setInterestError(null)
+    try {
+      const response = await recommendationService.getByInterests(interests)
+      setInterestRecs(response.data?.recommendations || [])
+    } catch (error) {
+      console.error("Failed to fetch interest recommendations:", error)
+      setInterestError("Unable to load interest-based recommendations right now.")
+    } finally {
+      setLoadingInterests(false)
+    }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Career Recommendations</h1>
-          <p className="text-gray-600">
-            Personalized career guidance based on AI analysis and your interests
-          </p>
-        </motion.div>
+    <div className="flex min-h-screen bg-background">
+      <Sidebar />
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="ai-based" className="flex items-center gap-2">
-              <Brain className="w-4 h-4" />
-              AI Analysis
-            </TabsTrigger>
-            <TabsTrigger value="interest-based" className="flex items-center gap-2">
-              <Heart className="w-4 h-4" />
-              Your Interests
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="ai-based" className="mt-6">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mb-6"
-            >
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6">
-                <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5" />
-                  AI-Powered Academic Analysis
-                </h3>
-                <div className="grid md:grid-cols-2 gap-4 text-sm">
-                  <div className="bg-white/60 rounded-lg p-3">
-                    <p className="text-blue-700"><strong>Academic Performance:</strong></p>
-                    <p className="text-gray-700">Grade 10: {studentData.extracted_grades?.grade_10_percentage}% | Grade 12: {studentData.extracted_grades?.grade_12_percentage}%</p>
-                  </div>
-                  <div className="bg-white/60 rounded-lg p-3">
-                    <p className="text-blue-700"><strong>Stream & Subjects:</strong></p>
-                    <p className="text-gray-700 capitalize">{studentData.extracted_grades?.stream} - {studentData.extracted_grades?.subjects?.slice(0, 3).join(", ")}</p>
-                  </div>
-                </div>
-                <p className="text-blue-700 text-sm mt-3">
-                  Our AI analyzed your marksheet to recommend careers that match your academic strengths and performance level.
-                </p>
-              </div>
-            </motion.div>
-          </TabsContent>
-
-          <TabsContent value="interest-based" className="mt-6">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mb-6"
-            >
-              <div className="bg-gradient-to-r from-green-50 to-pink-50 border border-green-200 rounded-xl p-6">
-                <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
-                  <Target className="w-5 h-5" />
-                  Interest-Based Recommendations
-                </h3>
-                <div className="bg-white/60 rounded-lg p-3">
-                  <p className="text-green-700 mb-2"><strong>Your Selected Interests:</strong></p>
-                  <div className="flex flex-wrap gap-2">
-                    {studentData.interests?.map((interest) => (
-                      <Badge key={interest} className="bg-green-100 text-green-800">
-                        {interest.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-green-700 text-sm mt-3">
-                  These recommendations are based on career fields that align with your personal interests and passions.
-                </p>
-              </div>
-            </motion.div>
-          </TabsContent>
-        </Tabs>
-
-        {/* Loading for AI recommendations */}
-        {activeTab === "ai-based" && isLoadingAI && (
-          <div className="text-center py-12">
-            <Brain className="w-16 h-16 text-blue-500 animate-pulse mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">AI is analyzing your academic profile...</h3>
-            <p className="text-gray-600">This may take a few moments</p>
-          </div>
-        )}
-
-        {/* Recommendations Grid */}
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {getCurrentRecommendations().map((career, index) => {
-            const confidenceLevel = confidenceLevels[career.confidence];
-            return (
-              <motion.div
-                key={`${career.title}-${index}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -4 }}
-              >
-                <Card className="h-full shadow-lg hover:shadow-xl transition-all duration-300 border-0">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                          activeTab === "ai-based"
-                            ? "bg-gradient-to-r from-blue-500 to-purple-500"
-                            : "bg-gradient-to-r from-green-500 to-pink-500"
-                        }`}>
-                          {activeTab === "ai-based" ? (
-                            <Brain className="w-5 h-5 text-white" />
-                          ) : (
-                            <Heart className="w-5 h-5 text-white" />
-                          )}
-                        </div>
-                        <div>
-                          <CardTitle className="text-lg">{career.title}</CardTitle>
-                          {career.category && (
-                            <p className="text-sm text-gray-500 capitalize">{career.category.replace("_", " ")}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-600">Match Score</span>
-                        <Badge className={`${confidenceLevel.bg} ${confidenceLevel.color} border-0`}>
-                          {confidenceLevel.label}
-                        </Badge>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span>Compatibility</span>
-                          <span className="font-semibold">{career.match_percentage}%</span>
-                        </div>
-                        <Progress value={career.match_percentage} className="h-2" />
-                      </div>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="space-y-4">
-                    {/* AI Analysis shows reasoning, Interest-based shows description */}
-                    <p className="text-gray-600 text-sm leading-relaxed">
-                      {activeTab === "ai-based" ? career.reasoning : career.description}
-                    </p>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-green-500" />
-                        <span className="text-sm text-gray-600">Growth:</span>
-                        <Badge variant="outline" className="text-xs">
-                          {career.growth_prospects || "High"}
-                        </Badge>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm text-gray-600">Salary:</span>
-                        <span className="text-sm font-medium">{career.salary_range}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-purple-500" />
-                        <span className="text-sm text-gray-600">Education:</span>
-                        <span className="text-sm font-medium">{career.education_required}</span>
-                      </div>
-                    </div>
-
-                    {career.required_skills && career.required_skills.length > 0 && (
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 mb-2">Key Skills:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {career.required_skills.slice(0, 3).map((skill, skillIndex) => (
-                            <Badge key={skillIndex} variant="secondary" className="text-xs">
-                              {skill}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
-
-        {getCurrentRecommendations().length === 0 && !isLoadingAI && (
+      <main className="flex-1 p-4 sm:p-6 lg:ml-64">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Header */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-12"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="space-y-2"
           >
-            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No recommendations available</h3>
-            <p className="text-gray-600">
-              {activeTab === "ai-based"
-                ? "Please ensure you've uploaded and analyzed your marksheet properly."
-                : "Select your interests in the assessment to see personalized recommendations."
-              }
+            <div className="flex items-center space-x-2">
+              <BarChart3 className="h-8 w-8 text-accent" />
+              <h1 className="text-4xl font-bold">Career Recommendations</h1>
+            </div>
+            <p className="text-xl text-muted-foreground">
+              Discover career paths tailored to your academic performance and personal interests
             </p>
           </motion.div>
-        )}
-      </div>
+
+          {/* Stats Overview */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="grid grid-cols-1 md:grid-cols-4 gap-4"
+          >
+            {[
+              { label: "Total Matches", value: stats.total, icon: Target, color: "text-primary" },
+              { label: "High Confidence", value: stats.high, icon: TrendingUp, color: "text-green-600" },
+              { label: "Medium Confidence", value: stats.medium, icon: Clock, color: "text-yellow-600" },
+              { label: "Saved Careers", value: "0", icon: Star, color: "text-accent" },
+            ].map((stat) => (
+              <Card key={stat.label} className="border-2">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">{stat.label}</p>
+                      <p className="text-2xl font-bold">{stat.value}</p>
+                    </div>
+                    <stat.icon className={`h-8 w-8 ${stat.color}`} />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </motion.div>
+
+          {/* Recommendations Tabs */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+              <TabsList className="grid w-full grid-cols-2 h-12">
+                <TabsTrigger value="grades" className="flex items-center space-x-2 text-base">
+                  <BookOpen className="h-4 w-4" />
+                  <span>Based on Grades</span>
+                </TabsTrigger>
+                <TabsTrigger value="interests" className="flex items-center space-x-2 text-base">
+                  <Target className="h-4 w-4" />
+                  <span>Based on Interests</span>
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="grades" className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold">Grade-Based Recommendations</h2>
+                    <Badge variant="secondary" className="bg-primary/10 text-primary">
+                      {gradeRecs.length} matches found
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground">
+                    These careers align with your academic strengths and performance in core subjects.
+                  </p>
+                  {analysisSummary ? (
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="rounded-lg border p-3">
+                        <p className="text-muted-foreground">Grade 12</p>
+                        <p className="text-lg font-semibold">{analysisSummary.grade12 ?? "—"}%</p>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <p className="text-muted-foreground">Stream</p>
+                        <p className="text-lg font-semibold capitalize">{analysisSummary.stream}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <AlertMessage message="Upload your marksheet on the Grades page to unlock AI-powered recommendations." />
+                  )}
+                </div>
+
+                {loadingGrades ? (
+                  <LoaderState />
+                ) : gradeError ? (
+                  <AlertMessage message={gradeError} />
+                ) : gradeRecs.length > 0 ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {gradeRecs.map((career, index) => (
+                      <CareerCard key={career.id} career={career} index={index} />
+                    ))}
+                  </div>
+                ) : (
+                  <AlertMessage message="No grade-based recommendations yet. Upload a marksheet to get started." />
+                )}
+              </TabsContent>
+
+              <TabsContent value="interests" className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold">Interest-Based Recommendations</h2>
+                    <Badge variant="secondary" className="bg-secondary/10 text-secondary">
+                      {interestRecs.length} matches found
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground">
+                    These careers match your selected interests, activities, and preferred work environments.
+                  </p>
+                  {interestSummary ? (
+                    <div className="flex flex-wrap gap-2">
+                      {(interestSummary.careerFields || []).map((field) => (
+                        <Badge key={field} variant="outline">
+                          {field}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <AlertMessage message="Complete the Interests flow to personalize these recommendations." />
+                  )}
+                </div>
+
+                {loadingInterests ? (
+                  <LoaderState />
+                ) : interestError ? (
+                  <AlertMessage message={interestError} />
+                ) : interestRecs.length > 0 ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {interestRecs.map((career, index) => (
+                      <CareerCard key={career.id} career={career} index={index} />
+                    ))}
+                  </div>
+                ) : (
+                  <AlertMessage message="No interest-based recommendations yet. Share your interests to continue." />
+                )}
+              </TabsContent>
+            </Tabs>
+          </motion.div>
+
+          {/* Action Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+          >
+            <Card className="border-2 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5">
+              <CardContent className="p-8 text-center space-y-4">
+                <h3 className="text-2xl font-bold">Ready to Explore Further?</h3>
+                <p className="text-muted-foreground max-w-2xl mx-auto">
+                  Discover colleges that offer programs for your recommended careers and find skill training
+                  opportunities to get started.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button size="lg" className="px-8" onClick={() => window.location.assign("/colleges")}>
+                    <MapPin className="mr-2 h-5 w-5" />
+                    Explore Colleges
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="px-8 bg-transparent"
+                    onClick={() => window.location.assign("/trainings")}
+                  >
+                    <BookOpen className="mr-2 h-5 w-5" />
+                    Find Training Programs
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </main>
     </div>
-  );
+  )
 }
+
+const AlertMessage = ({ message }) => (
+  <Card className="border border-dashed bg-muted/30">
+    <CardContent className="py-6 text-center text-sm text-muted-foreground">{message}</CardContent>
+  </Card>
+)
+
+const LoaderState = () => (
+  <div className="flex items-center justify-center py-12">
+    <Sparkles className="h-6 w-6 animate-spin text-primary" />
+    <span className="ml-2 text-sm text-muted-foreground">Generating recommendations…</span>
+  </div>
+)

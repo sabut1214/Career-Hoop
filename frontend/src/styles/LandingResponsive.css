@@ -1,0 +1,27 @@
+/* Responsive styles for Landing page */
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 2.5rem !important;
+  }
+
+  .hero-buttons {
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  .benefits-content {
+    grid-template-columns: 1fr !important;
+    gap: 2rem !important;
+  }
+
+  .footer-content {
+    flex-direction: column !important;
+    gap: 1rem !important;
+    text-align: center !important;
+  }
+
+  .footer-links {
+    justify-content: center !important;
+  }
+}
+
