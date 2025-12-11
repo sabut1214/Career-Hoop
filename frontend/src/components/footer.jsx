@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom"
 import { GraduationCap, Github, Twitter, Linkedin, Instagram } from "lucide-react"
+import logoImg from "@/assets/images/Logo.png"
 
 const footerLinks = {
   product: [
@@ -35,11 +36,11 @@ export function Footer() {
       <div className="container mx-auto max-w-6xl">
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2">
-            <Link to="/landing" className="mb-4 flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-                <GraduationCap className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold text-foreground">CareerHoop</span>
+            <Link to="/landing" className="mb-4 flex items-center">
+              <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain" />
+              <span className="text-xl font-bold text-foreground">
+                areer<span className="text-primary">Hoop</span>
+              </span>
             </Link>
             <p className="mb-6 max-w-sm text-muted-foreground">
               Empowering students to discover their perfect career path with personalized guidance and expert mentorship.

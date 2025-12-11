@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { submitQuiz } from "@/lib/api"
+import { toast } from "react-toastify"
 import { AlertCircle, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react"
 
 const QUIZ_STATE_KEY = "currentQuiz"
@@ -95,9 +96,12 @@ export default function QuizPage() {
         QUIZ_RESULT_KEY,
         JSON.stringify({ ...response, trainingId, questionCount: questions.length }),
       )
+      toast.success("Quiz submitted successfully!")
       navigate(`/quiz/result/${quizSessionId}`, { replace: true, state: { ...response, trainingId } })
     } catch (err) {
-      setError(err.message || "Failed to submit quiz. Please try again.")
+      const errorMsg = err.message || "Failed to submit quiz. Please try again."
+      setError(errorMsg)
+      toast.error(errorMsg)
       console.error("Quiz submit failed:", err)
     } finally {
       setSubmitting(false)

@@ -5,6 +5,8 @@ import { ModalProvider } from "./context/ModalContext"
 import ModalContainer from "./components/common/ModalContainer"
 import Navbar from "./components/navigation/Navbar"
 import HealthCheck from "./components/views/HealthCheck"
+import { ToastContainer } from "react-toastify"
+import "react-toastify/dist/ReactToastify.css"
 
 import { Landing } from "./components/landing"
 import Assessment from "./pages/Assessment"
@@ -109,6 +111,18 @@ function App() {
                 } />
               </Routes>
               <ModalContainer />
+              <ToastContainer
+                position="top-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+              />
             </div>
           </Router>
         </ModalProvider>

@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { GraduationCap, AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react"
 import { resetPassword as apiResetPassword } from "@/lib/api"
+import { toast } from "react-toastify"
+import logoImg from "@/assets/images/Logo.png"
 
 const MIN_PASSWORD_LENGTH = 8
 
@@ -58,7 +60,9 @@ export default function ResetPassword() {
 
     try {
       const response = await apiResetPassword(email, otp, newPassword)
-      setSuccess(response.message || "Password has been reset successfully. You can now login with your new password.")
+      const successMsg = response.message || "Password has been reset successfully. You can now login with your new password."
+      setSuccess(successMsg)
+      toast.success(successMsg)
       
       // Redirect to login after 2 seconds
       setTimeout(() => {
@@ -68,6 +72,7 @@ export default function ResetPassword() {
       console.error("[v0] Reset password error caught:", err)
       const errorMessage = err.message || "Failed to reset password. Please try again."
       setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -83,9 +88,11 @@ export default function ResetPassword() {
       >
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <GraduationCap className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-primary">CareerHoop</span>
+          <div className="flex items-center justify-center mb-4">
+            <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
+            <span className="text-2xl font-bold text-foreground">
+              areer<span className="text-primary">Hoop</span>
+            </span>
           </div>
           <h1 className="text-3xl font-bold mb-2">Reset Password</h1>
           <p className="text-muted-foreground">Enter your new password</p>

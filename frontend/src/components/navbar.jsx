@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Menu, X } from "lucide-react"
 import { useTheme } from "@/context/ThemeContext"
+import logoImg from "@/assets/images/Logo.png"
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -27,12 +28,10 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
       <div className="container mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        <Link to="/landing" className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-white">
-            CH
-          </div>
+        <Link to="/landing" className="flex items-center">
+          <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain" />
           <span className="text-xl font-bold text-foreground">
-            Career<span className="text-primary">Hoop</span>
+            areer<span className="text-primary">Hoop</span>
           </span>
         </Link>
 

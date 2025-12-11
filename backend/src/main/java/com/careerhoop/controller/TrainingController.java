@@ -12,6 +12,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/trainings")
+@CrossOrigin
 public class TrainingController {
 
     @Autowired
@@ -19,6 +20,11 @@ public class TrainingController {
 
     @GetMapping
     public List<Training> getAllTrainings() {
+        return trainingRepository.findAll();
+    }
+
+    @GetMapping("/available")
+    public List<Training> getAvailableTrainings() {
         return trainingRepository.findAll();
     }
 
@@ -38,12 +44,12 @@ public class TrainingController {
     public ResponseEntity<Training> updateTraining(@PathVariable UUID id, @RequestBody Training trainingDetails) {
         return trainingRepository.findById(id)
                 .map(training -> {
-                    training.setName(trainingDetails.getName());
+                    training.setTitle(trainingDetails.getTitle());
+                    training.setDescription(trainingDetails.getDescription());
                     training.setProvider(trainingDetails.getProvider());
                     training.setDuration(trainingDetails.getDuration());
-                    training.setSkillsCovered(trainingDetails.getSkillsCovered());
-                    training.setCost(trainingDetails.getCost());
-                    training.setLink(trainingDetails.getLink());
+                    training.setLevel(trainingDetails.getLevel());
+                    training.setSkills(trainingDetails.getSkills());
                     Training updatedTraining = trainingRepository.save(training);
                     return ResponseEntity.ok(updatedTraining);
                 })

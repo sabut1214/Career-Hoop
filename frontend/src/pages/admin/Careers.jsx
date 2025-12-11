@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { getCareers, deleteCareer } from "@/lib/api"
 import { Trash2, Plus } from "lucide-react"
 import { ProtectedRoute } from "@/components/protected-route"
+import { toast } from "react-toastify"
 
 export default function AdminCareersPage() {
   const [careers, setCareers] = useState([])
@@ -32,8 +33,10 @@ export default function AdminCareersPage() {
       try {
         await deleteCareer(id)
         setCareers(careers.filter((c) => c.id !== id))
+        toast.success("Career deleted successfully.")
       } catch (error) {
         console.error("Failed to delete career:", error)
+        toast.error("Failed to delete career. Please try again.")
       }
     }
   }

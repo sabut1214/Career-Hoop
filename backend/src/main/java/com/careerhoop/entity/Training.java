@@ -11,23 +11,25 @@ import java.util.UUID;
 @Entity
 @Table(name = "trainings")
 public class Training {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(nullable = false)
-    private String name;
+    private String title;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
     private String provider;
 
     private String duration;
 
-    @Column(name = "skills_covered")
-    private String[] skillsCovered;
+    private String level;
 
-    private Double cost;
-
-    private String link;
+    @Column(name = "skills", columnDefinition = "text[]")
+    private String[] skills;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

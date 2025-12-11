@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { getColleges, deleteCollege } from "@/lib/api"
 import { Trash2, Plus } from "lucide-react"
 import { ProtectedRoute } from "@/components/protected-route"
+import { toast } from "react-toastify"
 
 export default function AdminCollegesPage() {
   const [colleges, setColleges] = useState([])
@@ -32,8 +33,10 @@ export default function AdminCollegesPage() {
       try {
         await deleteCollege(id)
         setColleges(colleges.filter((c) => c.id !== id))
+        toast.success("College deleted successfully.")
       } catch (error) {
         console.error("Failed to delete college:", error)
+        toast.error("Failed to delete college. Please try again.")
       }
     }
   }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,18 +15,180 @@ import {
   Clock,
   Briefcase,
   Building2,
+  Star,
 } from "lucide-react"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { ProtectedRoute } from "@/components/protected-route"
 import { Link } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { getUserStorageKey } from "@/utils/utils"
+import { getSavedCareers, getSavedColleges, getUserProfile } from "@/lib/api"
 
 export default function Dashboard() {
   const { user } = useAuth()
   const userName = user?.name || user?.fullName || "Alex"
   const [showProfilePrompt, setShowProfilePrompt] = useState(false)
-  const profileCompletion = user?.profileCompletionPercent ?? 0
+  const [profileCompletion, setProfileCompletion] = useState(0)
+  const [savedCareersCount, setSavedCareersCount] = useState(0)
+  const [savedCollegesCount, setSavedCollegesCount] = useState(0)
+  const [hasGrades, setHasGrades] = useState(false)
+  const [hasInterests, setHasInterests] = useState(false)
+  const [recentActivity, setRecentActivity] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch real-time data
+  useEffect(() => {
+    if (!user?.id) {
+      setLoading(false)
+      return
+    }
+
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+        
+        // Check for grades
+        const gradesKey = getUserStorageKey("aiGradesAnalysis", user.id)
+        const storedGrades = localStorage.getItem(gradesKey)
+        setHasGrades(!!storedGrades)
+
+        // Check for interests
+        const interestsKey = getUserStorageKey("userInterests", user.id)
+        const storedInterests = localStorage.getItem(interestsKey)
+        setHasInterests(!!storedInterests)
+
+        // Fetch user profile for completion percentage
+        try {
+          const profileData = await getUserProfile(user.id)
+          setProfileCompletion(profileData.profileCompletionPercent ?? 0)
+        } catch (error) {
+          console.error("Failed to fetch profile:", error)
+        }
+
+        // Fetch saved careers and colleges
+        try {
+          const [careersData, collegesData] = await Promise.all([
+            getSavedCareers(user.id).catch(() => []),
+            getSavedColleges(user.id).catch(() => [])
+          ])
+          setSavedCareersCount(careersData.length)
+          setSavedCollegesCount(collegesData.length)
+
+          // Build recent activity from saved items
+          const activities = []
+          
+          // Add most recent saved career
+          if (careersData.length > 0) {
+            const latestCareer = careersData.sort((a, b) => 
+              new Date(b.savedAt) - new Date(a.savedAt)
+            )[0]
+            activities.push({
+              action: `Saved "${latestCareer.careerName || latestCareer.careerTitle}" career`,
+              time: formatTimeAgo(new Date(latestCareer.savedAt)),
+              icon: Star,
+            })
+          }
+
+          // Add most recent saved college
+          if (collegesData.length > 0) {
+            const latestCollege = collegesData.sort((a, b) => 
+              new Date(b.savedAt) - new Date(a.savedAt)
+            )[0]
+            activities.push({
+              action: `Saved "${latestCollege.collegeName}" college`,
+              time: formatTimeAgo(new Date(latestCollege.savedAt)),
+              icon: Building2,
+            })
+          }
+
+          // Add grades entry if exists
+          if (storedGrades) {
+            try {
+              const gradesData = JSON.parse(storedGrades)
+              activities.push({
+                action: "Completed Grade Entry",
+                time: "Recently",
+                icon: BookOpen,
+              })
+            } catch (e) {
+              // Ignore parse errors
+            }
+          }
+
+          // Add interests selection if exists
+          if (storedInterests) {
+            try {
+              const interestsData = JSON.parse(storedInterests)
+              if (interestsData.careerFields && interestsData.careerFields.length > 0) {
+                activities.push({
+                  action: `Selected ${interestsData.careerFields.length} Interest Area${interestsData.careerFields.length > 1 ? 's' : ''}`,
+                  time: "Recently",
+                  icon: Target,
+                })
+              }
+            } catch (e) {
+              // Ignore parse errors
+            }
+          }
+
+          // Add account creation (if no other activities)
+          if (activities.length === 0) {
+            activities.push({
+              action: "Joined CareerHoop",
+              time: "Recently",
+              icon: User,
+            })
+          }
+
+          // Sort by time (most recent first) and limit to 3
+          setRecentActivity(activities.slice(0, 3))
+        } catch (error) {
+          console.error("Failed to fetch saved items:", error)
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [user?.id])
+
+  // Format time ago helper
+  const formatTimeAgo = (date) => {
+    if (!date || isNaN(date.getTime())) return "Recently"
+    const now = new Date()
+    const diffMs = now - date
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return "Just now"
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+    return date.toLocaleDateString()
+  }
+
+  // Calculate progress steps based on real data
+  const progressSteps = useMemo(() => {
+    const steps = [
+      { id: 1, title: "Enter Grades", completed: hasGrades, current: !hasGrades && !hasInterests },
+      { id: 2, title: "Select Interests", completed: hasInterests, current: hasGrades && !hasInterests },
+      { id: 3, title: "Get Recommendations", completed: savedCareersCount > 0, current: hasGrades && hasInterests && savedCareersCount === 0 },
+      { id: 4, title: "Explore Colleges", completed: savedCollegesCount > 0, current: savedCareersCount > 0 && savedCollegesCount === 0 },
+      { id: 5, title: "Build Skills", completed: false, current: savedCollegesCount > 0 },
+    ]
+    return steps
+  }, [hasGrades, hasInterests, savedCareersCount, savedCollegesCount])
+
+  // Calculate overall progress percentage
+  const overallProgress = useMemo(() => {
+    const completedSteps = progressSteps.filter(step => step.completed).length
+    return Math.round((completedSteps / progressSteps.length) * 100)
+  }, [progressSteps])
 
   useEffect(() => {
     if (!user || user.role !== "student") {
@@ -39,25 +201,18 @@ export default function Dashboard() {
       setShowProfilePrompt(false)
     }
   }, [user?.id, user?.role, profileCompletion])
-  
-  const progressSteps = [
-    { id: 1, title: "Enter Grades", completed: true, current: false },
-    { id: 2, title: "Select Interests", completed: true, current: false },
-    { id: 3, title: "Get Recommendations", completed: false, current: true },
-    { id: 4, title: "Explore Colleges", completed: false, current: false },
-    { id: 5, title: "Build Skills", completed: false, current: false },
-  ]
 
-  const actionCards = [
+  // Action cards with real-time completion status
+  const actionCards = useMemo(() => [
     {
       title: "View Recommendations",
-      description: "Discover career paths tailored to your profile",
+      description: `Discover career paths tailored to your profile${savedCareersCount > 0 ? ` (${savedCareersCount} saved)` : ''}`,
       icon: BarChart3,
       color: "bg-accent",
       textColor: "text-accent-foreground",
       borderColor: "border-accent/20",
       href: "/recommendations",
-      completed: false,
+      completed: savedCareersCount > 0,
       size: "lg", // Large card
     },
     {
@@ -68,7 +223,7 @@ export default function Dashboard() {
       textColor: "text-primary-foreground",
       borderColor: "border-primary/20",
       href: "/grades",
-      completed: true,
+      completed: hasGrades,
       size: "md",
     },
     {
@@ -79,18 +234,18 @@ export default function Dashboard() {
       textColor: "text-secondary-foreground",
       borderColor: "border-secondary/20",
       href: "/interests",
-      completed: true,
+      completed: hasInterests,
       size: "md",
     },
     {
       title: "Explore Colleges",
-      description: "Find universities that match you",
+      description: `Find universities that match you${savedCollegesCount > 0 ? ` (${savedCollegesCount} saved)` : ''}`,
       icon: Building2,
       color: "bg-blue-500",
       textColor: "text-white",
       borderColor: "border-blue-500/20",
       href: "/colleges",
-      completed: false,
+      completed: savedCollegesCount > 0,
       size: "md",
     },
     {
@@ -115,7 +270,7 @@ export default function Dashboard() {
       completed: false,
       size: "md",
     },
-  ]
+  ], [hasGrades, hasInterests, savedCareersCount, savedCollegesCount])
 
   return (
     <ProtectedRoute requiredRole="student">
@@ -174,9 +329,9 @@ export default function Dashboard() {
                 <CardContent className="space-y-6">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Overall Progress</span>
-                    <span className="text-sm text-muted-foreground">40% Complete</span>
+                    <span className="text-sm text-muted-foreground">{loading ? "Loading..." : `${overallProgress}% Complete`}</span>
                   </div>
-                  <Progress value={40} className="h-2" />
+                  <Progress value={loading ? 0 : overallProgress} className="h-2" />
 
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     {progressSteps.map((step, index) => (
@@ -278,11 +433,12 @@ export default function Dashboard() {
                   <CardDescription>Your latest actions and achievements</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {[
-                    { action: "Completed Grade Entry", time: "2 hours ago", icon: BookOpen },
-                    { action: "Selected 5 Interest Areas", time: "1 day ago", icon: Target },
-                    { action: "Joined CareerHoop", time: "3 days ago", icon: User },
-                  ].map((activity, index) => (
+                  {loading ? (
+                    <div className="text-center py-4 text-muted-foreground">Loading activity...</div>
+                  ) : recentActivity.length === 0 ? (
+                    <div className="text-center py-4 text-muted-foreground">No recent activity. Start exploring to see your progress here!</div>
+                  ) : (
+                    recentActivity.map((activity, index) => (
                     <motion.div
                       key={activity.action}
                       initial={{ opacity: 0, x: -20 }}
@@ -296,7 +452,8 @@ export default function Dashboard() {
                         <p className="text-sm text-muted-foreground">{activity.time}</p>
                       </div>
                     </motion.div>
-                  ))}
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </motion.div>

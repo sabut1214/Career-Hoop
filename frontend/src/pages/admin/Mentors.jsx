@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { getMentors, deleteMentor } from "@/lib/api"
 import { Trash2, Plus } from "lucide-react"
 import { ProtectedRoute } from "@/components/protected-route"
+import { toast } from "react-toastify"
 
 export default function AdminMentorsPage() {
   const [mentors, setMentors] = useState([])

@@ -21,6 +21,15 @@ public class Student {
     @Column(unique = true, nullable = false)
     private String email;
 
+    @Column(name = "career_fields")
+    private String[] careerFields;
+
+    @Column(name = "activities")
+    private String[] activities;
+
+    @Column(name = "work_environments")
+    private String[] workEnvironments;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

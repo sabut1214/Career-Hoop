@@ -9,6 +9,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { GraduationCap, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import { login as apiLogin } from "@/lib/api"
+import { toast } from "react-toastify"
+import logoImg from "@/assets/images/Logo.png"
 
 const isValidEmail = (value) => /\S+@\S+\.\S+/.test(value)
 const MIN_PASSWORD_LENGTH = 8
@@ -79,6 +81,7 @@ export default function Login() {
       console.error("[v0] Login error caught:", err)
       const errorMessage = err.message || "Login failed. Please try again."
       setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -94,9 +97,11 @@ export default function Login() {
       >
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <GraduationCap className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-primary">CareerHoop</span>
+          <div className="flex items-center justify-center mb-4">
+            <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
+            <span className="text-2xl font-bold text-foreground">
+              areer<span className="text-primary">Hoop</span>
+            </span>
           </div>
           <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
           <p className="text-muted-foreground">Sign in to your account to continue</p>

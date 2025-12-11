@@ -3,15 +3,18 @@ import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { GraduationCap, Target, BookOpen, ArrowRight, Users, Award, TrendingUp } from "lucide-react"
+import logoImg from "@/assets/images/Logo.png"
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-card to-background">
       {/* Navigation */}
       <nav className="flex items-center justify-between p-6 max-w-7xl mx-auto">
-        <div className="flex items-center space-x-2">
-          <GraduationCap className="h-8 w-8 text-primary" />
-          <span className="text-2xl font-bold text-primary">CareerHoop</span>
+        <div className="flex items-center">
+          <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
+          <span className="text-2xl font-bold text-foreground">
+            areer<span className="text-primary">Hoop</span>
+          </span>
         </div>
         <div className="flex items-center space-x-4">
           <Button variant="ghost">About</Button>

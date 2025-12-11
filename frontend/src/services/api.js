@@ -1,19 +1,28 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// Get API base URL from environment or default to localhost:8080
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000, // Increased timeout for large responses
   headers: {
     'Content-Type': 'application/json',
   },
+  maxContentLength: Infinity,
+  maxBodyLength: Infinity,
 });
 
-// Add request interceptor for logging
+// Add request interceptor for JWT token and logging
 api.interceptors.request.use(
   (config) => {
+    // Add JWT token to all requests if available
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
     console.log(`Making ${config.method?.toUpperCase()} request to: ${config.url}`);
     return config;
   },
@@ -28,6 +37,31 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    const status = error.response?.status;
+    const message = error.response?.data?.message || error.message;
+    
+    // Handle authentication/authorization errors
+    if (status === 401) {
+      console.error('API Error: Unauthorized - Token may be expired or invalid');
+      // Clear invalid token
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("refreshToken");
+      // Redirect to login if not already there
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+    } else if (status === 403) {
+      console.error('API Error: Forbidden - Token may be missing or invalid');
+      // Check if token exists
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        console.error('No auth token found in localStorage');
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+      }
+    }
+    
     console.error('API Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }

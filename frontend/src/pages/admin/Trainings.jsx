@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { getTrainings, deleteTraining } from "@/lib/api"
 import { Trash2, Plus } from "lucide-react"
 import { ProtectedRoute } from "@/components/protected-route"
+import { toast } from "react-toastify"
 
 export default function AdminTrainingsPage() {
   const [trainings, setTrainings] = useState([])
@@ -32,8 +33,10 @@ export default function AdminTrainingsPage() {
       try {
         await deleteTraining(id)
         setTrainings(trainings.filter((t) => t.id !== id))
+        toast.success("Training deleted successfully.")
       } catch (error) {
         console.error("Failed to delete training:", error)
+        toast.error("Failed to delete training. Please try again.")
       }
     }
   }

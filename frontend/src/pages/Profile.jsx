@@ -25,10 +25,14 @@ import {
   Code,
   Palette,
   BarChart3,
+  Upload,
+  X,
+  Camera,
 } from "lucide-react"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { useAuth } from "@/context/AuthContext"
-import { getUserProfile, updateUserProfile } from "@/lib/api"
+import { toast } from "react-toastify"
+import { getUserProfile, updateUserProfile, getSavedCareers, getSavedColleges } from "@/lib/api"
 
 const initialProfile = {
   name: "Alex Johnson",
@@ -42,71 +46,19 @@ const initialProfile = {
   avatar: "/placeholder.svg?height=100&width=100",
 }
 
-const savedCareers = [
-  {
-    id: 1,
-    title: "Software Engineer",
-    confidence: 92,
-    icon: Code,
-    color: "bg-blue-500",
-    savedDate: "2024-01-15",
-  },
-  {
-    id: 2,
-    title: "UX/UI Designer",
-    confidence: 85,
-    icon: Palette,
-    color: "bg-purple-500",
-    savedDate: "2024-01-12",
-  },
-  {
-    id: 3,
-    title: "Data Scientist",
-    confidence: 88,
-    icon: BarChart3,
-    color: "bg-green-500",
-    savedDate: "2024-01-10",
-  },
-]
+// Icon mapping for careers
+const getCareerIcon = (careerName) => {
+  const name = careerName?.toLowerCase() || ""
+  if (name.includes("engineer") || name.includes("developer") || name.includes("programmer")) return Code
+  if (name.includes("design") || name.includes("ui") || name.includes("ux")) return Palette
+  if (name.includes("data") || name.includes("analyst") || name.includes("scientist")) return BarChart3
+  return Star
+}
 
-const savedColleges = [
-  {
-    id: 1,
-    name: "Stanford University",
-    location: "Stanford, CA",
-    logo: "/stanford-university-logo.png",
-    rating: 4.8,
-    savedDate: "2024-01-14",
-  },
-  {
-    id: 2,
-    name: "MIT",
-    location: "Cambridge, MA",
-    logo: "/mit-logo-generic.png",
-    rating: 4.9,
-    savedDate: "2024-01-11",
-  },
-  {
-    id: 3,
-    name: "UC Berkeley",
-    location: "Berkeley, CA",
-    logo: "/uc-berkeley-logo.png",
-    rating: 4.7,
-    savedDate: "2024-01-09",
-  },
-]
-
-const achievements = [
-  { title: "Profile Complete", description: "Completed your profile setup", date: "2024-01-08", icon: User },
-  { title: "Grades Entered", description: "Added academic performance data", date: "2024-01-10", icon: BookOpen },
-  { title: "Interests Selected", description: "Chose your career interests", date: "2024-01-12", icon: Target },
-  {
-    title: "First Career Saved",
-    description: "Saved your first career recommendation",
-    date: "2024-01-15",
-    icon: Star,
-  },
-]
+const getCareerColor = (index) => {
+  const colors = ["bg-blue-500", "bg-purple-500", "bg-green-500", "bg-orange-500", "bg-pink-500", "bg-indigo-500"]
+  return colors[index % colors.length]
+}
 
 const formatDateForInput = (value) => {
   if (!value) return ""
@@ -130,6 +82,7 @@ const mapResponseToProfile = (data, fallback = initialProfile) => ({
   phone: data?.phoneNumber ?? "",
   location: data?.location ?? "",
   dateOfBirth: data?.dateOfBirth ? formatDateForInput(data.dateOfBirth) : "",
+  avatar: data?.profilePicture || fallback.avatar,
   school: data?.schoolName ?? "",
   gpa: data?.gpa != null ? String(data.gpa) : "",
 })
@@ -144,6 +97,22 @@ export default function ProfilePage() {
   const [statusMessage, setStatusMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
   const [profileCompletion, setProfileCompletion] = useState(user?.profileCompletionPercent ?? 0)
+  const [profilePicture, setProfilePicture] = useState(null)
+  const [profilePicturePreview, setProfilePicturePreview] = useState(null)
+  const [pictureRemoved, setPictureRemoved] = useState(false)
+  const [savedCareers, setSavedCareers] = useState([])
+  const [savedColleges, setSavedColleges] = useState([])
+  const [achievements, setAchievements] = useState([])
+  const [loadingSavedItems, setLoadingSavedItems] = useState(false)
+
+  // Debug effect to track profile picture state
+  useEffect(() => {
+    console.log("Profile picture state changed:", {
+      profilePicture: profilePicture ? `${profilePicture.substring(0, 50)}...` : null,
+      profilePicturePreview: profilePicturePreview ? `${profilePicturePreview.substring(0, 50)}...` : null,
+      profileInfoAvatar: profileInfo.avatar ? `${profileInfo.avatar.substring(0, 50)}...` : null
+    })
+  }, [profilePicture, profilePicturePreview, profileInfo.avatar])
 
   useEffect(() => {
     if (!user?.id) return
@@ -157,6 +126,17 @@ export default function ProfilePage() {
         setProfileInfo(normalized)
         setEditedInfo(normalized)
         setProfileCompletion(data.profileCompletionPercent ?? 0)
+        // Set profile picture if available
+        if (data.profilePicture) {
+          setProfilePicturePreview(data.profilePicture)
+          setProfilePicture(data.profilePicture) // Preserve existing picture
+        } else if (normalized.avatar && normalized.avatar !== "/placeholder.svg?height=100&width=100") {
+          setProfilePicturePreview(normalized.avatar)
+          setProfilePicture(normalized.avatar) // Preserve existing picture
+        } else {
+          setProfilePicturePreview(null)
+          setProfilePicture(null)
+        }
         setStatusMessage("")
       })
       .catch((error) => {
@@ -173,6 +153,175 @@ export default function ProfilePage() {
     }
   }, [user?.id])
 
+  // Fetch saved careers and colleges
+  useEffect(() => {
+    if (!user?.id) return
+    let active = true
+    setLoadingSavedItems(true)
+
+    const fetchSavedItems = async () => {
+      try {
+        const [careersData, collegesData] = await Promise.all([
+          getSavedCareers(user.id).catch(() => []),
+          getSavedColleges(user.id).catch(() => [])
+        ])
+
+        if (!active) return
+
+        // Transform saved careers data
+        const transformedCareers = careersData.map((career, index) => ({
+          id: career.id,
+          title: career.careerTitle || career.careerName,
+          confidence: career.confidenceScore ? Math.round(career.confidenceScore) : null,
+          icon: getCareerIcon(career.careerTitle || career.careerName),
+          color: getCareerColor(index),
+          savedDate: career.savedAt ? new Date(career.savedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        }))
+
+        // Transform saved colleges data
+        const transformedColleges = collegesData.map((college) => {
+          const website = college.collegeWebsite || college.collegeDetailUrl || college.website || college.detailUrl || null
+          return {
+            id: college.id,
+            name: college.collegeName,
+            location: college.collegeLocation || college.location || "Location not available",
+            website: website,
+            logo: "/placeholder.svg",
+            savedDate: college.savedAt ? new Date(college.savedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          }
+        })
+
+        setSavedCareers(transformedCareers)
+        setSavedColleges(transformedColleges)
+
+        // Calculate achievements based on user activity
+        const calculatedAchievements = []
+        
+        // Profile completion achievement
+        if (profileCompletion >= 100) {
+          calculatedAchievements.push({
+            title: "Profile Complete",
+            description: "Completed your profile setup",
+            date: profileInfo.createdAt || new Date().toISOString().split('T')[0],
+            icon: User,
+          })
+        }
+
+        // Grades entered achievement
+        if (profileInfo.gpa) {
+          calculatedAchievements.push({
+            title: "Grades Entered",
+            description: "Added academic performance data",
+            date: new Date().toISOString().split('T')[0],
+            icon: BookOpen,
+          })
+        }
+
+        // First career saved achievement
+        if (transformedCareers.length > 0) {
+          calculatedAchievements.push({
+            title: "First Career Saved",
+            description: "Saved your first career recommendation",
+            date: transformedCareers[0].savedDate,
+            icon: Star,
+          })
+        }
+
+        // First college saved achievement
+        if (transformedColleges.length > 0) {
+          calculatedAchievements.push({
+            title: "First College Saved",
+            description: "Saved your first college",
+            date: transformedColleges[0].savedDate,
+            icon: Building2,
+          })
+        }
+
+        // Multiple careers saved achievement
+        if (transformedCareers.length >= 3) {
+          calculatedAchievements.push({
+            title: "Career Explorer",
+            description: `Saved ${transformedCareers.length} career recommendations`,
+            date: transformedCareers[transformedCareers.length - 1].savedDate,
+            icon: Target,
+          })
+        }
+
+        setAchievements(calculatedAchievements)
+      } catch (error) {
+        if (!active) return
+        console.error("Failed to fetch saved items:", error)
+        // Don't show error to user, just use empty arrays
+        setSavedCareers([])
+        setSavedColleges([])
+        setAchievements([])
+      } finally {
+        if (!active) return
+        setLoadingSavedItems(false)
+      }
+    }
+
+    fetchSavedItems()
+
+    return () => {
+      active = false
+    }
+  }, [user?.id, profileCompletion, profileInfo.gpa, profileInfo.createdAt])
+
+  const handlePictureUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      setErrorMessage("Please select an image file.")
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage("Image size must be less than 5MB.")
+      return
+    }
+
+    // Clear any previous errors and removal flag
+    setErrorMessage("")
+    setPictureRemoved(false)
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const base64String = reader.result
+      if (base64String && typeof base64String === 'string') {
+        console.log("Image loaded successfully, length:", base64String.length)
+        setProfilePicture(base64String)
+        setProfilePicturePreview(base64String)
+        setStatusMessage("Image selected. Click Save to update your profile.")
+      } else {
+        setErrorMessage("Failed to load image. Please try again.")
+      }
+    }
+    reader.onerror = () => {
+      setErrorMessage("Error reading image file. Please try again.")
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleRemovePicture = () => {
+    // Clear the picture and mark as removed
+    setProfilePicture(null)
+    setProfilePicturePreview(null)
+    setPictureRemoved(true)
+    setErrorMessage("") // Clear any previous errors
+    setStatusMessage("Profile picture removed. Click Save to confirm.")
+    
+    // Reset file input so user can select the same file again if needed
+    const fileInput = document.getElementById("profile-picture-upload")
+    if (fileInput) {
+      fileInput.value = ""
+    }
+  }
+
   const handleSave = async () => {
     if (!user?.id) return
     setIsSaving(true)
@@ -185,6 +334,28 @@ export default function ProfilePage() {
       return
     }
 
+    // Determine what profilePicture value to send
+    // Always send a string value (never null) so backend processes it
+    let pictureToSend = ""
+    if (profilePicture !== null && profilePicture !== undefined && profilePicture !== "") {
+      // profilePicture state is set with a base64 string (new upload)
+      pictureToSend = profilePicture
+    } else if (pictureRemoved) {
+      // User explicitly removed the picture - send empty string to delete
+      pictureToSend = ""
+    } else if (profilePicturePreview && profilePicturePreview.trim()) {
+      // No explicit change, keep existing picture
+      pictureToSend = profilePicturePreview
+    } else {
+      // No picture exists and user hasn't explicitly removed it
+      // Check if there was an existing picture that should be kept
+      if (profileInfo.avatar && profileInfo.avatar !== "/placeholder.svg?height=100&width=100") {
+        pictureToSend = profileInfo.avatar
+      } else {
+        pictureToSend = ""
+      }
+    }
+
     const payload = {
       name: editedInfo.name,
       phoneNumber: editedInfo.phone,
@@ -192,7 +363,15 @@ export default function ProfilePage() {
       schoolName: editedInfo.school,
       dateOfBirth: editedInfo.dateOfBirth || null,
       gpa: editedInfo.gpa ? parseFloat(editedInfo.gpa) : null,
+      profilePicture: pictureToSend, // Always include profilePicture
     }
+    
+    // Debug logging
+    console.log("Profile save - State check:", {
+      profilePicture: profilePicture ? `${typeof profilePicture} (${profilePicture.substring(0, 30)}...)` : profilePicture,
+      profilePicturePreview: profilePicturePreview ? `${profilePicturePreview.substring(0, 30)}...` : profilePicturePreview,
+      pictureToSend: pictureToSend ? `${typeof pictureToSend} (${pictureToSend.substring(0, 30)}...)` : pictureToSend,
+    })
 
     if (payload.gpa != null && Number.isNaN(payload.gpa)) {
       setErrorMessage("Please provide a valid GPA value.")
@@ -201,16 +380,85 @@ export default function ProfilePage() {
     }
 
     try {
+      // Log the actual payload being sent (truncate base64 for readability)
+      const payloadForLog = {
+        ...payload,
+        profilePicture: payload.profilePicture 
+          ? (payload.profilePicture.length > 100 
+              ? `${payload.profilePicture.substring(0, 100)}... (length: ${payload.profilePicture.length})` 
+              : payload.profilePicture)
+          : "null or empty"
+      }
+      console.log("Saving profile with payload:", payloadForLog)
+      console.log("Profile picture type:", typeof payload.profilePicture)
+      console.log("Profile picture is empty string:", payload.profilePicture === "")
+      console.log("Profile picture is null:", payload.profilePicture === null)
+      
       const updated = await updateUserProfile(user.id, payload)
+      console.log("Profile update response:", updated)
+      console.log("Profile picture in response:", updated.profilePicture ? `Present (length: ${updated.profilePicture.length})` : "Missing")
+      console.log("Profile picture response value:", updated.profilePicture ? updated.profilePicture.substring(0, 100) : "null")
+      
       const normalized = mapResponseToProfile(updated, profileInfo)
+      console.log("Normalized profile avatar:", normalized.avatar)
+      
+      // Update profile picture preview FIRST - always update based on response
+      if (updated.profilePicture && updated.profilePicture.trim()) {
+        console.log("Setting profile picture preview from response - length:", updated.profilePicture.length)
+        console.log("First 100 chars:", updated.profilePicture.substring(0, 100))
+        setProfilePicturePreview(updated.profilePicture)
+        setProfilePicture(updated.profilePicture) // Keep it in state
+        // Ensure normalized has the updated avatar
+        normalized.avatar = updated.profilePicture
+      } else {
+        console.log("Clearing profile picture preview - no picture in response")
+        setProfilePicturePreview(null)
+        setProfilePicture(null) // Clear state
+        normalized.avatar = "/placeholder.svg?height=100&width=100"
+      }
+      
+      // Reset removal flag after successful save
+      setPictureRemoved(false)
+      
       setProfileInfo(normalized)
       setEditedInfo(normalized)
       setProfileCompletion(updated.profileCompletionPercent ?? profileCompletion)
-      updateUser(updated)
-      setStatusMessage("Profile updated successfully.")
+      
+      // Update user context with profile picture so it shows in sidebar
+      const updatedUserData = { 
+        ...user, 
+        ...updated, 
+        profilePicture: updated.profilePicture || null, 
+        avatar: updated.profilePicture || null 
+      }
+      updateUser(updatedUserData)
+      console.log("Updated user context - profilePicture:", updatedUserData.profilePicture ? "Present" : "Missing")
+      console.log("Current profilePicturePreview state:", profilePicturePreview ? "Set" : "Not set")
+      
+      // Show appropriate success message based on what changed
+      const hadPictureBefore = profileInfo.avatar && profileInfo.avatar !== "/placeholder.svg?height=100&width=100"
+      const hasPictureAfter = updated.profilePicture && updated.profilePicture.trim()
+      
+      if (hadPictureBefore && !hasPictureAfter) {
+        toast.success("Profile picture removed successfully.")
+      } else if (!hadPictureBefore && hasPictureAfter) {
+        toast.success("Profile picture added successfully.")
+      } else if (hadPictureBefore && hasPictureAfter && profileInfo.avatar !== updated.profilePicture) {
+        toast.success("Profile picture updated successfully.")
+      } else {
+        toast.success("Profile updated successfully.")
+      }
       setIsEditing(false)
+      
+      // Force a re-render check after state updates
+      setTimeout(() => {
+        console.log("After save - profilePicturePreview:", profilePicturePreview ? "Still set" : "Cleared")
+        console.log("After save - profileInfo.avatar:", normalized.avatar)
+      }, 100)
     } catch (error) {
-      setErrorMessage(error.message || "Failed to update profile. Please try again.")
+      const errorMsg = error.message || "Failed to update profile. Please try again."
+      setErrorMessage(errorMsg)
+      toast.error(errorMsg)
     } finally {
       setIsSaving(false)
     }
@@ -218,9 +466,22 @@ export default function ProfilePage() {
 
   const handleCancel = () => {
     setEditedInfo(profileInfo)
+    setProfilePicture(null)
+    setPictureRemoved(false) // Reset removal flag on cancel
+    if (profileInfo.avatar && profileInfo.avatar !== "/placeholder.svg?height=100&width=100") {
+      setProfilePicturePreview(profileInfo.avatar)
+    } else {
+      setProfilePicturePreview(null)
+    }
     setIsEditing(false)
     setStatusMessage("")
     setErrorMessage("")
+    
+    // Reset file input
+    const fileInput = document.getElementById("profile-picture-upload")
+    if (fileInput) {
+      fileInput.value = ""
+    }
   }
 
   const displayName = profileInfo.name || user?.name || user?.fullName || "Student"
@@ -258,15 +519,66 @@ export default function ProfilePage() {
               <CardHeader>
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:space-x-4">
-                    <Avatar className="h-20 w-20 mx-auto sm:mx-0">
-                      <AvatarImage src={profileInfo.avatar || "/placeholder.svg"} alt={displayName} />
-                      <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground">
-                        {displayName
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative mx-auto sm:mx-0">
+                      <Avatar className="h-20 w-20">
+                        <AvatarImage 
+                          src={(() => {
+                            // Priority: preview > profileInfo.avatar > placeholder
+                            let imageSrc = profilePicturePreview || profileInfo.avatar || "/placeholder.svg"
+                            // Filter out placeholder strings
+                            if (imageSrc === "/placeholder.svg?height=100&width=100") {
+                              imageSrc = "/placeholder.svg"
+                            }
+                            console.log("Avatar rendering - preview:", profilePicturePreview ? "exists" : "null", "avatar:", profileInfo.avatar ? "exists" : "null", "final src:", imageSrc.substring(0, 50))
+                            return imageSrc
+                          })()}
+                          alt={displayName}
+                          onError={(e) => {
+                            console.error("Avatar image failed to load")
+                            e.target.style.display = 'none'
+                          }}
+                          onLoad={() => {
+                            console.log("Avatar image loaded successfully")
+                          }}
+                        />
+                        <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground">
+                          {displayName
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      {isEditing && (
+                        <div className="absolute bottom-0 right-0 flex gap-1">
+                          <label
+                            htmlFor="profile-picture-upload"
+                            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-colors hover:bg-primary/90"
+                            title="Upload photo"
+                          >
+                            <Camera className="h-4 w-4" />
+                            <input
+                              id="profile-picture-upload"
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={handlePictureUpload}
+                              disabled={isSaving}
+                            />
+                          </label>
+                          {(profilePicturePreview || (profileInfo.avatar && profileInfo.avatar !== "/placeholder.svg?height=100&width=100")) && (
+                            <button
+                              onClick={handleRemovePicture}
+                              className="flex h-8 w-8 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-lg transition-colors hover:bg-destructive/90"
+                              title="Remove photo"
+                              type="button"
+                              disabled={isSaving}
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     <div className="text-center sm:text-left space-y-2">
                       <h2 className="text-3xl font-bold">{displayName}</h2>
                       <p className="text-muted-foreground">
@@ -293,6 +605,17 @@ export default function ProfilePage() {
                         handleCancel()
                       } else {
                         setEditedInfo(profileInfo)
+                        // Preserve current profile picture when entering edit mode
+                        if (profilePicturePreview && profilePicturePreview.trim()) {
+                          setProfilePicture(profilePicturePreview)
+                        } else if (profileInfo.avatar && profileInfo.avatar !== "/placeholder.svg?height=100&width=100") {
+                          // If no preview but avatar exists, use avatar
+                          setProfilePicture(profileInfo.avatar)
+                        } else {
+                          // No existing picture
+                          setProfilePicture(null)
+                        }
+                        setPictureRemoved(false) // Reset removal flag when entering edit mode
                         setIsEditing(true)
                         setStatusMessage("")
                         setErrorMessage("")
@@ -473,8 +796,17 @@ export default function ProfilePage() {
                     <CardDescription>Career paths you've bookmarked for further exploration</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {savedCareers.map((career, index) => (
+                    {loadingSavedItems ? (
+                      <p className="text-sm text-muted-foreground">Loading saved careers...</p>
+                    ) : savedCareers.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">No saved careers yet</p>
+                        <p className="text-sm text-muted-foreground mt-2">Start exploring careers and save your favorites!</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {savedCareers.map((career, index) => (
                         <motion.div
                           key={career.id}
                           initial={{ opacity: 0, y: 20 }}
@@ -498,9 +830,11 @@ export default function ProfilePage() {
                                 </div>
                               </div>
                               <div className="flex items-center justify-between">
-                                <Badge variant="secondary" className="bg-green-100 text-green-700">
-                                  {career.confidence}% Match
-                                </Badge>
+                                {career.confidence && (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-700">
+                                    {career.confidence}% Match
+                                  </Badge>
+                                )}
                                 <Button variant="ghost" size="sm">
                                   <Star className="h-4 w-4 text-accent fill-current" />
                                 </Button>
@@ -509,7 +843,8 @@ export default function ProfilePage() {
                           </Card>
                         </motion.div>
                       ))}
-                    </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -522,45 +857,66 @@ export default function ProfilePage() {
                     <CardDescription>Universities and colleges you're interested in applying to</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {savedColleges.map((college, index) => (
-                        <motion.div
-                          key={college.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.4, delay: index * 0.1 }}
-                          whileHover={{ scale: 1.02 }}
-                        >
-                          <Card className="border hover:border-primary/20 hover:shadow-md transition-all duration-300">
-                            <CardContent className="p-4 space-y-3">
-                              <div className="flex items-center space-x-3">
-                                <img
-                                  src={college.logo || "/placeholder.svg"}
-                                  alt={`${college.name} logo`}
-                                  className="w-10 h-10 rounded object-cover"
-                                  onError={(e) => {
-                                    e.target.style.display = 'none'
-                                  }}
-                                />
-                                <div className="flex-1">
-                                  <h3 className="font-semibold">{college.name}</h3>
-                                  <p className="text-sm text-muted-foreground">{college.location}</p>
+                    {loadingSavedItems ? (
+                      <p className="text-sm text-muted-foreground">Loading saved colleges...</p>
+                    ) : savedColleges.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">No saved colleges yet</p>
+                        <p className="text-sm text-muted-foreground mt-2">Explore colleges and save your favorites!</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {savedColleges.map((college, index) => (
+                          <motion.div
+                            key={college.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4, delay: index * 0.1 }}
+                            whileHover={{ scale: 1.02 }}
+                          >
+                            <Card 
+                              className="border hover:border-primary/20 hover:shadow-md transition-all duration-300 h-full flex flex-col cursor-pointer"
+                              onClick={() => {
+                                const website = college.website
+                                if (website) {
+                                  let url = website.trim()
+                                  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                                    url = `https://${url}`
+                                  }
+                                  window.open(url, '_blank', 'noopener,noreferrer')
+                                }
+                              }}
+                            >
+                              <CardContent className="p-4 space-y-3 flex-1 flex flex-col">
+                                <div className="flex items-center space-x-3 flex-shrink-0">
+                                  <img
+                                    src={college.logo || "/placeholder.svg"}
+                                    alt={`${college.name} logo`}
+                                    className="w-10 h-10 rounded object-cover flex-shrink-0"
+                                    onError={(e) => {
+                                      e.target.style.display = 'none'
+                                    }}
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-sm leading-tight line-clamp-2">{college.name}</h3>
+                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{college.location}</p>
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-1">
-                                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                                  <span className="text-sm font-medium">{college.rating}</span>
+                                <div className="flex items-center justify-between mt-auto pt-2">
+                                  <p className="text-xs text-muted-foreground">
+                                    Saved {new Date(college.savedDate).toLocaleDateString()}
+                                  </p>
+                                  {college.website && (
+                                    <span className="text-xs text-primary">Visit Website →</span>
+                                  )}
                                 </div>
-                                <p className="text-xs text-muted-foreground">
-                                  Saved {new Date(college.savedDate).toLocaleDateString()}
-                                </p>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </motion.div>
-                      ))}
-                    </div>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -573,8 +929,17 @@ export default function ProfilePage() {
                     <CardDescription>Milestones you've reached on your career discovery journey</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {achievements.map((achievement, index) => (
+                    {loadingSavedItems ? (
+                      <p className="text-sm text-muted-foreground">Loading achievements...</p>
+                    ) : achievements.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Award className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">No achievements yet</p>
+                        <p className="text-sm text-muted-foreground mt-2">Complete your profile and start exploring to unlock achievements!</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {achievements.map((achievement, index) => (
                         <motion.div
                           key={achievement.title}
                           initial={{ opacity: 0, x: -20 }}
@@ -596,7 +961,8 @@ export default function ProfilePage() {
                           </div>
                         </motion.div>
                       ))}
-                    </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

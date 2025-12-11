@@ -18,11 +18,13 @@ import {
   Camera,
   Beaker,
   CheckCircle,
+  Edit,
 } from "lucide-react"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { useAuth } from "@/context/AuthContext"
 import { studentService } from "@/services/studentService"
 import { getUserStorageKey } from "@/utils/utils"
+import { toast } from "react-toastify"
 
 const persistInterests = (fields, activities, environments, userId) => {
   const data = {
@@ -92,7 +94,8 @@ export default function InterestsPage() {
   const [selectedEnvironments, setSelectedEnvironments] = useState([])
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState("")
-  const [successMessage, setSuccessMessage] = useState("")
+  const [isEditing, setIsEditing] = useState(false)
+  const [hasCompletedInterests, setHasCompletedInterests] = useState(false)
 
   const progress = (currentStep / steps.length) * 100
 
@@ -105,10 +108,25 @@ export default function InterestsPage() {
         const student = response.data
 
         if (student) {
-          setSelectedFields(student.careerFields || [])
-          setSelectedActivities(student.activities || [])
-          setSelectedEnvironments(student.workEnvironments || [])
-          persistInterests(student.careerFields || [], student.activities || [], student.workEnvironments || [], user?.id)
+          // Check if user has already completed interests
+          const hasInterests = 
+            (student.careerFields && student.careerFields.length > 0) ||
+            (student.activities && student.activities.length > 0) ||
+            (student.workEnvironments && student.workEnvironments.length > 0)
+          
+          if (hasInterests) {
+            setHasCompletedInterests(true)
+            // Limit to 2 career fields if more than 2 are stored
+            const careerFields = (student.careerFields || []).slice(0, 2)
+            // Limit to 3 activities if more than 3 are stored
+            const activities = (student.activities || []).slice(0, 3)
+            // Limit to 1 work environment if more than 1 is stored
+            const workEnvironments = (student.workEnvironments || []).slice(0, 1)
+            setSelectedFields(careerFields)
+            setSelectedActivities(activities)
+            setSelectedEnvironments(workEnvironments)
+            persistInterests(careerFields, activities, workEnvironments, user?.id)
+          }
         }
       } catch (err) {
         // If student not found (404), ignore; otherwise log error
@@ -122,7 +140,26 @@ export default function InterestsPage() {
   }, [user])
 
   const handleNext = () => {
+    // Validate step 1: require at least 1 career field
+    if (currentStep === 1 && selectedFields.length === 0) {
+      setError("Please select at least one career field before proceeding.")
+      return
+    }
+    
+    // Validate step 2: require exactly 3 activities
+    if (currentStep === 2 && selectedActivities.length !== 3) {
+      setError("Please select exactly 3 activities before proceeding.")
+      return
+    }
+    
+    // Validate step 3: require exactly 1 work environment
+    if (currentStep === 3 && selectedEnvironments.length !== 1) {
+      setError("Please select exactly 1 work environment before proceeding.")
+      return
+    }
+    
     if (currentStep < steps.length) {
+      setError("")
       setCurrentStep(currentStep + 1)
     }
   }
@@ -134,36 +171,69 @@ export default function InterestsPage() {
   }
 
   const toggleField = (fieldId) => {
-    setSelectedFields((prev) => (prev.includes(fieldId) ? prev.filter((id) => id !== fieldId) : [...prev, fieldId]))
+    setSelectedFields((prev) => {
+      if (prev.includes(fieldId)) {
+        // If already selected, remove it
+        return prev.filter((id) => id !== fieldId)
+      } else {
+        // If not selected, only add if we have less than 2 selected
+        if (prev.length < 2) {
+          return [...prev, fieldId]
+        }
+        // If already have 2 selected, don't add more
+        return prev
+      }
+    })
   }
 
   const toggleActivity = (activity) => {
-    setSelectedActivities((prev) =>
-      prev.includes(activity) ? prev.filter((a) => a !== activity) : [...prev, activity],
-    )
+    setSelectedActivities((prev) => {
+      if (prev.includes(activity)) {
+        // If already selected, remove it
+        return prev.filter((a) => a !== activity)
+      } else {
+        // If not selected, only add if we have less than 3 selected
+        if (prev.length < 3) {
+          return [...prev, activity]
+        }
+        // If already have 3 selected, don't add more
+        return prev
+      }
+    })
   }
 
   const toggleEnvironment = (environment) => {
-    setSelectedEnvironments((prev) =>
-      prev.includes(environment) ? prev.filter((e) => e !== environment) : [...prev, environment],
-    )
+    setSelectedEnvironments((prev) => {
+      if (prev.includes(environment)) {
+        // If already selected, deselect it (allow deselecting)
+        return prev.filter((e) => e !== environment)
+      } else {
+        // If not selected, replace the current selection (only 1 allowed)
+        return [environment]
+      }
+    })
   }
 
   const handleComplete = async () => {
     setError("")
-    setSuccessMessage("")
 
     if (!user?.email) {
       setError("You need to be logged in to save your interests.")
       return
     }
 
-    if (
-      selectedFields.length === 0 &&
-      selectedActivities.length === 0 &&
-      selectedEnvironments.length === 0
-    ) {
-      setError("Please select at least one interest before completing.")
+    if (selectedFields.length === 0) {
+      setError("Please select at least one career field before completing.")
+      return
+    }
+
+    if (selectedActivities.length !== 3) {
+      setError("Please select exactly 3 activities before completing.")
+      return
+    }
+
+    if (selectedEnvironments.length !== 1) {
+      setError("Please select exactly 1 work environment before completing.")
       return
     }
 
@@ -195,14 +265,54 @@ export default function InterestsPage() {
         await studentService.create(payload)
       }
 
-      setSuccessMessage("Your interests have been saved successfully.")
+      toast.success("Your interests have been saved successfully.")
       persistInterests(selectedFields, selectedActivities, selectedEnvironments, user?.id)
+      
+      // Mark as completed and exit edit mode
+      setHasCompletedInterests(true)
+      setIsEditing(false)
+      setCurrentStep(1)
     } catch (err) {
       console.error("Failed to save interests:", err)
-      setError("Failed to save your interests. Please try again.")
+      const errorMsg = "Failed to save your interests. Please try again."
+      setError(errorMsg)
+      toast.error(errorMsg)
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleEdit = () => {
+    setIsEditing(true)
+    setCurrentStep(1)
+    setError("")
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false)
+    setCurrentStep(1)
+    setError("")
+    // Reload original interests
+    const loadExistingInterests = async () => {
+      if (!user?.email) return
+      try {
+        const response = await studentService.getByEmail(user.email)
+        const student = response.data
+        if (student) {
+          const careerFields = (student.careerFields || []).slice(0, 2)
+          const activities = (student.activities || []).slice(0, 3)
+          const workEnvironments = (student.workEnvironments || []).slice(0, 1)
+          setSelectedFields(careerFields)
+          setSelectedActivities(activities)
+          setSelectedEnvironments(workEnvironments)
+        }
+      } catch (err) {
+        if (err.response?.status !== 404) {
+          console.error("Failed to load interests:", err)
+        }
+      }
+    }
+    loadExistingInterests()
   }
 
   const renderStepContent = () => {
@@ -215,32 +325,43 @@ export default function InterestsPage() {
             exit={{ opacity: 0, x: -20 }}
             className="space-y-6"
           >
-            <p className="text-muted-foreground">Select 3-5 career fields that interest you the most</p>
+            <p className="text-muted-foreground">Select 2 career fields that interest you the most</p>
+            {selectedFields.length >= 2 && (
+              <Alert className="mb-4">
+                <AlertDescription>You can select a maximum of 2 career fields. Deselect one to choose another.</AlertDescription>
+              </Alert>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {careerFields.map((field) => (
-                <motion.div
-                  key={field.id}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => toggleField(field.id)}
-                  className={`cursor-pointer p-4 rounded-lg border-2 transition-all duration-300 ${
-                    selectedFields.includes(field.id)
-                      ? "border-primary bg-primary/5 shadow-md"
-                      : "border-border hover:border-primary/50 hover:bg-muted/50"
-                  }`}
-                >
-                  <div className="flex flex-col items-center space-y-3 text-center">
-                    <div className={`w-12 h-12 rounded-lg ${field.color} flex items-center justify-center`}>
-                      <field.icon className="h-6 w-6 text-white" />
+              {careerFields.map((field) => {
+                const isSelected = selectedFields.includes(field.id)
+                const isDisabled = !isSelected && selectedFields.length >= 2
+                return (
+                  <motion.div
+                    key={field.id}
+                    whileHover={!isDisabled ? { scale: 1.02 } : {}}
+                    whileTap={!isDisabled ? { scale: 0.98 } : {}}
+                    onClick={() => !isDisabled && toggleField(field.id)}
+                    className={`p-4 rounded-lg border-2 transition-all duration-300 ${
+                      isSelected
+                        ? "border-primary bg-primary/5 shadow-md cursor-pointer"
+                        : isDisabled
+                          ? "border-border bg-muted/30 opacity-50 cursor-not-allowed"
+                          : "border-border hover:border-primary/50 hover:bg-muted/50 cursor-pointer"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center space-y-3 text-center">
+                      <div className={`w-12 h-12 rounded-lg ${field.color} flex items-center justify-center`}>
+                        <field.icon className="h-6 w-6 text-white" />
+                      </div>
+                      <h3 className="font-medium">{field.name}</h3>
+                      {isSelected && <CheckCircle className="h-5 w-5 text-primary" />}
                     </div>
-                    <h3 className="font-medium">{field.name}</h3>
-                    {selectedFields.includes(field.id) && <CheckCircle className="h-5 w-5 text-primary" />}
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                )
+              })}
             </div>
             <p className="text-sm text-muted-foreground">
-              Selected: {selectedFields.length} field{selectedFields.length !== 1 ? "s" : ""}
+              Selected: {selectedFields.length} of 2 field{selectedFields.length !== 1 ? "s" : ""}
             </p>
           </motion.div>
         )
@@ -253,26 +374,37 @@ export default function InterestsPage() {
             exit={{ opacity: 0, x: -20 }}
             className="space-y-6"
           >
-            <p className="text-muted-foreground">Choose activities and skills you enjoy or want to develop</p>
+            <p className="text-muted-foreground">Choose exactly 3 activities and skills you enjoy or want to develop</p>
+            {selectedActivities.length >= 3 && (
+              <Alert className="mb-4">
+                <AlertDescription>You can select a maximum of 3 activities. Deselect one to choose another.</AlertDescription>
+              </Alert>
+            )}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {activities.map((activity) => (
-                <motion.div
-                  key={activity}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => toggleActivity(activity)}
-                  className={`cursor-pointer p-3 rounded-lg border-2 text-center transition-all duration-300 ${
-                    selectedActivities.includes(activity)
-                      ? "border-secondary bg-secondary/5 text-secondary"
-                      : "border-border hover:border-secondary/50 hover:bg-muted/50"
-                  }`}
-                >
-                  <span className="text-sm font-medium">{activity}</span>
-                </motion.div>
-              ))}
+              {activities.map((activity) => {
+                const isSelected = selectedActivities.includes(activity)
+                const isDisabled = !isSelected && selectedActivities.length >= 3
+                return (
+                  <motion.div
+                    key={activity}
+                    whileHover={!isDisabled ? { scale: 1.02 } : {}}
+                    whileTap={!isDisabled ? { scale: 0.98 } : {}}
+                    onClick={() => !isDisabled && toggleActivity(activity)}
+                    className={`p-3 rounded-lg border-2 text-center transition-all duration-300 ${
+                      isSelected
+                        ? "border-secondary bg-secondary/5 text-secondary cursor-pointer"
+                        : isDisabled
+                          ? "border-border bg-muted/30 opacity-50 cursor-not-allowed"
+                          : "border-border hover:border-secondary/50 hover:bg-muted/50 cursor-pointer"
+                    }`}
+                  >
+                    <span className="text-sm font-medium">{activity}</span>
+                  </motion.div>
+                )
+              })}
             </div>
             <p className="text-sm text-muted-foreground">
-              Selected: {selectedActivities.length} activit{selectedActivities.length !== 1 ? "ies" : "y"}
+              Selected: {selectedActivities.length} of 3 activit{selectedActivities.length !== 1 ? "ies" : "y"}
             </p>
           </motion.div>
         )
@@ -285,26 +417,29 @@ export default function InterestsPage() {
             exit={{ opacity: 0, x: -20 }}
             className="space-y-6"
           >
-            <p className="text-muted-foreground">Select your preferred work environments</p>
+            <p className="text-muted-foreground">Select your preferred work environment (choose 1)</p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {workEnvironments.map((environment) => (
-                <motion.div
-                  key={environment}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => toggleEnvironment(environment)}
-                  className={`cursor-pointer p-4 rounded-lg border-2 text-center transition-all duration-300 ${
-                    selectedEnvironments.includes(environment)
-                      ? "border-accent bg-accent/5 text-accent"
-                      : "border-border hover:border-accent/50 hover:bg-muted/50"
-                  }`}
-                >
-                  <span className="font-medium">{environment}</span>
-                </motion.div>
-              ))}
+              {workEnvironments.map((environment) => {
+                const isSelected = selectedEnvironments.includes(environment)
+                return (
+                  <motion.div
+                    key={environment}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => toggleEnvironment(environment)}
+                    className={`cursor-pointer p-4 rounded-lg border-2 text-center transition-all duration-300 ${
+                      isSelected
+                        ? "border-accent bg-accent/5 text-accent"
+                        : "border-border hover:border-accent/50 hover:bg-muted/50"
+                    }`}
+                  >
+                    <span className="font-medium">{environment}</span>
+                  </motion.div>
+                )
+              })}
             </div>
             <p className="text-sm text-muted-foreground">
-              Selected: {selectedEnvironments.length} environment{selectedEnvironments.length !== 1 ? "s" : ""}
+              Selected: {selectedEnvironments.length} of 1 environment
             </p>
           </motion.div>
         )
@@ -361,6 +496,90 @@ export default function InterestsPage() {
     }
   }
 
+  // Show summary view if interests are completed and not editing
+  if (hasCompletedInterests && !isEditing) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+
+        <main className="flex-1 p-4 sm:p-6 lg:ml-64">
+          <div className="max-w-6xl mx-auto space-y-8">
+            {/* Header */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="space-y-2"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Target className="h-8 w-8 text-secondary" />
+                  <h1 className="text-4xl font-bold">Your Interests</h1>
+                </div>
+                <Button onClick={handleEdit} variant="outline">
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Interests
+                </Button>
+              </div>
+              <p className="text-xl text-muted-foreground">
+                Your selected interests are saved. Click "Edit Interests" to make changes.
+              </p>
+            </motion.div>
+
+            {/* Summary Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              <Card className="border-2">
+                <CardHeader>
+                  <CardTitle>Your Selected Interests</CardTitle>
+                  <CardDescription>Review your career preferences</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <h4 className="font-medium mb-3 text-lg">Career Fields:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedFields.map((fieldId) => {
+                        const field = careerFields.find((f) => f.id === fieldId)
+                        return (
+                          <Badge key={fieldId} variant="secondary" className="bg-primary/10 text-primary text-base px-3 py-1">
+                            {field?.name}
+                          </Badge>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-3 text-lg">Activities:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedActivities.map((activity) => (
+                        <Badge key={activity} variant="secondary" className="bg-secondary/10 text-secondary text-base px-3 py-1">
+                          {activity}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-3 text-lg">Work Environment:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedEnvironments.map((environment) => (
+                        <Badge key={environment} variant="secondary" className="bg-accent/10 text-accent text-base px-3 py-1">
+                          {environment}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
@@ -374,12 +593,21 @@ export default function InterestsPage() {
             transition={{ duration: 0.6 }}
             className="space-y-2"
           >
-            <div className="flex items-center space-x-2">
-              <Target className="h-8 w-8 text-secondary" />
-              <h1 className="text-4xl font-bold">Select Your Interests</h1>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Target className="h-8 w-8 text-secondary" />
+                <h1 className="text-4xl font-bold">{isEditing ? "Edit Your Interests" : "Select Your Interests"}</h1>
+              </div>
+              {isEditing && (
+                <Button onClick={handleCancelEdit} variant="outline">
+                  Cancel
+                </Button>
+              )}
             </div>
             <p className="text-xl text-muted-foreground">
-              Help us understand what excites you to find the perfect career match
+              {isEditing 
+                ? "Update your interests to refine your career recommendations"
+                : "Help us understand what excites you to find the perfect career match"}
             </p>
           </motion.div>
 
@@ -435,11 +663,6 @@ export default function InterestsPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            {successMessage && (
-              <Alert className="mb-4">
-                <AlertDescription>{successMessage}</AlertDescription>
-              </Alert>
-            )}
 
             <Card className="border-2">
               <CardHeader>
@@ -465,7 +688,7 @@ export default function InterestsPage() {
               onClick={currentStep === steps.length ? handleComplete : handleNext}
               disabled={isSaving}
             >
-              {currentStep === steps.length ? (isSaving ? "Saving..." : "Complete") : "Next"}
+              {currentStep === steps.length ? (isSaving ? "Saving..." : isEditing ? "Save Changes" : "Complete") : "Next"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </motion.div>

@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { GraduationCap, AlertCircle, CheckCircle2 } from "lucide-react"
 import { forgotPassword as apiForgotPassword, verifyOtp as apiVerifyOtp } from "@/lib/api"
+import { toast } from "react-toastify"
+import logoImg from "@/assets/images/Logo.png"
 
 const isValidEmail = (value) => /\S+@\S+\.\S+/.test(value)
 
@@ -34,12 +36,15 @@ export default function ForgotPassword() {
 
     try {
       const response = await apiForgotPassword(email)
-      setSuccess(response.message || "If an account with that email exists, a password reset OTP has been sent.")
+      const successMsg = response.message || "If an account with that email exists, a password reset OTP has been sent."
+      setSuccess(successMsg)
+      toast.success(successMsg)
       setStep("otp")
     } catch (err) {
       console.error("[v0] Forgot password error caught:", err)
       const errorMessage = err.message || "Failed to send password reset email. Please try again."
       setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -59,7 +64,9 @@ export default function ForgotPassword() {
 
     try {
       const response = await apiVerifyOtp(email, otp)
-      setSuccess(response.message || "OTP verified successfully. Redirecting to reset password...")
+      const successMsg = response.message || "OTP verified successfully. Redirecting to reset password..."
+      setSuccess(successMsg)
+      toast.success(successMsg)
       setTimeout(() => {
         navigate("/reset-password", { state: { email, otp } })
       }, 1500)
@@ -67,6 +74,7 @@ export default function ForgotPassword() {
       console.error("[v0] Verify OTP error caught:", err)
       const errorMessage = err.message || "Failed to verify OTP. Please try again."
       setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -82,9 +90,11 @@ export default function ForgotPassword() {
       >
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <GraduationCap className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-primary">CareerHoop</span>
+          <div className="flex items-center justify-center mb-4">
+            <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
+            <span className="text-2xl font-bold text-foreground">
+              areer<span className="text-primary">Hoop</span>
+            </span>
           </div>
           <h1 className="text-3xl font-bold mb-2">Forgot Password</h1>
           <p className="text-muted-foreground">

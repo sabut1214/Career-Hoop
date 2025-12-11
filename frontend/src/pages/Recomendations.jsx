@@ -22,40 +22,56 @@ import {
   Beaker,
   Users,
   Sparkles,
-  Loader2,
 } from "lucide-react"
 import { Sidebar } from "@/components/dashboard/sidebar"
-import { recommendationService } from "@/services/recommendationService"
+import api from "@/services/api"
 import { useAuth } from "@/context/AuthContext"
 import { getUserStorageKey } from "@/utils/utils"
+import { saveCareer, unsaveCareer, getSavedCareers } from "@/lib/api"
+import { toast } from "react-toastify"
 
 const categoryIconMap = {
-  technology: Code,
-  data: BarChart3,
-  healthcare: Stethoscope,
-  design: Palette,
-  engineering: Wrench,
-  science: Beaker,
-  business: Briefcase,
-  general: Target,
-  media: BookOpen,
+  Technology: Code,
+  "Data Science": BarChart3,
+  Healthcare: Stethoscope,
+  Medical: Stethoscope,
+  Design: Palette,
+  Engineering: Wrench,
+  Science: Beaker,
+  Business: Briefcase,
+  Education: Users,
+  Media: BookOpen,
+  Marketing: BookOpen,
+  Gaming: Code,
+  "History & Research": BookOpen,
+  "Social Science": Users,
+  "Space & Aeronautics": Beaker,
+  default: Target,
 }
 
 const categoryColorMap = {
-  technology: "bg-blue-500",
-  data: "bg-green-500",
-  healthcare: "bg-red-500",
-  design: "bg-purple-500",
-  engineering: "bg-orange-500",
-  science: "bg-teal-500",
-  business: "bg-indigo-500",
-  media: "bg-pink-500",
-  general: "bg-gray-500",
+  Technology: "bg-blue-500",
+  "Data Science": "bg-green-500",
+  Healthcare: "bg-red-500",
+  Medical: "bg-red-500",
+  Design: "bg-purple-500",
+  Engineering: "bg-orange-500",
+  Science: "bg-teal-500",
+  Business: "bg-indigo-500",
+  Education: "bg-yellow-500",
+  Media: "bg-pink-500",
+  Marketing: "bg-rose-500",
+  Gaming: "bg-violet-500",
+  "History & Research": "bg-amber-500",
+  "Social Science": "bg-cyan-500",
+  "Space & Aeronautics": "bg-violet-500",
+  default: "bg-gray-500",
 }
 
 const getConfidenceColor = (level) => {
   switch (level) {
     case "High":
+    case "Very High":
       return "text-green-600 bg-green-100"
     case "Medium":
       return "text-yellow-600 bg-yellow-100"
@@ -66,9 +82,113 @@ const getConfidenceColor = (level) => {
   }
 }
 
-const CareerCard = ({ career, index }) => {
-  const Icon = categoryIconMap[career.category] || Target
-  const color = categoryColorMap[career.category] || "bg-gray-500"
+const getConfidenceFromOutlook = (outlook) => {
+  if (!outlook) return { confidence: 60, level: "Medium" }
+  const lower = outlook.toLowerCase()
+  if (lower.includes("very high")) return { confidence: 95, level: "High" }
+  if (lower.includes("high")) return { confidence: 85, level: "High" }
+  if (lower.includes("medium")) return { confidence: 65, level: "Medium" }
+  if (lower.includes("low")) return { confidence: 45, level: "Low" }
+  return { confidence: 60, level: "Medium" }
+}
+
+const transformCareerToRecommendation = (career, matchReason = "") => {
+  const outlookData = getConfidenceFromOutlook(career.jobOutlook)
+  return {
+    id: career.id || career.careerName,
+    title: career.careerName || career.name || career.title,
+    description: career.description || "",
+    confidence: outlookData.confidence,
+    confidenceLevel: outlookData.level,
+    matchReason: matchReason || `Strong match based on ${career.category || "your profile"}`,
+    salary: career.averageSalaryUSD || career.salaryRange || "Not specified",
+    growth: career.jobOutlook || "Medium",
+    skills: career.skills || career.requiredSkills || [],
+    opportunities: [career.category || "Various"].filter(Boolean),
+    category: career.category || "default",
+  }
+}
+
+const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
+  const { user } = useAuth()
+  const [isSaving, setIsSaving] = useState(false)
+  const category = career.category || "default"
+  const Icon = categoryIconMap[category] || categoryIconMap.default
+  const color = categoryColorMap[category] || categoryColorMap.default
+
+  // Check if career is saved based on the savedCareerIds set
+  // Try multiple ID formats to match (UUID, name, etc.)
+  const careerIdString = String(career.id || career.careerId || "")
+  const careerNameString = String(career.title || career.careerName || career.name || "")
+  const isSaved = savedCareerIds.has(careerIdString) || (careerNameString && savedCareerIds.has(careerNameString))
+
+  const handleStarClick = async (e) => {
+    e.stopPropagation()
+    const careerId = career.id || career.careerId
+    const careerName = career.title || career.careerName || career.name
+    if (!user?.id || (!careerId && !careerName) || isSaving) return
+
+    setIsSaving(true)
+    try {
+      if (isSaved) {
+        // Try to get the actual saved career ID from savedCareerIds
+        let idToUnsave = careerId || careerName
+        if (savedCareerIds) {
+          // Find the actual saved career ID (UUID) if available
+          const savedCareerIdStr = Array.from(savedCareerIds).find(id => {
+            const idStr = String(id)
+            const careerIdStr = String(careerId || "")
+            const careerNameStr = String(careerName || "").toLowerCase()
+            return idStr === careerIdStr || 
+                   (careerNameStr && idStr.toLowerCase() === careerNameStr) ||
+                   (careerNameStr && idStr.toLowerCase().includes(careerNameStr))
+          })
+          if (savedCareerIdStr) {
+            idToUnsave = savedCareerIdStr
+          }
+        }
+        
+        await unsaveCareer(user.id, idToUnsave)
+        // Update the saved careers list - remove both ID and name
+        if (onSaveChange) {
+          onSaveChange(careerId || careerName, false)
+          if (careerId) {
+            onSaveChange(String(careerId), false)
+          }
+          if (careerName) {
+            onSaveChange(careerName, false)
+          }
+        }
+        toast.success("Career removed from saved")
+      } else {
+        const result = await saveCareer(
+          user.id,
+          careerId || careerName,
+          career.confidence || null,
+          career.matchReason || null,
+          careerName
+        )
+        // Update the saved careers list with the actual careerId from response
+        if (onSaveChange && result) {
+          // Use the careerId from the response (UUID) and also add the name
+          const actualCareerId = result.careerId || careerId
+          if (actualCareerId) {
+            onSaveChange(String(actualCareerId), true)
+          }
+          if (result.careerName || careerName) {
+            onSaveChange(result.careerName || careerName, true)
+          }
+        }
+        toast.success("Career saved successfully")
+      }
+    } catch (error) {
+      console.error("Error saving/unsaving career:", error)
+      const errorMessage = error.message || "Failed to update saved career"
+      toast.error(errorMessage)
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   return (
     <motion.div
@@ -86,7 +206,9 @@ const CareerCard = ({ career, index }) => {
                 <Icon className="h-6 w-6 text-white" />
               </div>
               <div>
-                <CardTitle className="text-xl group-hover:text-primary transition-colors">{career.title}</CardTitle>
+                <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                  {career.title}
+                </CardTitle>
                 <div className="flex items-center space-x-2 mt-1">
                   <Badge className={`${getConfidenceColor(career.confidenceLevel)} border-0`}>
                     {career.confidenceLevel} Match
@@ -95,7 +217,20 @@ const CareerCard = ({ career, index }) => {
                 </div>
               </div>
             </div>
-            <Star className="h-5 w-5 text-muted-foreground group-hover:text-accent transition-colors cursor-pointer" />
+            <button
+              onClick={handleStarClick}
+              disabled={isSaving}
+              className="transition-colors disabled:opacity-50"
+              title={isSaved ? "Remove from saved" : "Save career"}
+            >
+              <Star
+                className={`h-5 w-5 transition-colors cursor-pointer ${
+                  isSaved
+                    ? "text-yellow-500 fill-yellow-500"
+                    : "text-muted-foreground group-hover:text-accent"
+                }`}
+              />
+            </button>
           </div>
 
           <div className="space-y-2">
@@ -122,41 +257,34 @@ const CareerCard = ({ career, index }) => {
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center space-x-2">
                 <TrendingUp className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium">Job Growth</span>
+                <span className="text-sm font-medium">Job Outlook</span>
               </div>
               <span className="text-sm font-semibold text-green-600">{career.growth}</span>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div>
-              <h4 className="text-sm font-medium mb-2 flex items-center">
-                <Target className="h-4 w-4 mr-1" />
-                Key Skills
-              </h4>
-              <div className="flex flex-wrap gap-1">
-                {career.skills.map((skill) => (
-                  <Badge key={skill} variant="secondary" className="text-xs">
-                    {skill}
-                  </Badge>
-                ))}
+          {career.skills && career.skills.length > 0 && (
+            <div className="space-y-3">
+              <div>
+                <h4 className="text-sm font-medium mb-2 flex items-center">
+                  <Target className="h-4 w-4 mr-1" />
+                  Key Skills
+                </h4>
+                <div className="flex flex-wrap gap-1">
+                  {career.skills.slice(0, 5).map((skill, idx) => (
+                    <Badge key={idx} variant="secondary" className="text-xs">
+                      {skill}
+                    </Badge>
+                  ))}
+                  {career.skills.length > 5 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{career.skills.length - 5} more
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
-
-            <div>
-              <h4 className="text-sm font-medium mb-2 flex items-center">
-                <Briefcase className="h-4 w-4 mr-1" />
-                Opportunities
-              </h4>
-              <div className="flex flex-wrap gap-1">
-                {career.opportunities.map((opportunity) => (
-                  <Badge key={opportunity} variant="outline" className="text-xs">
-                    {opportunity}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </div>
+          )}
 
           <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
             <p className="text-sm text-primary font-medium mb-1">Why this matches you:</p>
@@ -165,8 +293,13 @@ const CareerCard = ({ career, index }) => {
 
           <div className="flex space-x-2">
             <Button className="flex-1">Learn More</Button>
-            <Button variant="outline" className="flex-1 bg-transparent">
-              Save Career
+            <Button 
+              variant="outline" 
+              className="flex-1 bg-transparent"
+              onClick={handleStarClick}
+              disabled={isSaving}
+            >
+              {isSaved ? "Saved" : "Save Career"}
             </Button>
           </div>
         </CardContent>
@@ -178,18 +311,90 @@ const CareerCard = ({ career, index }) => {
 export default function RecommendationsPage() {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState("grades")
+  const [allCareers, setAllCareers] = useState([])
   const [gradeRecs, setGradeRecs] = useState([])
   const [interestRecs, setInterestRecs] = useState([])
   const [gradeError, setGradeError] = useState(null)
   const [interestError, setInterestError] = useState(null)
+  const [loadingCareers, setLoadingCareers] = useState(true)
   const [loadingGrades, setLoadingGrades] = useState(false)
   const [loadingInterests, setLoadingInterests] = useState(false)
   const [analysisSummary, setAnalysisSummary] = useState(null)
   const [interestSummary, setInterestSummary] = useState(null)
+  const [savedCareerIds, setSavedCareerIds] = useState(new Set())
 
+  // Fetch all careers on mount
   useEffect(() => {
+    const fetchCareers = async () => {
+      try {
+        setLoadingCareers(true)
+        const response = await api.get("/api/careers")
+        setAllCareers(response.data || [])
+      } catch (error) {
+        console.error("Failed to fetch careers:", error)
+        setGradeError("Unable to load career data.")
+        setInterestError("Unable to load career data.")
+      } finally {
+        setLoadingCareers(false)
+      }
+    }
+
+    fetchCareers()
+  }, [])
+
+  // Function to fetch saved career IDs
+  const fetchSavedCareers = async () => {
     if (!user?.id) {
-      // Don't load data if user is not logged in
+      setSavedCareerIds(new Set())
+      return
+    }
+
+    try {
+      const savedCareers = await getSavedCareers(user.id)
+      // Convert IDs to strings for consistent comparison
+      // Add both careerId (UUID) and careerName for matching
+      const ids = new Set()
+      savedCareers.forEach(sc => {
+        if (sc.careerId) ids.add(String(sc.careerId))
+        if (sc.careerName) ids.add(sc.careerName)
+        if (sc.careerTitle) ids.add(sc.careerTitle)
+        if (sc.id) ids.add(String(sc.id))
+      })
+      setSavedCareerIds(ids)
+    } catch (error) {
+      console.error("Failed to fetch saved careers:", error)
+      setSavedCareerIds(new Set())
+    }
+  }
+
+  // Fetch saved careers on mount
+  useEffect(() => {
+    fetchSavedCareers()
+  }, [user?.id])
+
+  // Handle save/unsave changes
+  const handleSaveChange = async (careerId, isSaved) => {
+    // Optimistically update the UI immediately
+    setSavedCareerIds(prev => {
+      const newSet = new Set(prev)
+      const idString = String(careerId)
+      if (isSaved) {
+        newSet.add(idString)
+      } else {
+        newSet.delete(idString)
+      }
+      return newSet
+    })
+    
+    // Refetch to ensure consistency with backend after a short delay
+    setTimeout(() => {
+      fetchSavedCareers()
+    }, 500)
+  }
+
+  // Load user data and fetch recommendations
+  useEffect(() => {
+    if (!user?.id || loadingCareers || allCareers.length === 0) {
       return
     }
 
@@ -218,39 +423,97 @@ export default function RecommendationsPage() {
         localStorage.removeItem(interestsKey)
       }
     }
-  }, [user?.id])
+  }, [user?.id, loadingCareers, allCareers])
+
+  // Helper function to check if a career is saved
+  const isCareerSaved = (career) => {
+    const careerId = String(career.id || career.careerId || "")
+    const careerName = String(career.title || career.careerName || career.name || "")
+    return savedCareerIds.has(careerId) || (careerName && savedCareerIds.has(careerName))
+  }
+
+  // Sort recommendations: saved ones first
+  const sortRecommendations = (recommendations) => {
+    const saved = recommendations.filter(rec => isCareerSaved(rec))
+    const notSaved = recommendations.filter(rec => !isCareerSaved(rec))
+    return [...saved, ...notSaved]
+  }
+
+  // Get sorted recommendations
+  const sortedGradeRecs = useMemo(() => sortRecommendations(gradeRecs), [gradeRecs, savedCareerIds])
+  const sortedInterestRecs = useMemo(() => sortRecommendations(interestRecs), [interestRecs, savedCareerIds])
 
   const stats = useMemo(() => {
     const allRecs = [...gradeRecs, ...interestRecs]
     const total = allRecs.length
     const high = allRecs.filter((rec) => rec.confidenceLevel === "High").length
     const medium = allRecs.filter((rec) => rec.confidenceLevel === "Medium").length
-    return { total, high, medium }
-  }, [gradeRecs, interestRecs])
+    const saved = savedCareerIds.size
+    return { total, high, medium, saved }
+  }, [gradeRecs, interestRecs, savedCareerIds])
 
   const fetchGradeRecommendations = async (analysis) => {
     setLoadingGrades(true)
     setGradeError(null)
     try {
+      const grade12 = analysis.grade12 ?? 70
+      const stream = (analysis.stream || "general").toLowerCase()
       const subjects =
         Array.isArray(analysis.subjects)
-          ? analysis.subjects
-              .map((subject) => {
-                if (typeof subject === "string") return subject
-                if (subject && typeof subject === "object") return subject.name
-                return null
-              })
-              .filter(Boolean)
+          ? analysis.subjects.map((s) => (typeof s === "string" ? s : s?.name || "")).filter(Boolean)
           : []
 
-      const payload = {
-        grade10: analysis.grade10 ?? null,
-        grade12: analysis.grade12 ?? null,
-        stream: analysis.stream || "general",
-        subjects,
+      // Filter careers based on stream and subjects
+      let matchedCareers = []
+
+      if (stream.includes("science")) {
+        // Match with Technology, Engineering, Science, Healthcare careers
+        matchedCareers = allCareers.filter(
+          (career) =>
+            career.category === "Technology" ||
+            career.category === "Engineering" ||
+            career.category === "Science" ||
+            career.category === "Healthcare" ||
+            career.category === "Medical" ||
+            career.category === "Data Science"
+        )
+      } else if (stream.includes("commerce") || stream.includes("business")) {
+        // Match with Business careers
+        matchedCareers = allCareers.filter(
+          (career) => career.category === "Business" || career.category === "Marketing"
+        )
+      } else if (stream.includes("arts")) {
+        // Match with Arts, Design, Media, Education careers
+        matchedCareers = allCareers.filter(
+          (career) =>
+            career.category === "Design" ||
+            career.category === "Media" ||
+            career.category === "Marketing" ||
+            career.category === "Education" ||
+            career.category === "History & Research" ||
+            career.category === "Social Science"
+        )
+      } else {
+        // General stream - show diverse careers
+        matchedCareers = allCareers.slice(0, 20)
       }
-      const response = await recommendationService.getByGrades(payload)
-      setGradeRecs(response.data?.recommendations || [])
+
+      // Sort by grade (higher grades get better matches)
+      if (grade12 >= 90) {
+        matchedCareers = matchedCareers.slice(0, 15)
+      } else if (grade12 >= 80) {
+        matchedCareers = matchedCareers.slice(0, 12)
+      } else {
+        matchedCareers = matchedCareers.slice(0, 10)
+      }
+
+      // Transform to recommendation format
+      const recommendations = matchedCareers.map((career) => {
+        const matchReason = `Strong academic performance (${grade12}%) in ${stream} stream aligns with ${career.category} careers.`
+        return transformCareerToRecommendation(career, matchReason)
+      })
+
+      setGradeRecs(recommendations)
     } catch (error) {
       console.error("Failed to fetch grade recommendations:", error)
       setGradeError("Unable to load grade-based recommendations right now.")
@@ -263,8 +526,63 @@ export default function RecommendationsPage() {
     setLoadingInterests(true)
     setInterestError(null)
     try {
-      const response = await recommendationService.getByInterests(interests)
-      setInterestRecs(response.data?.recommendations || [])
+      const careerFields = interests.careerFields || []
+      const activities = interests.activities || []
+
+      // Map interest fields to career categories
+      const fieldToCategory = {
+        medicine: ["Healthcare", "Medical"],
+        technology: ["Technology", "Gaming"],
+        arts: ["Design", "Media", "Marketing"],
+        engineering: ["Engineering"],
+        business: ["Business"],
+        science: ["Science", "Data Science"],
+        education: ["Education"],
+        media: ["Media", "Marketing"],
+      }
+
+      // Get categories from selected fields
+      const selectedCategories = careerFields
+        .map((field) => fieldToCategory[field.toLowerCase()])
+        .flat()
+        .filter(Boolean)
+
+      // Filter careers based on interests
+      let matchedCareers = []
+
+      if (selectedCategories.length > 0) {
+        matchedCareers = allCareers.filter((career) => selectedCategories.includes(career.category))
+      } else {
+        // If no specific category match, show diverse careers
+        matchedCareers = allCareers.slice(0, 15)
+      }
+
+      // Further filter by activities/skills if available
+      if (activities.length > 0) {
+        const activityKeywords = activities.map((a) => a.toLowerCase())
+        matchedCareers = matchedCareers.filter((career) => {
+          const skills = (career.skills || career.requiredSkills || []).map((s) => s.toLowerCase())
+          const description = (career.description || "").toLowerCase()
+          return (
+            activityKeywords.some((keyword) =>
+              skills.some((skill) => skill.includes(keyword) || keyword.includes(skill))
+            ) ||
+            activityKeywords.some((keyword) => description.includes(keyword))
+          )
+        })
+      }
+
+      // Limit results
+      matchedCareers = matchedCareers.slice(0, 15)
+
+      // Transform to recommendation format
+      const recommendations = matchedCareers.map((career) => {
+        const fieldsStr = careerFields.join(", ")
+        const matchReason = `Your interests in ${fieldsStr} and selected activities align with ${career.careerName || career.name}.`
+        return transformCareerToRecommendation(career, matchReason)
+      })
+
+      setInterestRecs(recommendations)
     } catch (error) {
       console.error("Failed to fetch interest recommendations:", error)
       setInterestError("Unable to load interest-based recommendations right now.")
@@ -306,7 +624,7 @@ export default function RecommendationsPage() {
               { label: "Total Matches", value: stats.total, icon: Target, color: "text-primary" },
               { label: "High Confidence", value: stats.high, icon: TrendingUp, color: "text-green-600" },
               { label: "Medium Confidence", value: stats.medium, icon: Clock, color: "text-yellow-600" },
-              { label: "Saved Careers", value: "0", icon: Star, color: "text-accent" },
+              { label: "Saved Careers", value: stats.saved, icon: Star, color: "text-accent" },
             ].map((stat) => (
               <Card key={stat.label} className="border-2">
                 <CardContent className="p-4">
@@ -367,14 +685,20 @@ export default function RecommendationsPage() {
                   )}
                 </div>
 
-                {loadingGrades ? (
+                {loadingCareers || loadingGrades ? (
                   <LoaderState />
                 ) : gradeError ? (
                   <AlertMessage message={gradeError} />
                 ) : gradeRecs.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {gradeRecs.map((career, index) => (
-                      <CareerCard key={career.id} career={career} index={index} />
+                    {sortedGradeRecs.map((career, index) => (
+                      <CareerCard 
+                        key={career.id} 
+                        career={career} 
+                        index={index}
+                        savedCareerIds={savedCareerIds}
+                        onSaveChange={handleSaveChange}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -406,14 +730,20 @@ export default function RecommendationsPage() {
                   )}
                 </div>
 
-                {loadingInterests ? (
+                {loadingCareers || loadingInterests ? (
                   <LoaderState />
                 ) : interestError ? (
                   <AlertMessage message={interestError} />
                 ) : interestRecs.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {interestRecs.map((career, index) => (
-                      <CareerCard key={career.id} career={career} index={index} />
+                    {sortedInterestRecs.map((career, index) => (
+                      <CareerCard 
+                        key={career.id} 
+                        career={career} 
+                        index={index}
+                        savedCareerIds={savedCareerIds}
+                        onSaveChange={handleSaveChange}
+                      />
                     ))}
                   </div>
                 ) : (

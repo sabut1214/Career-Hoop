@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import { LayoutDashboard, Users, BookOpen, Building2, Users2, Gift, Zap, FileText, LogOut, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/context/AuthContext"
+import logoImg from "@/assets/images/Logo.png"
 
 export function AdminSidebar() {
   const location = useLocation()
@@ -51,13 +52,16 @@ export function AdminSidebar() {
       {/* Header with Logo and Toggle */}
       <div className="flex items-center justify-between mb-8">
         {!isCollapsed && (
-          <Link to="/admin">
-            <h1 className="text-2xl font-bold text-sidebar-primary">CareerHoop Admin</h1>
+          <Link to="/admin" className="flex items-center">
+            <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
+            <h1 className="text-2xl font-bold text-foreground">
+              areer<span className="text-primary">Hoop</span> Admin
+            </h1>
           </Link>
         )}
         {isCollapsed && (
           <Link to="/admin" className="flex items-center justify-center" title="CareerHoop Admin">
-            <LayoutDashboard className="h-8 w-8 text-sidebar-primary" />
+            <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
           </Link>
         )}
         <Button

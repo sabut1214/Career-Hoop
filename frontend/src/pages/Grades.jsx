@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import { getUserStorageKey } from "@/utils/utils"
+import { toast } from "react-toastify"
 
 const parsePrograms = (programs) => {
   if (!programs) return []
@@ -72,7 +73,6 @@ const transformCollege = (college) => ({
   overview: college.overview || "",
   programs: parsePrograms(college.programs),
   type: college.type || "Unknown",
-  rating: college.rating || null,
   detailUrl: college.detailUrl,
 })
 
@@ -240,8 +240,11 @@ export default function GradesPage() {
       localStorage.setItem(storageKey, JSON.stringify(result))
       const recs = await fetchRecommendedColleges(result, profile)
       setRecommendations(recs)
+      toast.success("Marksheet analyzed successfully!")
     } catch (err) {
-      setError(err.message || "Failed to analyze the marksheet. Please try again.")
+      const errorMsg = err.message || "Failed to analyze the marksheet. Please try again."
+      setError(errorMsg)
+      toast.error(errorMsg)
       setAnalysis(null)
       setAcademicProfile(null)
       setRecommendations([])
@@ -605,12 +608,6 @@ export default function GradesPage() {
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                          {college.rating && (
-                            <div className="flex items-center gap-1 text-sm font-semibold">
-                              <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                              {college.rating.toFixed(1)}
-                            </div>
-                          )}
                           {typeof college.matchScore === "number" && (
                             <Badge variant="secondary" className="gap-1 text-xs">
                               <TrendingUp className="h-3 w-3" />

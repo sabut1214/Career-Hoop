@@ -30,6 +30,15 @@ public class StudentController {
                      .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/email/{email}")
+    public ResponseEntity<Student> getStudentByEmail(@PathVariable String email) {
+        Student student = studentRepository.findByEmail(email);
+        if (student == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(student);
+    }
+
     @PostMapping
     public ResponseEntity<?> createStudent(@RequestBody Student student) {
         if (studentRepository.existsByEmail(student.getEmail())) {
@@ -46,6 +55,9 @@ public class StudentController {
                 .map(student -> {
                     student.setName(studentDetails.getName());
                     student.setEmail(studentDetails.getEmail());
+                    student.setCareerFields(studentDetails.getCareerFields());
+                    student.setActivities(studentDetails.getActivities());
+                    student.setWorkEnvironments(studentDetails.getWorkEnvironments());
                     Student updatedStudent = studentRepository.save(student);
                     return ResponseEntity.ok(updatedStudent);
                 })

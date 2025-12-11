@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/context/AuthContext"
 import { register } from "@/lib/api"
+import { toast } from "react-toastify"
+import logoImg from "@/assets/images/Logo.png"
 
 export default function Signup() {
   const navigate = useNavigate()
@@ -71,9 +73,12 @@ export default function Signup() {
         password,
       })
 
+      toast.success("Account created successfully! Please log in.")
       navigate("/login", { state: { prefillEmail: email } })
     } catch (err) {
-      setError(err.message || "Signup failed. Please try again.")
+      const errorMsg = err.message || "Signup failed. Please try again."
+      setError(errorMsg)
+      toast.error(errorMsg)
     } finally {
       setLoading(false)
     }
@@ -88,9 +93,11 @@ export default function Signup() {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <GraduationCap className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-primary">CareerHoop</span>
+          <div className="flex items-center justify-center mb-4">
+            <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
+            <span className="text-2xl font-bold text-foreground">
+              areer<span className="text-primary">Hoop</span>
+            </span>
           </div>
           <h1 className="text-3xl font-bold mb-2">Create an Account</h1>
           <p className="text-muted-foreground">Join CareerHoop to start your personalized journey</p>

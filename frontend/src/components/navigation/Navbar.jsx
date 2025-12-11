@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "../../context/ThemeContext"
 import "@/styles/Navbar.css"
+import logoImg from "@/assets/images/Logo.png"
 
 const Navbar = () => {
   const location = useLocation()
@@ -15,7 +16,12 @@ const Navbar = () => {
     <nav className="navbar">
       <div className="navbar-container">
         <div className="navbar-brand">
-          <Link to="/">CareerHoop</Link>
+          <Link to="/" className="flex items-center">
+            <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
+            <span className="font-bold text-foreground">
+              areer<span className="text-primary">Hoop</span>
+            </span>
+          </Link>
         </div>
 
         <ul className="navbar-nav">

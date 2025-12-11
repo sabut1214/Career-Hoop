@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,7 +13,6 @@ import {
   LogOut,
   Briefcase,
   Users,
-  Award,
   ChevronUp,
   ChevronLeft,
   ChevronRight,
@@ -32,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
+import logoImg from "@/assets/images/Logo.png"
 
 const navigationItems = [
   { icon: Home, label: "Dashboard", href: "/dashboard" },
@@ -41,7 +41,6 @@ const navigationItems = [
   { icon: Building2, label: "Colleges", href: "/colleges" },
   { icon: Briefcase, label: "Careers", href: "/careers" },
   { icon: Users, label: "Mentors", href: "/mentors" },
-  { icon: Award, label: "Scholarships", href: "/scholarships" },
   { icon: BookOpen, label: "Training", href: "/trainings" },
   { icon: Activity, label: "Quiz Analytics", href: "/quiz/analytics" },
 ]
@@ -55,11 +54,17 @@ export function Sidebar() {
     return saved ? JSON.parse(saved) : false
   })
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const hasAnimatedRef = useRef(false)
 
   useEffect(() => {
     localStorage.setItem("sidebarCollapsed", JSON.stringify(isCollapsed))
     document.documentElement.style.setProperty("--sidebar-width", isCollapsed ? "5rem" : "16rem")
   }, [isCollapsed])
+
+  // Mark as animated after first render
+  if (!hasAnimatedRef.current) {
+    hasAnimatedRef.current = true
+  }
 
   useEffect(() => {
     const handleResize = () => {
@@ -116,7 +121,7 @@ export function Sidebar() {
       )}
 
       <motion.aside
-        initial={{ x: -300 }}
+        {...(!hasAnimatedRef.current && { initial: { x: -300 } })}
         animate={{ x: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
         className={cn(
@@ -129,14 +134,16 @@ export function Sidebar() {
       {/* Header with Logo and Toggle */}
       <div className="flex items-center justify-between mb-8">
         {!isCollapsed && (
-          <Link to="/" className="flex items-center space-x-2">
-            <GraduationCap className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-primary">CareerHoop</span>
+          <Link to="/" className="flex items-center">
+            <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
+            <span className="text-2xl font-bold text-foreground">
+              areer<span className="text-primary">Hoop</span>
+            </span>
           </Link>
         )}
         {isCollapsed && (
           <Link to="/" className="flex items-center justify-center">
-            <GraduationCap className="h-8 w-8 text-primary" />
+            <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
           </Link>
         )}
         <Button
@@ -163,9 +170,9 @@ export function Sidebar() {
           return (
             <motion.div
               key={item.label}
-              initial={{ opacity: 0, x: -20 }}
+              {...(!hasAnimatedRef.current && { initial: { opacity: 0, x: -20 } })}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 + index * 0.05 }}
+              transition={hasAnimatedRef.current ? { duration: 0 } : { duration: 0.4, delay: 0.1 + index * 0.05 }}
             >
               <Link to={item.href} title={isCollapsed ? item.label : ""}>
                 <Button

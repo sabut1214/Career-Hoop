@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "react-toastify";
 import {
   ArrowLeft,
   ArrowRight,
@@ -130,11 +131,14 @@ export default function Assessment() {
           extracted_grades: result.output
         }));
         setUploadedFile(file);
+        toast.success("Marksheet analyzed successfully!");
       } else {
         throw new Error("Could not extract academic data from the marksheet. Please ensure the document is clear and contains grade information.");
       }
     } catch (error) {
-      setError(error.message || "Error analyzing marksheet. Please try again.");
+      const errorMsg = error.message || "Error analyzing marksheet. Please try again.";
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
 
     setIsAnalyzing(false);
@@ -177,10 +181,13 @@ export default function Assessment() {
         await Student.create(studentData);
       }
 
+      toast.success("Assessment saved successfully!");
       navigate(createPageUrl("Recommendations"));
     } catch (error) {
       console.error("Error saving assessment:", error);
-      setError("Error saving assessment data. Please try again.");
+      const errorMsg = "Error saving assessment data. Please try again.";
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
     setIsLoading(false);
   };

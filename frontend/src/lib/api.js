@@ -118,8 +118,21 @@ export const deleteStudent = async (id) => {
 // Careers
 export const getCareers = async () => {
   if (USE_MOCK_DATA) return { data: mockStats.careers }
-  const response = await fetch(`${API_BASE_URL}/careers`)
-  if (!response.ok) throw new Error("Failed to fetch careers")
+  
+  const headers = buildAuthHeaders()
+  const response = await fetch(`${API_BASE_URL}/careers`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
+  })
+  
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Failed to fetch careers: ${response.status} ${errorText}`)
+  }
+  
   const data = await response.json()
   return { data }
 }
@@ -1102,6 +1115,249 @@ export const updateUserProfile = async (userId, data) => {
   }
 
   return response.json()
+}
+
+export const getSavedCareers = async (userId) => {
+  if (!userId) throw new Error("User ID is required to fetch saved careers")
+
+  const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}/saved-careers`, {
+    method: "GET",
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.message || "Failed to fetch saved careers")
+  }
+
+  return response.json()
+}
+
+export const getSavedColleges = async (userId) => {
+  if (!userId) throw new Error("User ID is required to fetch saved colleges")
+
+  const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}/saved-colleges`, {
+    method: "GET",
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.message || "Failed to fetch saved colleges")
+  }
+
+  return response.json()
+}
+
+export const saveCareer = async (userId, careerId, confidenceScore, matchReason, careerName) => {
+  if (!userId) throw new Error("User ID is required to save career")
+  
+  // Check if careerId is a valid UUID
+  const isUUID = careerId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(careerId)
+  
+  let url, body
+  if (isUUID) {
+    // Use UUID endpoint
+    url = `${API_BASE_URL}/users/${userId}/saved-careers`
+    body = {
+      careerId,
+      confidenceScore: confidenceScore || null,
+      matchReason: matchReason || null,
+    }
+  } else if (careerName) {
+    // Use name-based endpoint
+    url = `${API_BASE_URL}/users/${userId}/saved-careers/by-name`
+    body = {
+      careerName,
+      confidenceScore: confidenceScore || null,
+      matchReason: matchReason || null,
+    }
+  } else {
+    throw new Error("Career ID or name is required")
+  }
+
+  const response = await fetchWithAuth(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    const errorMessage = errorData.message || errorData.error || "Failed to save career"
+    console.error("Save career error:", errorMessage, { url, body, status: response.status })
+    throw new Error(errorMessage)
+  }
+
+  return response.json()
+}
+
+export const unsaveCareer = async (userId, careerId) => {
+  if (!userId) throw new Error("User ID is required to unsave career")
+  if (!careerId) throw new Error("Career ID is required")
+
+  // Check if careerId is a valid UUID
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(careerId))
+  
+  if (isUUID) {
+    // Try to unsave by careerId (UUID) first
+    try {
+      const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}/saved-careers/by-career/${careerId}`, {
+        method: "DELETE",
+      })
+      if (response.ok) {
+        return true
+      }
+      // If that fails, try to find by saved career ID
+      const errorData = await response.json().catch(() => ({}))
+      if (response.status === 404) {
+        // Career not found by careerId, try to find by saved career ID
+        const savedCareers = await getSavedCareers(userId)
+        const savedCareer = savedCareers.find(sc => 
+          String(sc.careerId) === String(careerId)
+        )
+        if (savedCareer && savedCareer.id) {
+          const deleteResponse = await fetchWithAuth(`${API_BASE_URL}/users/${userId}/saved-careers/${savedCareer.id}`, {
+            method: "DELETE",
+          })
+          if (!deleteResponse.ok) {
+            throw new Error(errorData.message || "Failed to unsave career")
+          }
+          return true
+        }
+      }
+      throw new Error(errorData.message || "Failed to unsave career")
+    } catch (error) {
+      // If UUID-based unsave fails, fall through to name-based lookup
+      console.warn("Failed to unsave by UUID, trying name-based lookup:", error)
+    }
+  }
+
+  // If not a UUID or UUID-based unsave failed, find by name
+  try {
+    const savedCareers = await getSavedCareers(userId)
+    const careerIdStr = String(careerId).toLowerCase().trim()
+    
+    // Try to find saved career by matching name or title (case-insensitive)
+    const savedCareer = savedCareers.find(sc => {
+      const title = (sc.careerTitle || "").toLowerCase().trim()
+      const name = (sc.careerName || "").toLowerCase().trim()
+      return title === careerIdStr || name === careerIdStr || 
+             title.includes(careerIdStr) || name.includes(careerIdStr)
+    })
+    
+    if (savedCareer && savedCareer.id) {
+      // Use the saved career's ID to unsave
+      const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}/saved-careers/${savedCareer.id}`, {
+        method: "DELETE",
+      })
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || "Failed to unsave career")
+      }
+      return true
+    }
+    
+    // If not found by name, try to find by careerId if it's a UUID
+    if (isUUID) {
+      const savedCareerByCareerId = savedCareers.find(sc => 
+        String(sc.careerId) === String(careerId)
+      )
+      if (savedCareerByCareerId && savedCareerByCareerId.id) {
+        const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}/saved-careers/${savedCareerByCareerId.id}`, {
+          method: "DELETE",
+        })
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.message || "Failed to unsave career")
+        }
+        return true
+      }
+    }
+    
+    throw new Error("Career not found in saved items")
+  } catch (error) {
+    if (error.message === "Career not found in saved items") {
+      throw error
+    }
+    throw new Error(error.message || "Failed to unsave career")
+  }
+}
+
+export const saveCollege = async (userId, collegeId) => {
+  if (!userId) throw new Error("User ID is required to save college")
+  if (!collegeId) throw new Error("College ID is required")
+
+  const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}/saved-colleges`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ collegeId }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.message || "Failed to save college")
+  }
+
+  return response.json()
+}
+
+export const unsaveCollege = async (userId, collegeId) => {
+  if (!userId) throw new Error("User ID is required to unsave college")
+  if (!collegeId) throw new Error("College ID is required")
+
+  const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}/saved-colleges/by-college/${collegeId}`, {
+    method: "DELETE",
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.message || "Failed to unsave college")
+  }
+
+  return true
+}
+
+export const checkCareerSaved = async (userId, careerId) => {
+  if (!userId || !careerId) return false
+
+  // Only check if careerId is a valid UUID
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(careerId)
+  if (!isUUID) return false // Can't check non-UUID careers
+
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}/saved-careers/check/${careerId}`, {
+      method: "GET",
+    })
+
+    if (!response.ok) return false
+
+    const data = await response.json()
+    return data.saved === true
+  } catch (error) {
+    console.error("Error checking if career is saved:", error)
+    return false
+  }
+}
+
+export const checkCollegeSaved = async (userId, collegeId) => {
+  if (!userId || !collegeId) return false
+
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}/saved-colleges/check/${collegeId}`, {
+      method: "GET",
+    })
+
+    if (!response.ok) return false
+
+    const data = await response.json()
+    return data.saved === true
+  } catch (error) {
+    console.error("Error checking if college is saved:", error)
+    return false
+  }
 }
 
 export const logout = async () => {

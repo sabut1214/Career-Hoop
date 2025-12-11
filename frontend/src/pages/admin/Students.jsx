@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { getStudents, deleteStudent } from "@/lib/api"
 import { Trash2, Plus } from "lucide-react"
 import { ProtectedRoute } from "@/components/protected-route"
+import { toast } from "react-toastify"
 
 export default function StudentsPage() {
   const [students, setStudents] = useState([])
@@ -32,8 +33,10 @@ export default function StudentsPage() {
       try {
         await deleteStudent(id)
         setStudents(students.filter((s) => s.id !== id))
+        toast.success("Student deleted successfully.")
       } catch (error) {
         console.error("Failed to delete student:", error)
+        toast.error("Failed to delete student. Please try again.")
       }
     }
   }
