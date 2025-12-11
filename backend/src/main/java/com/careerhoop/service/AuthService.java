@@ -398,6 +398,57 @@ public class AuthService {
     public PasswordResetResponse forgotPassword(String email) {
         return generateAndSendPasswordResetOtp(email);
     }
+
+    /**
+     * Changes user password after verifying current password.
+     * 
+     * @param userId The user's ID
+     * @param currentPassword The user's current password
+     * @param newPassword The new password to set
+     * @throws IllegalArgumentException if user not found, current password incorrect, or new password invalid
+     */
+    @Transactional
+    public void changePassword(UUID userId, String currentPassword, String newPassword) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID is required");
+        }
+        
+        if (currentPassword == null || currentPassword.trim().isEmpty()) {
+            throw new IllegalArgumentException("Current password is required");
+        }
+        
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            throw new IllegalArgumentException("New password is required");
+        }
+        
+        if (newPassword.length() < 8) {
+            throw new IllegalArgumentException("New password must be at least 8 characters long");
+        }
+        
+        // Find user
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        // Verify current password
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+        
+        // Check if new password is same as current password
+        if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("New password must be different from current password");
+        }
+        
+        // Hash and update password
+        String newPasswordHash = passwordEncoder.encode(newPassword);
+        user.setPasswordHash(newPasswordHash);
+        userRepository.save(user);
+        
+        logger.info("Password changed successfully for user: {}", user.getEmail());
+        
+        // Note: In a production system, you might want to invalidate all refresh tokens here
+        // to force re-login. This would require a refresh token repository.
+    }
 }
 
 

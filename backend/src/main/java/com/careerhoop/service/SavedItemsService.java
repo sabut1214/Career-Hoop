@@ -103,6 +103,9 @@ public class SavedItemsService {
         return SavedCareerResponse.fromEntity(saved);
     }
 
+    @Autowired(required = false)
+    private NotificationService notificationService;
+
     @Transactional
     public SavedCollegeResponse saveCollege(UUID userId, UUID collegeId) {
         User user = userRepository.findById(userId)
@@ -121,6 +124,18 @@ public class SavedItemsService {
         savedCollege.setCollege(college);
 
         SavedCollege saved = savedCollegeRepository.save(savedCollege);
+        
+        // Send notification if service is available
+        if (notificationService != null) {
+            try {
+                notificationService.sendCollegeSavedNotification(user, college);
+            } catch (Exception e) {
+                // Log but don't fail the save operation
+                org.slf4j.LoggerFactory.getLogger(SavedItemsService.class)
+                    .warn("Failed to send college saved notification", e);
+            }
+        }
+        
         return SavedCollegeResponse.fromEntity(saved);
     }
 

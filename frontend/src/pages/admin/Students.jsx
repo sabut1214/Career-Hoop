@@ -20,9 +20,13 @@ export default function StudentsPage() {
   const fetchStudents = async () => {
     try {
       const response = await getStudents()
-      setStudents(response.data || [])
+      // Handle different response structures
+      const studentsData = Array.isArray(response) ? response : (response.data || [])
+      setStudents(studentsData)
     } catch (error) {
       console.error("Failed to fetch students:", error)
+      toast.error("Failed to fetch students. Please try again.")
+      setStudents([])
     } finally {
       setLoading(false)
     }

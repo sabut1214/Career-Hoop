@@ -1,13 +1,18 @@
 package com.careerhoop.controller;
 
+import com.careerhoop.dto.ChangePasswordRequest;
 import com.careerhoop.dto.SaveCareerByNameRequest;
 import com.careerhoop.dto.SaveCareerRequest;
 import com.careerhoop.dto.SavedCareerResponse;
 import com.careerhoop.dto.SavedCollegeResponse;
 import com.careerhoop.dto.UpdateUserProfileRequest;
 import com.careerhoop.dto.UserResponse;
+import com.careerhoop.service.AuthService;
+import com.careerhoop.service.DataExportService;
 import com.careerhoop.service.SavedItemsService;
 import com.careerhoop.service.UserProfileService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +33,12 @@ public class UserController {
 
     @Autowired
     private SavedItemsService savedItemsService;
+
+    @Autowired
+    private AuthService authService;
+
+    @Autowired
+    private DataExportService dataExportService;
 
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUserProfile(
@@ -191,6 +202,70 @@ public class UserController {
         enforceAccess(id, requesterId, requesterRole);
         boolean isSaved = savedItemsService.isCollegeSaved(id, collegeId);
         return ResponseEntity.ok(Map.of("saved", isSaved));
+    }
+
+    @PostMapping("/{id}/change-password")
+    public ResponseEntity<Map<String, String>> changePassword(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-User-Id", required = false) UUID requesterId,
+            @RequestHeader(value = "X-User-Role", required = false) String requesterRole,
+            @RequestBody ChangePasswordRequest request
+    ) {
+        enforceAccess(id, requesterId, requesterRole);
+        
+        // Validate password confirmation
+        if (!request.newPassword().equals(request.confirmPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "New password and confirmation do not match");
+        }
+        
+        try {
+            authService.changePassword(id, request.currentPassword(), request.newPassword());
+            return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/export/json")
+    public ResponseEntity<String> exportAsJson(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-User-Id", required = false) UUID requesterId,
+            @RequestHeader(value = "X-User-Role", required = false) String requesterRole
+    ) {
+        enforceAccess(id, requesterId, requesterRole);
+        
+        try {
+            String jsonData = dataExportService.exportAsJson(id);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setContentDispositionFormData("attachment", "careerhoop-export-" + id + ".json");
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(jsonData);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to export data: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/export/pdf")
+    public ResponseEntity<byte[]> exportAsPdf(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-User-Id", required = false) UUID requesterId,
+            @RequestHeader(value = "X-User-Role", required = false) String requesterRole
+    ) {
+        enforceAccess(id, requesterId, requesterRole);
+        
+        try {
+            byte[] pdfData = dataExportService.exportAsPdf(id);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "careerhoop-export-" + id + ".pdf");
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(pdfData);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to export data: " + e.getMessage());
+        }
     }
 
     private void enforceAccess(UUID targetUserId, UUID requesterId, String requesterRole) {

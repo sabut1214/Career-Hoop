@@ -20,9 +20,13 @@ export default function AdminCollegesPage() {
   const fetchColleges = async () => {
     try {
       const response = await getColleges()
-      setColleges(response.data || [])
+      // Handle different response structures (direct array or { data: [...] })
+      const collegesData = Array.isArray(response) ? response : (response.data || [])
+      setColleges(collegesData)
     } catch (error) {
       console.error("Failed to fetch colleges:", error)
+      toast.error("Failed to fetch colleges. Please try again.")
+      setColleges([])
     } finally {
       setLoading(false)
     }

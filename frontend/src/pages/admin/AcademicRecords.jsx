@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { getAcademicRecords, deleteAcademicRecord } from "@/lib/api"
 import { Trash2, Plus } from "lucide-react"
 import { ProtectedRoute } from "@/components/protected-route"
+import { toast } from "react-toastify"
 
 export default function AcademicRecordsPage() {
   const [records, setRecords] = useState([])
@@ -19,9 +20,13 @@ export default function AcademicRecordsPage() {
   const fetchRecords = async () => {
     try {
       const response = await getAcademicRecords()
-      setRecords(response.data || [])
+      // Handle different response structures
+      const recordsData = Array.isArray(response) ? response : (response.data || [])
+      setRecords(recordsData)
     } catch (error) {
       console.error("Failed to fetch academic records:", error)
+      toast.error("Failed to fetch academic records. Please try again.")
+      setRecords([])
     } finally {
       setLoading(false)
     }
@@ -32,8 +37,10 @@ export default function AcademicRecordsPage() {
       try {
         await deleteAcademicRecord(id)
         setRecords(records.filter((r) => r.id !== id))
+        toast.success("Academic record deleted successfully.")
       } catch (error) {
         console.error("Failed to delete record:", error)
+        toast.error("Failed to delete academic record. Please try again.")
       }
     }
   }

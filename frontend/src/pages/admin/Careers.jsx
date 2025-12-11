@@ -20,9 +20,13 @@ export default function AdminCareersPage() {
   const fetchCareers = async () => {
     try {
       const response = await getCareers()
-      setCareers(response.data || [])
+      // Handle different response structures
+      const careersData = Array.isArray(response) ? response : (response.data || [])
+      setCareers(careersData)
     } catch (error) {
       console.error("Failed to fetch careers:", error)
+      toast.error("Failed to fetch careers. Please try again.")
+      setCareers([])
     } finally {
       setLoading(false)
     }

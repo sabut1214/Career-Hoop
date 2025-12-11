@@ -20,9 +20,13 @@ export default function AdminTrainingsPage() {
   const fetchTrainings = async () => {
     try {
       const response = await getTrainings()
-      setTrainings(response.data || [])
+      // Handle different response structures
+      const trainingsData = Array.isArray(response) ? response : (response.data || [])
+      setTrainings(trainingsData)
     } catch (error) {
       console.error("Failed to fetch trainings:", error)
+      toast.error("Failed to fetch trainings. Please try again.")
+      setTrainings([])
     } finally {
       setLoading(false)
     }

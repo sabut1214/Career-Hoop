@@ -22,6 +22,8 @@ import { getColleges, saveCollege, unsaveCollege, checkCollegeSaved, getSavedCol
 import Pagination from "@/components/common/pagination"
 import { useAuth } from "@/context/AuthContext"
 import { toast } from "react-toastify"
+import { collegeService } from "@/services/collegeService"
+import { useNavigate } from "react-router-dom"
 
 const PUBLIC_KEYWORDS = ["campus", "public", "government", "constituent", "state", "community"]
 const PRIVATE_KEYWORDS = ["college", "academy", "institute", "school", "private"]
@@ -143,6 +145,7 @@ const dedupeColleges = (colleges) => {
 
 const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [isSaving, setIsSaving] = useState(false)
   
   // Check if college is saved based on the savedCollegeIds set
@@ -291,18 +294,18 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
           </div>
         )}
 
-        <div className="flex space-x-2 mt-auto">
-          <Button className="flex-1" onClick={() => college.detailUrl && window.open(college.detailUrl, '_blank')}>
-            <ExternalLink className="mr-2 h-4 w-4" />
-            {college.detailUrl ? "View Details" : "Visit Website"}
-          </Button>
+        <div className="flex flex-col space-y-2 mt-auto">
           <Button 
             variant="outline" 
-            className="flex-1 bg-transparent"
+            className="w-full bg-transparent"
             onClick={handleStarClick}
             disabled={isSaving}
           >
-            {isSaved ? "Saved" : "Save College"}
+            {isSaved ? "Saved" : "Save"}
+          </Button>
+          <Button className="w-full" onClick={() => college.detailUrl && window.open(college.detailUrl, '_blank')}>
+            <ExternalLink className="mr-2 h-4 w-4" />
+            {college.detailUrl ? "View Details" : "Visit Website"}
           </Button>
         </div>
       </CardContent>
@@ -323,6 +326,16 @@ export default function CollegesPage() {
   const [pageMeta, setPageMeta] = useState({ totalPages: 1, totalElements: 0 })
   const [savedCollegeIds, setSavedCollegeIds] = useState(new Set())
   const [savedCollegesFullData, setSavedCollegesFullData] = useState([]) // Store full saved college objects
+  const [filters, setFilters] = useState({
+    location: null,
+    affiliation: null,
+    minYear: null,
+    maxYear: null,
+    program: null,
+    type: null,
+    sortBy: "name",
+    sortOrder: "asc"
+  })
   const { user } = useAuth()
 
   // Function to fetch saved college IDs and full data
@@ -391,7 +404,7 @@ export default function CollegesPage() {
   // Reset to page 1 when search term or filter changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, filterType])
+  }, [searchTerm, filterType, filters])
 
   // Fetch all colleges when search is active, otherwise use pagination
   useEffect(() => {
@@ -399,13 +412,27 @@ export default function CollegesPage() {
       setLoading(true)
       setError(null)
       try {
-        // Fetch all colleges (use a large size to get all)
-        const response = await getColleges({ size: 10000 })
-        const transformed = (response.data || []).map(transformCollege)
+        // Build filter params
+        const filterParams = {
+          size: 10000,
+          ...filters
+        }
+        // Remove null/undefined values
+        Object.keys(filterParams).forEach(key => {
+          if (filterParams[key] === null || filterParams[key] === undefined || filterParams[key] === "") {
+            delete filterParams[key]
+          }
+        })
+        
+        const response = await collegeService.getAll(filterParams)
+        const data = response.data?.data || response.data?.content || response.data || []
+        const transformed = (Array.isArray(data) ? data : []).map(transformCollege)
         const normalized = dedupeColleges(transformed)
         const completeColleges = normalized.filter(hasCompleteData)
-        // Sort by name A-Z
-        completeColleges.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+        // Sort by name A-Z if not already sorted
+        if (!filters.sortBy || filters.sortBy === "name") {
+          completeColleges.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+        }
         setAllColleges(completeColleges)
       } catch (err) {
         console.error("Failed to fetch all colleges:", err)
@@ -420,29 +447,38 @@ export default function CollegesPage() {
       setLoading(true)
       setError(null)
       try {
-        // Fetch a larger batch to account for filtering out incomplete data
-        const fetchSize = pageSize * 3 // Fetch 3x to ensure we get enough complete colleges
-        const response = await getColleges({ page: pageNumber - 1, size: fetchSize })
-        const transformed = (response.data || []).map(transformCollege)
+        // Build filter params
+        const filterParams = {
+          page: pageNumber - 1,
+          size: pageSize * 3, // Fetch 3x to ensure we get enough complete colleges
+          ...filters
+        }
+        // Remove null/undefined values
+        Object.keys(filterParams).forEach(key => {
+          if (filterParams[key] === null || filterParams[key] === undefined || filterParams[key] === "") {
+            delete filterParams[key]
+          }
+        })
+        
+        const response = await collegeService.getAll(filterParams)
+        const responseData = response.data || {}
+        const data = responseData.data || responseData.content || []
+        const transformed = (Array.isArray(data) ? data : []).map(transformCollege)
         const normalized = dedupeColleges(transformed)
         // Filter to only show colleges with complete data
         const completeColleges = normalized.filter(hasCompleteData).slice(0, pageSize)
         setColleges(completeColleges)
         
         // Update pagination metadata
-        const originalTotal = response.meta?.totalElements || normalized.length
-        setPageMeta(
-          response.meta ? {
-            ...response.meta,
-            totalElements: originalTotal,
-            totalPages: Math.ceil(originalTotal / pageSize),
-          } : {
-            totalPages: 1,
-            totalElements: completeColleges.length,
-            page: pageNumber - 1,
-            size: pageSize,
-          }
-        )
+        const meta = responseData.meta || {}
+        const originalTotal = meta.totalElements || normalized.length
+        setPageMeta({
+          ...meta,
+          totalElements: originalTotal,
+          totalPages: Math.ceil(originalTotal / pageSize),
+          page: pageNumber - 1,
+          size: pageSize,
+        })
       } catch (err) {
         console.error("Failed to fetch colleges:", err)
         setColleges([])
@@ -460,7 +496,7 @@ export default function CollegesPage() {
       // When not searching, use pagination
       fetchCollegesPaginated(currentPage)
     }
-  }, [searchTerm, currentPage])
+  }, [searchTerm, currentPage, filters])
 
   const handlePageChange = (page) => {
     if (page < 1) return
@@ -568,28 +604,30 @@ export default function CollegesPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="flex flex-col md:flex-row gap-4"
+            className="space-y-4"
           >
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search colleges, programs, or locations..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search colleges, programs, or locations..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-full md:w-48">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="private">Private</SelectItem>
+                  <SelectItem value="public">Public</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full md:w-48">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="private">Private</SelectItem>
-                <SelectItem value="public">Public</SelectItem>
-              </SelectContent>
-            </Select>
           </motion.div>
 
           {/* Results Summary */}

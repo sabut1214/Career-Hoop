@@ -47,6 +47,36 @@ public class User {
     @Column(name = "profile_picture", columnDefinition = "TEXT")
     private String profilePicture; // Base64 encoded image or URL
 
+    // Privacy settings
+    @Column(name = "show_gpa")
+    private Boolean showGpa = true;
+
+    @Column(name = "show_saved_colleges")
+    private Boolean showSavedColleges = true;
+
+    @Column(name = "show_saved_careers")
+    private Boolean showSavedCareers = true;
+
+    // Academic details
+    @Column(name = "grade_level")
+    private String gradeLevel;
+
+    @Column(name = "stream")
+    private String stream;
+
+    @Column(name = "subjects", columnDefinition = "TEXT")
+    private String subjects; // JSON array stored as TEXT
+
+    // Social links
+    @Column(name = "linkedin_url")
+    private String linkedinUrl;
+
+    @Column(name = "github_url")
+    private String githubUrl;
+
+    @Column(name = "portfolio_url")
+    private String portfolioUrl;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

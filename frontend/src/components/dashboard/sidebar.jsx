@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import {
   GraduationCap,
@@ -9,7 +9,6 @@ import {
   BarChart3,
   Building2,
   User,
-  Settings,
   LogOut,
   Briefcase,
   Users,
@@ -19,6 +18,7 @@ import {
   Menu,
   X,
   Activity,
+  PanelLeft,
 } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
@@ -29,6 +29,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import logoImg from "@/assets/images/Logo.png"
@@ -40,7 +46,6 @@ const navigationItems = [
   { icon: BarChart3, label: "Recommendations", href: "/recommendations" },
   { icon: Building2, label: "Colleges", href: "/colleges" },
   { icon: Briefcase, label: "Careers", href: "/careers" },
-  { icon: Users, label: "Mentors", href: "/mentors" },
   { icon: BookOpen, label: "Training", href: "/trainings" },
   { icon: Activity, label: "Quiz Analytics", href: "/quiz/analytics" },
 ]
@@ -58,13 +63,13 @@ export function Sidebar() {
 
   useEffect(() => {
     localStorage.setItem("sidebarCollapsed", JSON.stringify(isCollapsed))
-    document.documentElement.style.setProperty("--sidebar-width", isCollapsed ? "5rem" : "16rem")
+    document.documentElement.style.setProperty("--sidebar-width", isCollapsed ? "4.5rem" : "16.25rem")
   }, [isCollapsed])
 
-  // Mark as animated after first render
-  if (!hasAnimatedRef.current) {
+  // Mark as animated after first mount
+  useEffect(() => {
     hasAnimatedRef.current = true
-  }
+  }, [])
 
   useEffect(() => {
     const handleResize = () => {
@@ -106,181 +111,258 @@ export function Sidebar() {
 
   return (
     <>
+      {/* Mobile Toggle Button */}
       <Button
         variant="outline"
         size="icon"
-        className="lg:hidden fixed top-4 left-4 z-50 rounded-full shadow-md bg-background/80 backdrop-blur"
+        className="lg:hidden fixed top-4 right-4 z-50 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border-border/50 hover:bg-background"
         onClick={toggleMobileSidebar}
       >
         {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         <span className="sr-only">Toggle navigation</span>
       </Button>
 
-      {isMobileOpen && (
-        <div className="fixed inset-0 z-30 bg-background/60 backdrop-blur-sm lg:hidden" onClick={toggleMobileSidebar} />
-      )}
+      {/* Mobile Overlay */}
+      <AnimatePresence>
+        {isMobileOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm lg:hidden"
+            onClick={toggleMobileSidebar}
+          />
+        )}
+      </AnimatePresence>
 
-      <motion.aside
-        {...(!hasAnimatedRef.current && { initial: { x: -300 } })}
-        animate={{ x: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+      {/* Sidebar */}
+      <aside
         className={cn(
-          "fixed left-0 top-0 h-screen bg-card border-r border-border z-40 overflow-y-auto transition-all duration-300",
-          isCollapsed ? "w-20 p-4" : "w-64 p-6",
+          "fixed left-0 top-0 h-screen bg-card border-r border-border/50 z-40 flex flex-col",
+          "transition-all duration-300 ease-in-out",
+          "shadow-lg lg:shadow-xl",
+          isCollapsed ? "w-[72px]" : "w-[260px]",
           isMobileOpen ? "translate-x-0" : "-translate-x-full",
           "lg:translate-x-0"
         )}
       >
-      {/* Header with Logo and Toggle */}
-      <div className="flex items-center justify-between mb-8">
-        {!isCollapsed && (
-          <Link to="/" className="flex items-center">
-            <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
-            <span className="text-2xl font-bold text-foreground">
-              areer<span className="text-primary">Hoop</span>
-            </span>
-          </Link>
-        )}
-        {isCollapsed && (
-          <Link to="/" className="flex items-center justify-center">
-            <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
-          </Link>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleSidebar}
-          className="ml-auto shrink-0"
-        >
+        {/* Top Header Area */}
+        <div className={cn(
+          "flex-shrink-0 border-b border-border/50",
+          isCollapsed ? "p-3" : "p-4"
+        )}>
           {isCollapsed ? (
-            <ChevronRight className="h-5 w-5" />
+            /* Collapsed: Logo + Small Expand Button */
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="relative flex items-center justify-center w-full cursor-pointer group"
+                    onClick={toggleSidebar}
+                  >
+                    {/* Logo - No background, flush on sidebar */}
+                    <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain" />
+                    
+                    {/* Small Square Expand Button - Only visible when collapsed, positioned at right edge */}
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-muted/30 group-hover:bg-muted/70 transition-colors border border-border/30 group-hover:border-border/60" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  <p>Open sidebar</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ) : (
-            <ChevronLeft className="h-5 w-5" />
-          )}
-        </Button>
-      </div>
-
-      {/* Navigation */}
-      <nav className="space-y-2">
-        {!isCollapsed && (
-          <p className="text-sm font-medium text-muted-foreground mb-4">NAVIGATION</p>
-        )}
-        {navigationItems.map((item, index) => {
-          const isActive = location.pathname === item.href
-          return (
-            <motion.div
-              key={item.label}
-              {...(!hasAnimatedRef.current && { initial: { opacity: 0, x: -20 } })}
-              animate={{ opacity: 1, x: 0 }}
-              transition={hasAnimatedRef.current ? { duration: 0 } : { duration: 0.4, delay: 0.1 + index * 0.05 }}
-            >
-              <Link to={item.href} title={isCollapsed ? item.label : ""}>
-                <Button
-                  variant={isActive ? "default" : "ghost"}
-                  className={cn(
-                    "w-full h-12 text-sm",
-                    isCollapsed ? "justify-center px-0" : "justify-start gap-3",
-                    isActive ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-muted hover:text-foreground"
-                  )}
-                  onClick={() => {
-                    if (window.innerWidth < 1024) setIsMobileOpen(false)
-                  }}
-                >
-                  <item.icon className="h-5 w-5 shrink-0" />
-                  {!isCollapsed && (
-                    <div className="flex flex-1 items-center gap-2 truncate">
-                      <span className="truncate">{item.label}</span>
-                    </div>
-                  )}
-                </Button>
+            /* Expanded: Logo + Brand Name + Collapse Button */
+            <div className="flex items-center justify-between gap-3">
+              {/* Logo and Brand */}
+              <Link 
+                to="/" 
+                className="flex items-center flex-1"
+              >
+                <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain shrink-0" />
+                <span className="text-2xl font-bold text-foreground whitespace-nowrap">
+                  areer<span className="text-primary">Hoop</span>
+                </span>
               </Link>
-            </motion.div>
-          )
-        })}
-      </nav>
+              
+              {/* Collapse Button - Only visible when expanded */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggleSidebar}
+                      className="h-8 w-8 shrink-0 hover:bg-muted/50 rounded-lg"
+                      aria-label="Collapse sidebar"
+                    >
+                      <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Collapse sidebar</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
+        </div>
 
-      {/* User Menu - ChatGPT Style */}
-      <div className={`absolute bottom-6 ${isCollapsed ? "left-2 right-2" : "left-6 right-6"}`}>
-        <div className="border-t border-border pt-4">
+        {/* Scrollable Navigation Section */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <TooltipProvider delayDuration={300}>
+            <nav className={cn("space-y-1", isCollapsed ? "p-2" : "p-3")}>
+              {!isCollapsed && (
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">
+                  Navigation
+                </p>
+              )}
+              {navigationItems.map((item) => {
+                const isActive = location.pathname === item.href
+                const navItem = (
+                  <div key={item.label}>
+                    <Link to={item.href}>
+                      <Button
+                        variant={isActive ? "default" : "ghost"}
+                        className={cn(
+                          "w-full text-sm transition-all duration-200 rounded-lg",
+                          isCollapsed ? "justify-center h-10 px-0" : "justify-start h-11 gap-3 px-3",
+                          isActive 
+                            ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90" 
+                            : "hover:bg-muted/50 hover:text-foreground text-muted-foreground"
+                        )}
+                        onClick={() => {
+                          if (window.innerWidth < 1024) setIsMobileOpen(false)
+                        }}
+                      >
+                        <item.icon className={cn("shrink-0", isCollapsed ? "h-5 w-5" : "h-4 w-4")} />
+                        {!isCollapsed && (
+                          <span className="truncate text-left flex-1">
+                            {item.label}
+                          </span>
+                        )}
+                      </Button>
+                    </Link>
+                  </div>
+                )
+
+                // Wrap with tooltip when collapsed
+                if (isCollapsed) {
+                  return (
+                    <Tooltip key={item.label}>
+                      <TooltipTrigger asChild>
+                        {navItem}
+                      </TooltipTrigger>
+                      <TooltipContent side="right" sideOffset={8}>
+                        <p>{item.label}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                }
+
+                return navItem
+              })}
+            </nav>
+          </TooltipProvider>
+        </div>
+
+        {/* Bottom Settings/Profile Area */}
+        <div className={cn(
+          "flex-shrink-0 border-t border-border/50 bg-background/50 backdrop-blur-sm",
+          isCollapsed ? "p-2" : "p-3"
+        )}>
           {isCollapsed ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-center h-10 p-0 hover:bg-muted/50 rounded-lg"
+                        aria-label={getUserDisplayName()}
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user?.avatar || user?.profilePicture} alt={getUserDisplayName()} />
+                          <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
+                            {getUserInitials()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" side="right" className="w-56 ml-2 max-w-[90vw]">
+                      <div className="px-2 py-1.5">
+                        <p className="text-sm font-medium">{getUserDisplayName()}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {user?.email || "user@example.com"}
+                        </p>
+                      </div>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link to="/profile" className="flex items-center cursor-pointer">
+                          <User className="mr-2 h-4 w-4" />
+                          <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={handleLogout}
+                        className="cursor-pointer text-destructive focus:text-destructive"
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Sign Out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>{getUserDisplayName()}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="w-full justify-center p-2 hover:bg-muted/50 rounded-lg"
-                  title={getUserDisplayName()}
+                  className="w-full justify-start gap-3 h-auto p-2.5 hover:bg-muted/50 rounded-lg text-left"
                 >
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-9 w-9 shrink-0">
                     <AvatarImage src={user?.avatar || user?.profilePicture} alt={getUserDisplayName()} />
                     <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
                       {getUserInitials()}
                     </AvatarFallback>
                   </Avatar>
+                  <div className="flex flex-col flex-1 min-w-0 text-left">
+                    <p className="text-sm font-medium truncate">{getUserDisplayName()}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {user?.email || "user@example.com"}
+                    </p>
+                  </div>
+                  <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" side="right" className="w-56 ml-2 max-w-[90vw]">
+              <DropdownMenuContent align="end" side="top" className="w-64 max-w-[90vw] mb-2">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium">{getUserDisplayName()}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user?.email || "user@example.com"}
+                  </p>
+                </div>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/profile" className="flex items-center">
+                  <Link to="/profile" className="flex items-center cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/settings" className="flex items-center">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleLogout}
-                  variant="destructive"
-                  className="cursor-pointer"
+                  className="cursor-pointer text-destructive focus:text-destructive"
                 >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign Out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3 h-auto p-3 hover:bg-muted/50 rounded-lg text-left text-foreground hover:text-foreground focus-visible:text-foreground"
-                >
-                  <div className="flex w-full items-center gap-3 min-w-0">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.avatar || user?.profilePicture} alt={getUserDisplayName()} />
-                      <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
-                        {getUserInitials()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col flex-1 min-w-0 text-left">
-                      <p className="text-sm font-medium truncate">{getUserDisplayName()}</p>
-                      <p className="text-xs text-muted-foreground break-all sm:truncate">
-                        {user?.email || "user@example.com"}
-                      </p>
-                    </div>
-                    <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" side="top" className="w-60 max-w-[90vw] mb-2">
-                <DropdownMenuItem asChild>
-                  <Link to="/profile" className="flex items-center">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/settings" className="flex items-center">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} variant="destructive" className="cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign Out</span>
                 </DropdownMenuItem>
@@ -288,8 +370,7 @@ export function Sidebar() {
             </DropdownMenu>
           )}
         </div>
-      </div>
-      </motion.aside>
+      </aside>
     </>
   )
 }

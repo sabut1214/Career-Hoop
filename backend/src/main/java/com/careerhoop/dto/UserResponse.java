@@ -1,9 +1,12 @@
 package com.careerhoop.dto;
 
 import com.careerhoop.entity.User;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -20,6 +23,21 @@ public class UserResponse {
     private String profilePicture;
     private boolean profileComplete;
     private int profileCompletionPercent;
+    
+    // Privacy settings
+    private Boolean showGpa;
+    private Boolean showSavedColleges;
+    private Boolean showSavedCareers;
+    
+    // Academic details
+    private String gradeLevel;
+    private String stream;
+    private List<String> subjects;
+    
+    // Social links
+    private String linkedinUrl;
+    private String githubUrl;
+    private String portfolioUrl;
 
     public static UserResponse fromEntity(User user) {
         UserResponse response = new UserResponse();
@@ -33,6 +51,28 @@ public class UserResponse {
         response.setDateOfBirth(user.getDateOfBirth());
         response.setGpa(user.getGpa());
         response.setProfilePicture(user.getProfilePicture());
+
+        // Privacy settings
+        response.setShowGpa(user.getShowGpa() != null ? user.getShowGpa() : true);
+        response.setShowSavedColleges(user.getShowSavedColleges() != null ? user.getShowSavedColleges() : true);
+        response.setShowSavedCareers(user.getShowSavedCareers() != null ? user.getShowSavedCareers() : true);
+
+        // Academic details
+        response.setGradeLevel(user.getGradeLevel());
+        response.setStream(user.getStream());
+        if (user.getSubjects() != null && !user.getSubjects().trim().isEmpty()) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                response.setSubjects(mapper.readValue(user.getSubjects(), new TypeReference<List<String>>() {}));
+            } catch (Exception e) {
+                response.setSubjects(null);
+            }
+        }
+
+        // Social links
+        response.setLinkedinUrl(user.getLinkedinUrl());
+        response.setGithubUrl(user.getGithubUrl());
+        response.setPortfolioUrl(user.getPortfolioUrl());
 
         int completion = calculateProfileCompletion(user);
         response.setProfileCompletionPercent(completion);

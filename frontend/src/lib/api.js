@@ -75,10 +75,23 @@ export const checkHealth = async () => {
 // Students
 export const getStudents = async () => {
   if (USE_MOCK_DATA) return { data: mockStats.students }
-  const response = await fetch(`${API_BASE_URL}/students`)
-  if (!response.ok) throw new Error("Failed to fetch students")
-  const data = await response.json()
-  return { data }
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/students`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Failed to fetch students: ${response.status} ${errorText}`)
+    }
+    const data = await response.json()
+    return { data }
+  } catch (error) {
+    console.error("getStudents error:", error)
+    throw error
+  }
 }
 
 export const getStudent = async (id) => {
@@ -359,8 +372,18 @@ export const deleteScholarship = async (id) => {
 // Trainings
 export const getTrainings = async () => {
   if (USE_MOCK_DATA) return { data: mockStats.trainings }
-  const response = await fetch(`${API_BASE_URL}/trainings`)
-  if (!response.ok) throw new Error("Failed to fetch trainings")
+  const headers = buildAuthHeaders()
+  const response = await fetch(`${API_BASE_URL}/trainings`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
+  })
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Failed to fetch trainings: ${response.status} ${errorText}`)
+  }
   const data = await response.json()
   return { data }
 }
@@ -572,10 +595,23 @@ export const getAIFeedback = async (userId) => {
 
 // Academic Records
 export const getAcademicRecords = async () => {
-  const response = await fetch(`${API_BASE_URL}/academic-records`)
-  if (!response.ok) throw new Error("Failed to fetch academic records")
-  const data = await response.json()
-  return { data }
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/academic-records`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Failed to fetch academic records: ${response.status} ${errorText}`)
+    }
+    const data = await response.json()
+    return { data }
+  } catch (error) {
+    console.error("getAcademicRecords error:", error)
+    throw error
+  }
 }
 
 export const getAcademicRecord = async (id) => {
@@ -1045,7 +1081,7 @@ const buildAuthHeaders = () => {
 }
 
 // Enhanced fetch with automatic token refresh
-const fetchWithAuth = async (url, options = {}) => {
+export const fetchWithAuth = async (url, options = {}) => {
   const headers = buildAuthHeaders()
   const token = localStorage.getItem("authToken")
 

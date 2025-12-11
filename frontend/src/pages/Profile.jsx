@@ -29,10 +29,17 @@ import {
   X,
   Camera,
 } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { useAuth } from "@/context/AuthContext"
 import { toast } from "react-toastify"
 import { getUserProfile, updateUserProfile, getSavedCareers, getSavedColleges } from "@/lib/api"
+import { ChangePasswordForm } from "@/components/profile/ChangePasswordForm"
+import { PrivacySettings } from "@/components/profile/PrivacySettings"
+import { AcademicDetailsForm } from "@/components/profile/AcademicDetailsForm"
+import { SocialLinksForm } from "@/components/profile/SocialLinksForm"
+import { ThemeSelector } from "@/components/profile/ThemeSelector"
+import { DataExport } from "@/components/profile/DataExport"
 
 const initialProfile = {
   name: "Alex Johnson",
@@ -114,6 +121,31 @@ export default function ProfilePage() {
     })
   }, [profilePicture, profilePicturePreview, profileInfo.avatar])
 
+  const fetchProfileData = async () => {
+    if (!user?.id) return
+    setIsLoading(true)
+    setErrorMessage("")
+    try {
+      const data = await getUserProfile(user.id)
+      const normalized = mapResponseToProfile(data, initialProfile)
+      setProfileInfo({ ...normalized, ...data }) // Include all fields from response
+      setEditedInfo(normalized)
+      setProfileCompletion(data.profileCompletionPercent ?? 0)
+      // Set profile picture if available
+      if (data.profilePicture) {
+        setProfilePicturePreview(data.profilePicture)
+        setProfilePicture(data.profilePicture) // Preserve existing picture
+      } else if (normalized.avatar && normalized.avatar !== "/placeholder.svg?height=100&width=100") {
+        setProfilePicturePreview(normalized.avatar)
+        setProfilePicture(normalized.avatar) // Preserve existing picture
+      }
+    } catch (error) {
+      setErrorMessage(error.message || "Failed to load profile")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!user?.id) return
     let active = true
@@ -123,7 +155,7 @@ export default function ProfilePage() {
       .then((data) => {
         if (!active) return
         const normalized = mapResponseToProfile(data, initialProfile)
-        setProfileInfo(normalized)
+        setProfileInfo({ ...normalized, ...data }) // Include all fields from response
         setEditedInfo(normalized)
         setProfileCompletion(data.profileCompletionPercent ?? 0)
         // Set profile picture if available
@@ -500,13 +532,15 @@ export default function ProfilePage() {
             transition={{ duration: 0.6 }}
             className="space-y-2"
           >
-            <div className="flex items-center space-x-2">
-              <User className="h-8 w-8 text-accent" />
-              <h1 className="text-4xl font-bold">My Profile</h1>
+            <div>
+              <div className="flex items-center space-x-2">
+                <User className="h-8 w-8 text-accent" />
+                <h1 className="text-4xl font-bold">My Profile</h1>
+              </div>
+              <p className="text-xl text-muted-foreground">
+                Manage your personal information and track your career journey progress
+              </p>
             </div>
-            <p className="text-xl text-muted-foreground">
-              Manage your personal information and track your career journey progress
-            </p>
           </motion.div>
 
           {/* Profile Overview */}
@@ -966,6 +1000,7 @@ export default function ProfilePage() {
                   </CardContent>
                 </Card>
               </TabsContent>
+
             </Tabs>
           </motion.div>
         </div>

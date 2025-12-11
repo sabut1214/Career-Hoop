@@ -3,7 +3,7 @@ import { AuthProvider } from "@/context/AuthContext"
 import { ThemeProvider } from "./context/ThemeContext"
 import { ModalProvider } from "./context/ModalContext"
 import ModalContainer from "./components/common/ModalContainer"
-import Navbar from "./components/navigation/Navbar"
+import { Navbar } from "./components/navbar"
 import HealthCheck from "./components/views/HealthCheck"
 import { ToastContainer } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
@@ -14,6 +14,8 @@ import Grades from "./pages/Grades"
 import Interests from "./pages/Interests"
 import Careers from "./pages/Careers"
 import Colleges from "./pages/Colleges"
+import SavedColleges from "./pages/SavedColleges"
+import CollegeComparison from "./pages/CollegeComparison"
 import Mentors from "./pages/Mentors"
 import Scholarships from "./pages/Scholarship"
 import Trainings from "./pages/Trainings"
@@ -80,6 +82,8 @@ function App() {
                 <Route path="/interests" element={<Interests />} />
                 <Route path="/careers" element={<Careers />} />
                 <Route path="/colleges" element={<Colleges />} />
+                <Route path="/saved-colleges" element={<SavedColleges />} />
+                <Route path="/college-comparison" element={<CollegeComparison />} />
                 <Route path="/mentors" element={<Mentors />} />
                 <Route path="/scholarships" element={<Scholarships />} />
                 <Route path="/trainings" element={<Trainings />} />

@@ -4,12 +4,16 @@ import com.careerhoop.dto.UpdateUserProfileRequest;
 import com.careerhoop.dto.UserResponse;
 import com.careerhoop.entity.User;
 import com.careerhoop.repository.UserRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.UUID;
@@ -21,6 +25,9 @@ public class UserProfileService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     public UserResponse getUserProfile(UUID userId) {
         User user = userRepository.findById(userId)
@@ -94,17 +101,87 @@ public class UserProfileService {
                     throw new IllegalArgumentException("Profile picture is too large. Maximum size is 10MB.");
                 }
                 // Only save if it's a valid base64 data URL or URL
-                if (picture.startsWith("data:image/") || picture.startsWith("http://") || picture.startsWith("https://")) {
-                    log.info("Setting profilePicture - valid format, length: {}", picture.length());
-                    user.setProfilePicture(picture);
+                if (picture.startsWith("data:image/")) {
+                    // Validate that it's actually an image data URL
+                    String[] parts = picture.split(",");
+                    if (parts.length == 2 && parts[0].matches("data:image/(jpeg|jpg|png|gif|webp);base64")) {
+                        log.info("Setting profilePicture - valid image data URL, length: {}", picture.length());
+                        user.setProfilePicture(picture);
+                    } else {
+                        log.warn("Invalid image data URL format");
+                        throw new IllegalArgumentException("Profile picture must be a valid image (JPEG, PNG, GIF, or WebP)");
+                    }
+                } else if (picture.startsWith("http://") || picture.startsWith("https://")) {
+                    // Validate URL format
+                    try {
+                        java.net.URL url = new java.net.URL(picture);
+                        String host = url.getHost().toLowerCase();
+                        // Basic validation - allow common image hosting domains
+                        if (host.endsWith(".com") || host.endsWith(".org") || host.endsWith(".net") || 
+                            host.endsWith(".io") || host.endsWith(".co") || host.contains("github") || 
+                            host.contains("imgur") || host.contains("cloudinary") || host.contains("s3")) {
+                            log.info("Setting profilePicture - valid URL, length: {}", picture.length());
+                            user.setProfilePicture(picture);
+                        } else {
+                            log.warn("Profile picture URL from untrusted domain: {}", host);
+                            throw new IllegalArgumentException("Profile picture URL must be from a trusted domain");
+                        }
+                    } catch (java.net.MalformedURLException e) {
+                        log.warn("Invalid profile picture URL format");
+                        throw new IllegalArgumentException("Invalid profile picture URL format");
+                    }
                 } else {
-                    // If it's just base64 without prefix, assume it's image data
-                    log.info("Setting profilePicture - no prefix, assuming image data, length: {}", picture.length());
-                    user.setProfilePicture(picture);
+                    // Reject base64 without data URL prefix for security
+                    log.warn("Profile picture provided without proper data URL prefix");
+                    throw new IllegalArgumentException("Profile picture must be a valid image data URL or HTTP(S) URL");
                 }
             }
         } else {
             log.info("profilePicture is null in request, skipping update");
+        }
+
+        // Privacy settings
+        if (request.showGpa() != null) {
+            user.setShowGpa(request.showGpa());
+        }
+        if (request.showSavedColleges() != null) {
+            user.setShowSavedColleges(request.showSavedColleges());
+        }
+        if (request.showSavedCareers() != null) {
+            user.setShowSavedCareers(request.showSavedCareers());
+        }
+
+        // Academic details
+        if (request.gradeLevel() != null) {
+            user.setGradeLevel(sanitizeText(request.gradeLevel(), 50, "Grade level"));
+        }
+        if (request.stream() != null) {
+            user.setStream(sanitizeText(request.stream(), 50, "Stream"));
+        }
+        if (request.subjects() != null) {
+            // Handle empty list - clear subjects
+            if (request.subjects().isEmpty()) {
+                user.setSubjects(null);
+            } else {
+                try {
+                    String subjectsJson = objectMapper.writeValueAsString(request.subjects());
+                    user.setSubjects(subjectsJson);
+                } catch (JsonProcessingException e) {
+                    log.error("Failed to serialize subjects to JSON", e);
+                    throw new IllegalArgumentException("Invalid subjects format");
+                }
+            }
+        }
+
+        // Social links
+        if (request.linkedinUrl() != null) {
+            user.setLinkedinUrl(validateUrl(request.linkedinUrl(), "LinkedIn"));
+        }
+        if (request.githubUrl() != null) {
+            user.setGithubUrl(validateUrl(request.githubUrl(), "GitHub"));
+        }
+        if (request.portfolioUrl() != null) {
+            user.setPortfolioUrl(validateUrl(request.portfolioUrl(), "Portfolio"));
         }
         
         log.info("User profilePicture before save: {}", 
@@ -176,6 +253,23 @@ public class UserProfileService {
         } catch (DateTimeParseException ex) {
             throw new IllegalArgumentException("Invalid date format. Use ISO format (yyyy-MM-dd).");
         }
+    }
+
+    private String validateUrl(String url, String fieldName) {
+        if (!hasText(url)) {
+            return null;
+        }
+        String trimmed = url.trim();
+        if (trimmed.length() > 255) {
+            throw new IllegalArgumentException(fieldName + " URL must be at most 255 characters long.");
+        }
+        // Basic URL validation
+        try {
+            new URL(trimmed);
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException(fieldName + " URL is invalid: " + e.getMessage());
+        }
+        return trimmed;
     }
 }
 

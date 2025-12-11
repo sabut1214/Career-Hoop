@@ -2,8 +2,8 @@
 
 /* Initialize CSS variables for sidebar widths */
 :root {
-  --sidebar-width: 16rem;
-  --admin-sidebar-width: 16rem;
+  --sidebar-width: 16.25rem; /* 260px */
+  --admin-sidebar-width: 16.25rem; /* 260px */
 }
 
 /* Ensure sidebars don't overlap content */
@@ -13,14 +13,32 @@
 
 /* Ensure main content has proper spacing for fixed sidebars */
 main.ml-64 {
-  margin-left: var(--sidebar-width, 16rem); /* Default to 16rem, use CSS variable if set */
-  transition: margin-left 0.3s ease;
+  margin-left: var(--sidebar-width, 16.25rem); /* Default to 16.25rem (260px), use CSS variable if set */
+  transition: margin-left 0.3s ease-in-out;
+}
+
+/* Custom scrollbar styling for sidebar */
+aside::-webkit-scrollbar {
+  width: 6px;
+}
+
+aside::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+aside::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+
+aside::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.3);
 }
 
 /* Admin pages margin */
 .admin-main.ml-64 {
-  margin-left: var(--admin-sidebar-width, 16rem);
-  transition: margin-left 0.3s ease;
+  margin-left: var(--admin-sidebar-width, 16.25rem); /* Default to 16.25rem (260px), use CSS variable if set */
+  transition: margin-left 0.3s ease-in-out;
 }
 
 /* Ensure full height for pages with sidebars */

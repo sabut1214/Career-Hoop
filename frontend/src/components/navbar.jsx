@@ -1,7 +1,8 @@
 import { useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { Menu, X } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Menu, X, Sun, Moon } from "lucide-react"
 import { useTheme } from "@/context/ThemeContext"
 import logoImg from "@/assets/images/Logo.png"
 
@@ -10,7 +11,11 @@ export function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
   const pathname = location.pathname
-  const { isDarkMode, toggleTheme } = useTheme()
+  const { isDarkMode, setTheme } = useTheme()
+  
+  const handleThemeChange = (checked) => {
+    setTheme(checked ? "dark" : "light")
+  }
 
   const navLinks = [
     { href: "/landing", label: "Home" },
@@ -50,13 +55,15 @@ export function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <button
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-          >
-            {isDarkMode ? "☀️" : "🌙"}
-          </button>
+          <div className="flex items-center gap-2">
+            <Sun className="h-4 w-4 text-muted-foreground" />
+            <Switch
+              checked={isDarkMode}
+              onCheckedChange={handleThemeChange}
+              aria-label="Toggle theme"
+            />
+            <Moon className="h-4 w-4 text-muted-foreground" />
+          </div>
           <Button variant="ghost" className="text-sm font-medium" onClick={() => handleAuthRedirect("/login")}>
             Log In
           </Button>
@@ -93,13 +100,15 @@ export function Navbar() {
               </Link>
             ))}
             <div className="flex flex-col gap-2 border-t border-border/40 pt-4">
-              <button
-                className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-colors mx-auto"
-                onClick={toggleTheme}
-                aria-label="Toggle theme"
-              >
-                {isDarkMode ? "☀️" : "🌙"}
-              </button>
+              <div className="flex items-center justify-center gap-2">
+                <Sun className="h-4 w-4 text-muted-foreground" />
+                <Switch
+                  checked={isDarkMode}
+                  onCheckedChange={handleThemeChange}
+                  aria-label="Toggle theme"
+                />
+                <Moon className="h-4 w-4 text-muted-foreground" />
+              </div>
               <Button variant="ghost" className="w-full text-sm font-medium" onClick={() => handleAuthRedirect("/login")}>
                 Log In
               </Button>
