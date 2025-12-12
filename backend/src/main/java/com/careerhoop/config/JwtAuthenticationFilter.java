@@ -30,31 +30,42 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-        final String authHeader = request.getHeader("Authorization");
+        String jwt = null;
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
+        // Try to get token from Authorization header first (for backward compatibility)
+        final String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7);
+        } else {
+            // Try to get token from cookie (cookie-based auth)
+            if (request.getCookies() != null) {
+                for (jakarta.servlet.http.Cookie cookie : request.getCookies()) {
+                    if ("accessToken".equals(cookie.getName())) {
+                        jwt = cookie.getValue();
+                        break;
+                    }
+                }
+            }
         }
 
-        try {
-            final String jwt = authHeader.substring(7);
+        if (jwt != null) {
+            try {
+                if (jwtService.validateAccessToken(jwt)) {
+                    UUID userId = jwtService.extractUserId(jwt);
+                    String role = jwtService.extractRole(jwt);
 
-            if (jwtService.validateAccessToken(jwt)) {
-                UUID userId = jwtService.extractUserId(jwt);
-                String role = jwtService.extractRole(jwt);
-
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userId,
-                        null,
-                        Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
-                );
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userId,
+                            null,
+                            Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
+                    );
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+            } catch (Exception e) {
+                // Token is invalid or expired - let it pass through and let the endpoint handle it
+                // or let the exception handler catch it
             }
-        } catch (Exception e) {
-            // Token is invalid or expired - let it pass through and let the endpoint handle it
-            // or let the exception handler catch it
         }
 
         filterChain.doFilter(request, response);

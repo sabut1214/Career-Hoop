@@ -39,6 +39,9 @@ public class AuthService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private RefreshTokenService refreshTokenService;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     
     // OTP configuration constants
@@ -60,44 +63,68 @@ public class AuthService {
 
         User saved = userRepository.save(user);
 
+        // Generate tokens
+        String accessToken = jwtService.generateAccessToken(saved.getId(), saved.getEmail(), saved.getRole());
+        String refreshToken = refreshTokenService.generateRefreshToken(saved);
+
         AuthResponse response = new AuthResponse();
-        response.setToken(jwtService.generateAccessToken(saved.getId(), saved.getEmail(), saved.getRole()));
-        response.setRefreshToken(jwtService.generateRefreshToken(saved.getId()));
+        response.setToken(accessToken);
+        response.setRefreshToken(refreshToken);
         response.setUser(UserResponse.fromEntity(saved));
         return response;
     }
 
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
+                .orElseThrow(() -> {
+                    logger.warn("Login attempt failed - user not found: {}", maskEmail(request.getEmail()));
+                    return new IllegalArgumentException("Invalid credentials");
+                });
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            logger.warn("Login attempt failed - invalid password for user: {}", maskEmail(request.getEmail()));
             throw new IllegalArgumentException("Invalid credentials");
         }
 
+        // Generate tokens
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getRole());
+        String refreshToken = refreshTokenService.generateRefreshToken(user);
+
+        logger.info("User logged in successfully: {}", maskEmail(user.getEmail()));
+
         AuthResponse response = new AuthResponse();
-        response.setToken(jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getRole()));
-        response.setRefreshToken(jwtService.generateRefreshToken(user.getId()));
+        response.setToken(accessToken);
+        response.setRefreshToken(refreshToken);
         response.setUser(UserResponse.fromEntity(user));
         return response;
     }
 
+    @Transactional
     public AuthResponse refreshToken(String refreshToken) {
-        if (!jwtService.validateRefreshToken(refreshToken)) {
+        // Validate refresh token from database (includes JWT validation and DB check)
+        com.careerhoop.entity.RefreshToken tokenEntity = refreshTokenService.validateRefreshToken(refreshToken);
+        if (tokenEntity == null) {
+            logger.warn("Token refresh failed - invalid or expired refresh token");
             throw new IllegalArgumentException("Invalid or expired refresh token");
         }
 
-        UUID userId = jwtService.extractUserId(refreshToken);
-        if (userId == null) {
-            throw new IllegalArgumentException("Invalid refresh token: user ID not found");
+        User user = tokenEntity.getUser();
+        if (user == null) {
+            logger.error("Token refresh failed - user not found for token");
+            throw new IllegalArgumentException("Invalid refresh token: user not found");
         }
-        
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        // Rotate refresh token (revoke old, generate new)
+        String newRefreshToken = refreshTokenService.rotateRefreshToken(refreshToken, user);
+
+        // Generate new access token
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getRole());
+
+        logger.debug("Token refreshed successfully for user: {}", user.getId());
 
         AuthResponse response = new AuthResponse();
-        response.setToken(jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getRole()));
-        response.setRefreshToken(jwtService.generateRefreshToken(user.getId()));
+        response.setToken(accessToken);
+        response.setRefreshToken(newRefreshToken);
         response.setUser(UserResponse.fromEntity(user));
         return response;
     }
@@ -446,8 +473,9 @@ public class AuthService {
         
         logger.info("Password changed successfully for user: {}", user.getEmail());
         
-        // Note: In a production system, you might want to invalidate all refresh tokens here
-        // to force re-login. This would require a refresh token repository.
+        // Revoke all refresh tokens to force re-login for security
+        refreshTokenService.revokeAllUserTokens(userId);
+        logger.info("Revoked all refresh tokens for user after password change: {}", user.getId());
     }
 }
 

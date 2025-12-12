@@ -10,7 +10,12 @@ import com.careerhoop.dto.ResetPasswordRequest;
 import com.careerhoop.dto.VerifyOtpRequest;
 import com.careerhoop.dto.VerifyOtpResponse;
 import com.careerhoop.exception.PasswordResetException;
+import com.careerhoop.config.CookieConfig;
 import com.careerhoop.service.AuthService;
+import com.careerhoop.service.RefreshTokenService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -25,10 +30,17 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
+    @Autowired
+    private RefreshTokenService refreshTokenService;
+
+    @Autowired
+    private CookieConfig cookieConfig;
+
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request, HttpServletResponse httpResponse) {
         try {
             AuthResponse response = authService.register(request);
+            setAuthCookies(httpResponse, response.getToken(), response.getRefreshToken());
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
@@ -36,9 +48,10 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletResponse httpResponse) {
         try {
             AuthResponse response = authService.login(request);
+            setAuthCookies(httpResponse, response.getToken(), response.getRefreshToken());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ex.getMessage());
@@ -46,9 +59,30 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<?> refresh(@RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<?> refresh(
+            @RequestBody(required = false) RefreshTokenRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
         try {
-            AuthResponse response = authService.refreshToken(request.getRefreshToken());
+            // Try to get refresh token from cookie first, then request body
+            String refreshToken = null;
+            if (httpRequest.getCookies() != null) {
+                for (Cookie cookie : httpRequest.getCookies()) {
+                    if ("refreshToken".equals(cookie.getName())) {
+                        refreshToken = cookie.getValue();
+                        break;
+                    }
+                }
+            }
+            if (refreshToken == null && request != null) {
+                refreshToken = request.getRefreshToken();
+            }
+            if (refreshToken == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token required");
+            }
+
+            AuthResponse response = authService.refreshToken(refreshToken);
+            setAuthCookies(httpResponse, response.getToken(), response.getRefreshToken());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ex.getMessage());
@@ -141,6 +175,91 @@ public class AuthController {
             PasswordResetResponse errorResponse = new PasswordResetResponse("Unable to reset password, please request a new code.");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
+    }
+
+    /**
+     * POST /api/logout
+     * 
+     * Logs out the user by revoking their refresh token.
+     * Supports both cookie-based and body-based token extraction.
+     * 
+     * @param request HTTP request (may contain refresh token in cookie or body)
+     * @param response HTTP response (to clear cookies)
+     * @return Success message
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            @RequestBody(required = false) RefreshTokenRequest refreshTokenRequest) {
+        try {
+            String refreshToken = null;
+
+            // Try to get refresh token from cookie first
+            if (request.getCookies() != null) {
+                for (Cookie cookie : request.getCookies()) {
+                    if ("refreshToken".equals(cookie.getName())) {
+                        refreshToken = cookie.getValue();
+                        break;
+                    }
+                }
+            }
+
+            // Fallback to request body if not in cookie
+            if (refreshToken == null && refreshTokenRequest != null) {
+                refreshToken = refreshTokenRequest.getRefreshToken();
+            }
+
+            // Revoke token if found
+            if (refreshToken != null && !refreshToken.isEmpty()) {
+                refreshTokenService.revokeToken(refreshToken);
+            }
+
+            // Clear cookies
+            Cookie accessTokenCookie = new Cookie("accessToken", null);
+            accessTokenCookie.setHttpOnly(true);
+            accessTokenCookie.setSecure(true);
+            accessTokenCookie.setPath("/");
+            accessTokenCookie.setMaxAge(0);
+            response.addCookie(accessTokenCookie);
+
+            Cookie refreshTokenCookie = new Cookie("refreshToken", null);
+            refreshTokenCookie.setHttpOnly(true);
+            refreshTokenCookie.setSecure(true);
+            refreshTokenCookie.setPath("/");
+            refreshTokenCookie.setMaxAge(0);
+            response.addCookie(refreshTokenCookie);
+
+            return ResponseEntity.ok(new PasswordResetResponse("Logged out successfully"));
+        } catch (Exception ex) {
+            // Even if there's an error, return success to prevent information leakage
+            return ResponseEntity.ok(new PasswordResetResponse("Logged out successfully"));
+        }
+    }
+
+    /**
+     * Sets httpOnly cookies for access and refresh tokens.
+     */
+    private void setAuthCookies(HttpServletResponse response, String accessToken, String refreshToken) {
+        // Access token cookie
+        Cookie accessTokenCookie = new Cookie("accessToken", accessToken);
+        accessTokenCookie.setHttpOnly(true);
+        accessTokenCookie.setSecure(cookieConfig.isCookieSecure());
+        accessTokenCookie.setPath("/");
+        accessTokenCookie.setMaxAge(cookieConfig.getCookieMaxAge());
+        if ("Strict".equals(cookieConfig.getCookieSameSite()) || "Lax".equals(cookieConfig.getCookieSameSite())) {
+            // Note: SameSite attribute needs to be set via response header in newer Spring versions
+            // This is a limitation - we'll set it via response header if needed
+        }
+        response.addCookie(accessTokenCookie);
+
+        // Refresh token cookie
+        Cookie refreshTokenCookie = new Cookie("refreshToken", refreshToken);
+        refreshTokenCookie.setHttpOnly(true);
+        refreshTokenCookie.setSecure(cookieConfig.isCookieSecure());
+        refreshTokenCookie.setPath("/");
+        refreshTokenCookie.setMaxAge(cookieConfig.getCookieMaxAge());
+        response.addCookie(refreshTokenCookie);
     }
 }
 
