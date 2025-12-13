@@ -56,7 +56,7 @@ export function WhyChooseSection() {
           <h2 className="mb-4 font-sans text-3xl font-bold text-foreground md:text-4xl text-balance">
             Why Students <span className="text-primary">Choose Us</span>
           </h2>
-          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+          <p className="mx-auto max-w-2xl text-lg text-foreground/90">
             We're committed to helping every student find their path with confidence
           </p>
         </div>
@@ -65,21 +65,21 @@ export function WhyChooseSection() {
         <div className="mb-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {benefits.map((benefit) => (
             <div key={benefit.title} className="text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/20">
                 <benefit.icon className="h-8 w-8 text-primary" />
               </div>
               <h3 className="mb-2 font-semibold text-foreground">{benefit.title}</h3>
-              <p className="text-sm text-muted-foreground">{benefit.description}</p>
+              <p className="text-sm text-foreground/80">{benefit.description}</p>
             </div>
           ))}
         </div>
 
         {/* Confidence Meter */}
-        <div className="mb-16 rounded-3xl bg-gradient-to-r from-primary/10 via-secondary/10 to-accent p-8 md:p-12">
+        <div className="mb-16 rounded-3xl bg-gradient-to-r from-primary/20 via-secondary/20 to-accent/30 p-8 md:p-12">
           <div className="grid items-center gap-8 md:grid-cols-2">
             <div>
               <h3 className="mb-4 text-2xl font-bold text-foreground">Student Confidence Meter</h3>
-              <p className="text-muted-foreground">
+              <p className="text-foreground/90">
                 Our students report a significant boost in career confidence after using CareerHoop for just 30 days.
               </p>
             </div>
@@ -120,7 +120,7 @@ export function WhyChooseSection() {
           {testimonials.map((testimonial) => (
             <Card key={testimonial.name} className="border-border/50 bg-card">
               <CardContent className="p-6">
-                <p className="mb-6 text-muted-foreground italic">"{testimonial.quote}"</p>
+                <p className="mb-6 text-foreground/80 italic">"{testimonial.quote}"</p>
                 <div className="flex items-center gap-3">
                   <img
                     src={testimonial.avatar || "/placeholder.svg"}
@@ -129,7 +129,7 @@ export function WhyChooseSection() {
                   />
                   <div>
                     <p className="font-semibold text-foreground">{testimonial.name}</p>
-                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                    <p className="text-sm text-foreground/70">{testimonial.role}</p>
                   </div>
                 </div>
               </CardContent>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { createPageUrl } from "../utils/utils";
-import { Student } from "@/entities/all";
-import { UploadFile, ExtractDataFromUploadedFile } from "@/integrations/Core";
+import { createPageUrl } from "@/shared/utils/utils";
+import { Student } from "@/shared/entities/all";
+import { UploadFile, ExtractDataFromUploadedFile } from "@/shared/integrations/Core";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";

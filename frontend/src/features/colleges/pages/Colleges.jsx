@@ -22,7 +22,7 @@ import { getColleges, saveCollege, unsaveCollege, checkCollegeSaved, getSavedCol
 import Pagination from "@/shared/components/common/pagination"
 import { useAuth } from "@/shared/context/AuthContext"
 import { toast } from "react-toastify"
-import { collegeService } from "./services/collegeService"
+import { collegeService } from "../services/collegeService"
 import { useNavigate } from "react-router-dom"
 
 const PUBLIC_KEYWORDS = ["campus", "public", "government", "constituent", "state", "community"]

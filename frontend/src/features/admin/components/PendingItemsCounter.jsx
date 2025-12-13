@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Badge } from "@/shared/components/ui/badge"
-import { getPendingCounts } from "@/lib/api"
+import { getPendingCounts } from "@/shared/lib/api"
 import { AlertCircle, Clock } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { useNavigate } from "react-router-dom"

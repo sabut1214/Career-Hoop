@@ -9,7 +9,7 @@ import {
   Download, 
   Upload
 } from "lucide-react"
-import { importAllData } from "@/lib/api"
+import { importAllData } from "@/shared/lib/api"
 import { toast } from "react-toastify"
 
 export function QuickActions() {

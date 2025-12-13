@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
-import { getTrends } from "@/lib/api"
+import { getTrends } from "@/shared/lib/api"
 import { 
   ChartContainer, 
   ChartTooltip, 

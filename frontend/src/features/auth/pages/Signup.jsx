@@ -29,8 +29,12 @@ export default function Signup() {
 
   const isValidEmail = (value) => /\S+@\S+\.\S+/.test(value)
   const validatePassword = (value) => {
+    // Check byte length (BCrypt has a 72-byte limit)
+    // For most ASCII characters, 1 char = 1 byte, so 72 chars is a safe limit
+    const byteLength = new TextEncoder().encode(value).length
     const checks = [
       { test: value.length >= 8, message: "at least 8 characters" },
+      { test: byteLength <= 72, message: "no more than 72 characters" },
       { test: /[A-Z]/.test(value), message: "an uppercase letter" },
       { test: /[a-z]/.test(value), message: "a lowercase letter" },
       { test: /[0-9]/.test(value), message: "a number" },

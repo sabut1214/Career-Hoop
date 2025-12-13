@@ -20,23 +20,22 @@ export function AuthProvider({ children }) {
         
         // Validate user data has required fields
         if (parsedUser.role && parsedUser.id) {
-          // Verify user is still authenticated by attempting a refresh
+          // Use stored user data immediately to avoid blocking UI
+          setUser(parsedUser)
+          setLoading(false)
+          
+          // Attempt refresh in background (non-blocking)
+          // This won't cause errors if backend is unavailable due to our caching
           refreshAccessToken()
             .then((result) => {
-              // If refresh succeeds, user is authenticated
+              // If refresh succeeds, update user data
               if (result && typeof result === 'object' && result.user) {
                 setUser(result.user)
-              } else {
-                // Use stored user data
-                setUser(parsedUser)
               }
-              setLoading(false)
+              // If result is null (backend unavailable), keep using stored user data
             })
             .catch(() => {
-              // Refresh failed - user not authenticated, clear data
-              localStorage.removeItem("user")
-              setUser(null)
-              setLoading(false)
+              // Silently ignore errors - we're already using stored user data
             })
         } else {
           // Invalid user data, clear it

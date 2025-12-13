@@ -48,12 +48,33 @@ public class AuthService {
     private static final int OTP_MIN_VALUE = 10000;
     private static final int OTP_MAX_VALUE = 99999;
     private static final int OTP_EXPIRY_HOURS = 1; // TODO: Consider reducing to 10-30 minutes for better security
+    
+    // BCrypt password validation
+    private static final int BCRYPT_MAX_PASSWORD_BYTES = 72;
+    
+    /**
+     * Validates that a password does not exceed BCrypt's 72-byte limit.
+     * @param password The password to validate
+     * @throws IllegalArgumentException if password exceeds 72 bytes
+     */
+    private void validatePasswordByteLength(String password) {
+        if (password == null) {
+            return; // Let other validations handle null
+        }
+        byte[] passwordBytes = password.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        if (passwordBytes.length > BCRYPT_MAX_PASSWORD_BYTES) {
+            throw new IllegalArgumentException("Password is too long. Please use a password with 72 characters or less.");
+        }
+    }
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("User with this email already exists");
         }
+
+        // Validate password byte length (BCrypt limit)
+        validatePasswordByteLength(request.getPassword());
 
         User user = new User();
         user.setName(request.getName());
@@ -309,6 +330,13 @@ public class AuthService {
         if (newPassword == null || newPassword.length() < 8) {
             throw new PasswordResetException("Password must be at least 8 characters long");
         }
+        
+        // Validate password byte length (BCrypt limit)
+        try {
+            validatePasswordByteLength(newPassword);
+        } catch (IllegalArgumentException ex) {
+            throw new PasswordResetException(ex.getMessage());
+        }
 
         String normalizedEmail = email.trim().toLowerCase();
         LocalDateTime now = LocalDateTime.now();
@@ -451,6 +479,9 @@ public class AuthService {
         if (newPassword.length() < 8) {
             throw new IllegalArgumentException("New password must be at least 8 characters long");
         }
+        
+        // Validate password byte length (BCrypt limit)
+        validatePasswordByteLength(newPassword);
         
         // Find user
         User user = userRepository.findById(userId)

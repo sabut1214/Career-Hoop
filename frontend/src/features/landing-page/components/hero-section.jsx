@@ -4,10 +4,10 @@ import { ArrowRight, Sparkles } from "lucide-react"
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/5 to-secondary/10 px-4 py-20 md:py-32">
+    <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/20 to-secondary/30 px-4 py-20 md:py-32">
       {/* Decorative elements */}
-      <div className="absolute top-20 left-10 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
-      <div className="absolute bottom-10 right-10 h-48 w-48 rounded-full bg-secondary/20 blur-3xl" />
+      <div className="absolute top-20 left-10 h-64 w-64 rounded-full bg-primary/30 blur-3xl" />
+      <div className="absolute bottom-10 right-10 h-48 w-48 rounded-full bg-secondary/40 blur-3xl" />
 
       <div className="container relative mx-auto max-w-6xl">
         <div className="grid items-center gap-12 lg:grid-cols-2">
@@ -24,7 +24,7 @@ export function HeroSection() {
               </span>
             </h1>
 
-            <p className="mx-auto max-w-xl text-lg leading-relaxed text-muted-foreground lg:mx-0">
+            <p className="mx-auto max-w-xl text-lg leading-relaxed text-foreground/90 lg:mx-0">
               CareerHoop helps students discover their perfect career path through personalized guidance, skill
               assessments, and expert mentorship. Your dream future is just a few clicks away.
             </p>
@@ -53,28 +53,27 @@ export function HeroSection() {
             <div className="flex items-center justify-center gap-8 pt-4 lg:justify-start">
               <div className="text-center">
                 <p className="text-2xl font-bold text-foreground">10K+</p>
-                <p className="text-sm text-muted-foreground">Students Guided</p>
+                <p className="text-sm text-foreground/80">Students Guided</p>
               </div>
               <div className="h-8 w-px bg-border" />
               <div className="text-center">
                 <p className="text-2xl font-bold text-foreground">500+</p>
-                <p className="text-sm text-muted-foreground">Career Paths</p>
+                <p className="text-sm text-foreground/80">Career Paths</p>
               </div>
               <div className="h-8 w-px bg-border" />
               <div className="text-center">
                 <p className="text-2xl font-bold text-foreground">98%</p>
-                <p className="text-sm text-muted-foreground">Satisfaction</p>
+                <p className="text-sm text-foreground/80">Satisfaction</p>
               </div>
             </div>
           </div>
 
           <div className="relative animate-in fade-in slide-in-from-right-5 duration-700 delay-200">
             <div className="relative mx-auto aspect-square max-w-md">
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/20 to-secondary/20" />
               <img
                 src="/diverse-students-exploring-careers-on-laptop--illu.jpg"
                 alt="Students exploring career paths on laptops"
-                className="relative z-10 h-full w-full rounded-3xl object-cover"
+                className="relative z-10 h-full w-full rounded-3xl object-cover shadow-2xl brightness-110 contrast-125 saturate-110"
               />
 
               {/* Floating cards */}

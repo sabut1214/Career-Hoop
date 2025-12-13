@@ -61,12 +61,58 @@ const mockStats = {
   ],
 }
 
-// Health Check
+// Health Check with very short timeout to fail fast
 export const checkHealth = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/health`)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 1000) // 1 second timeout - fail fast
+    
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      method: "GET",
+      signal: controller.signal,
+    })
+    
+    clearTimeout(timeoutId)
     return response.ok
   } catch (error) {
+    // Silently return false if backend is unavailable
+    // Note: Browser will still log ERR_CONNECTION_REFUSED - this is expected behavior
+    return false
+  }
+}
+
+// Check if backend is available (cached result)
+// If backend is unavailable, cache for 5 minutes to avoid repeated checks
+// If backend is available, cache for 30 seconds
+// Initialize as unavailable (false) with current timestamp to prevent initial network calls
+let backendAvailableCache = { value: false, timestamp: Date.now() }
+const BACKEND_CHECK_CACHE_DURATION_AVAILABLE = 30000 // 30 seconds when available
+const BACKEND_CHECK_CACHE_DURATION_UNAVAILABLE = 300000 // 5 minutes when unavailable
+
+const isBackendAvailable = async () => {
+  const now = Date.now()
+  const cacheAge = now - backendAvailableCache.timestamp
+  
+  // Use cached result if still valid - check cache FIRST to avoid network calls
+  if (backendAvailableCache.value !== null) {
+    const cacheDuration = backendAvailableCache.value 
+      ? BACKEND_CHECK_CACHE_DURATION_AVAILABLE 
+      : BACKEND_CHECK_CACHE_DURATION_UNAVAILABLE
+    
+    if (cacheAge < cacheDuration) {
+      return backendAvailableCache.value
+    }
+  }
+  
+  // Only check backend health if cache is expired
+  // This minimizes network calls and console errors
+  try {
+    const isAvailable = await checkHealth()
+    backendAvailableCache = { value: isAvailable, timestamp: now }
+    return isAvailable
+  } catch (error) {
+    // If health check fails, mark as unavailable and cache for 5 minutes
+    backendAvailableCache = { value: false, timestamp: now }
     return false
   }
 }
@@ -893,7 +939,8 @@ export const login = async (email, password) => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `Login failed with status ${response.status}`)
+      const errorMessage = errorData.message || `Login failed with status ${response.status}`
+      throw new Error(errorMessage)
     }
 
     const data = await response.json()
@@ -912,7 +959,12 @@ export const register = async (data) => {
       credentials: "include", // Include cookies for cookie-based auth
       body: JSON.stringify(data),
     })
-    if (!response.ok) throw new Error("Registration failed")
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      const errorMessage = errorData.message || `Registration failed with status ${response.status}`
+      throw new Error(errorMessage)
+    }
 
     const responseData = await response.json()
     // Tokens are now stored in httpOnly cookies, not localStorage
@@ -993,12 +1045,44 @@ export const resetPassword = async (email, otp, newPassword) => {
 
 // Token refresh function - now uses cookies
 export const refreshAccessToken = async () => {
+  // CRITICAL FIRST CHECK: If backend is marked as unavailable, return null immediately
+  // This must be the FIRST thing we check to prevent ANY network calls
+  if (backendAvailableCache.value === false) {
+    return null
+  }
+  
+  // Check cached value - if backend is marked as unavailable, skip immediately
+  const now = Date.now()
+  const cacheAge = now - backendAvailableCache.timestamp
+  const cacheDuration = backendAvailableCache.value 
+    ? BACKEND_CHECK_CACHE_DURATION_AVAILABLE 
+    : BACKEND_CHECK_CACHE_DURATION_UNAVAILABLE
+  
+  // Only check backend availability if we think it might be available AND cache is expired
+  let backendAvailable = false
+  if (backendAvailableCache.value === true && cacheAge < cacheDuration) {
+    // Backend was available and cache is still valid
+    backendAvailable = true
+  } else if (cacheAge >= cacheDuration) {
+    // Cache expired - check backend (this might cause one error, but only once every 5 minutes)
+    backendAvailable = await isBackendAvailable()
+  } else {
+    // Use cached value
+    backendAvailable = backendAvailableCache.value || false
+  }
+  
+  // If backend is not available, return null immediately without making any API calls
+  if (!backendAvailable) {
+    return null
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include", // Include cookies for cookie-based auth
       body: JSON.stringify({}), // Refresh token is in cookie
+      signal: AbortSignal.timeout(5000), // 5 second timeout
     })
 
     if (!response.ok) {
@@ -1022,7 +1106,18 @@ export const refreshAccessToken = async () => {
 
     return data
   } catch (error) {
-    // Clear user data on refresh failure
+    // Handle connection errors gracefully (backend not running)
+    if (error.name === "AbortError" || 
+        error.message.includes("Failed to fetch") || 
+        error.message.includes("ERR_CONNECTION_REFUSED") ||
+        error.message.includes("NetworkError")) {
+      // Backend is not available - don't clear user data, just return null
+      // This allows the app to work in offline mode with stored user data
+      // Update cache to mark backend as unavailable
+      backendAvailableCache = { value: false, timestamp: Date.now() }
+      return null
+    }
+    // For other errors (auth failures), clear user data
     localStorage.removeItem("user")
     throw error
   }
@@ -1367,21 +1462,6 @@ export const checkCollegeSaved = async (userId, collegeId) => {
     return data.saved === true
   } catch (error) {
     return false
-  }
-}
-
-export const logout = async () => {
-  try {
-    await fetch(`${API_BASE_URL}/logout`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    })
-  } catch (error) {
-    // Silently fail - logout should proceed
-  } finally {
-    // Clear all tokens on logout
-    // Tokens are in httpOnly cookies, no need to remove from localStorage
-    localStorage.removeItem("user")
   }
 }
 

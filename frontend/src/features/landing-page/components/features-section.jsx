@@ -80,7 +80,7 @@ export function FeaturesSection() {
           <h2 className="mb-4 font-sans text-3xl font-bold text-foreground md:text-4xl text-balance">
             Everything You Need to <span className="text-primary">Succeed</span>
           </h2>
-          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+          <p className="mx-auto max-w-2xl text-lg text-foreground/90">
             Powerful tools designed to guide you through every step of your career discovery journey
           </p>
         </div>
@@ -97,7 +97,7 @@ export function FeaturesSection() {
                   <feature.icon className={`h-7 w-7 ${feature.iconColor}`} />
                 </div>
                 <h3 className="mb-2 text-lg font-semibold text-foreground">{feature.title}</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
+                <p className="text-sm leading-relaxed text-foreground/80">{feature.description}</p>
               </CardContent>
             </Card>
           ))}

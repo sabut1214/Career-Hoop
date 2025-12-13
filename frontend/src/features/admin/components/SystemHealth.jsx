@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card"
-import { getSystemHealth } from "@/lib/api"
+import { getSystemHealth } from "@/shared/lib/api"
 import { CheckCircle2, AlertTriangle, XCircle, Database, Activity, Users, Clock } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 

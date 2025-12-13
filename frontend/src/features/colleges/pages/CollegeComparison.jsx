@@ -9,8 +9,8 @@ import { useAuth } from "@/shared/context/AuthContext"
 import { toast } from "react-toastify"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import ComparisonTable from "../components/ComparisonTable"
-import { collegeComparisonService } from "./services/collegeComparisonService"
-import { collegeService } from "./services/collegeService"
+import { collegeComparisonService } from "../services/collegeComparisonService"
+import { collegeService } from "../services/collegeService"
 
 export default function CollegeComparisonPage() {
   const [colleges, setColleges] = useState([])

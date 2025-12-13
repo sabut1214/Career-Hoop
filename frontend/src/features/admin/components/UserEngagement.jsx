@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card"
-import { getEngagement } from "@/lib/api"
+import { getEngagement } from "@/shared/lib/api"
 import { Users, TrendingUp, BarChart3 } from "lucide-react"
 import { 
   ChartContainer, 

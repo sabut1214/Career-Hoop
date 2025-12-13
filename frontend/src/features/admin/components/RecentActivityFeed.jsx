@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card"
-import { getRecentActivity } from "@/lib/api"
+import { getRecentActivity } from "@/shared/lib/api"
 import { 
   UserPlus, 
   BookOpen, 

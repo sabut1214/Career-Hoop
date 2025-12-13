@@ -1,6 +1,7 @@
 package com.careerhoop.controller;
 
 import com.careerhoop.dto.AuthResponse;
+import com.careerhoop.dto.ErrorResponse;
 import com.careerhoop.dto.ForgotPasswordRequest;
 import com.careerhoop.dto.LoginRequest;
 import com.careerhoop.dto.PasswordResetResponse;
@@ -43,7 +44,7 @@ public class AuthController {
             setAuthCookies(httpResponse, response.getToken(), response.getRefreshToken());
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(ex.getMessage()));
         }
     }
 
@@ -78,14 +79,14 @@ public class AuthController {
                 refreshToken = request.getRefreshToken();
             }
             if (refreshToken == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token required");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Refresh token required"));
             }
 
             AuthResponse response = authService.refreshToken(refreshToken);
             setAuthCookies(httpResponse, response.getToken(), response.getRefreshToken());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ex.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse(ex.getMessage()));
         }
     }
 
