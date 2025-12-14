@@ -60,22 +60,40 @@ export default function Login() {
     setLoading(true)
 
     try {
+      console.log('Attempting login for:', email)
       const response = await apiLogin(email, password)
+      console.log('Login response:', response)
 
       if (response.user) {
+        // Ensure user data has required fields
+        const userData = {
+          id: response.user.id || response.user.userId,
+          email: response.user.email,
+          name: response.user.name,
+          role: response.user.role,
+        }
+        
+        console.log('Storing user data:', userData)
+        
         // Tokens are stored in httpOnly cookies by backend
         // Only store user data in context
-        authLogin(response.user)
+        authLogin(userData)
+        
+        // Verify user was stored
+        const storedUser = localStorage.getItem("user")
+        console.log('User stored in localStorage:', storedUser)
 
-        if (response.user.role === "admin") {
+        if (userData.role === "admin") {
           navigate("/admin")
         } else {
           navigate("/dashboard")
         }
       } else {
-        throw new Error("Invalid response from server")
+        console.error('Login response missing user data:', response)
+        throw new Error("Invalid response from server - user data missing")
       }
     } catch (err) {
+      console.error('Login error:', err)
       const errorMessage = err.message || "Login failed. Please try again."
       setError(errorMessage)
       toast.error(errorMessage)

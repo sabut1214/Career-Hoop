@@ -19,6 +19,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -55,7 +56,7 @@ public class AuthController {
             setAuthCookies(httpResponse, response.getToken(), response.getRefreshToken());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ex.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse(ex.getMessage()));
         }
     }
 
@@ -242,25 +243,43 @@ public class AuthController {
      * Sets httpOnly cookies for access and refresh tokens.
      */
     private void setAuthCookies(HttpServletResponse response, String accessToken, String refreshToken) {
-        // Access token cookie
-        Cookie accessTokenCookie = new Cookie("accessToken", accessToken);
-        accessTokenCookie.setHttpOnly(true);
-        accessTokenCookie.setSecure(cookieConfig.isCookieSecure());
-        accessTokenCookie.setPath("/");
-        accessTokenCookie.setMaxAge(cookieConfig.getCookieMaxAge());
-        if ("Strict".equals(cookieConfig.getCookieSameSite()) || "Lax".equals(cookieConfig.getCookieSameSite())) {
-            // Note: SameSite attribute needs to be set via response header in newer Spring versions
-            // This is a limitation - we'll set it via response header if needed
+        // Use ResponseCookie to properly set SameSite attribute
+        String sameSiteValue = cookieConfig.getCookieSameSite();
+        boolean secure = cookieConfig.isCookieSecure();
+        
+        // For SameSite=None, Secure must be true (browser requirement)
+        // If SameSite=None but Secure=false, use Lax instead for local development
+        if ("None".equalsIgnoreCase(sameSiteValue) && !secure) {
+            sameSiteValue = "Lax";
         }
-        response.addCookie(accessTokenCookie);
+        
+        // Build cookie strings manually to ensure SameSite is set correctly
+        String sameSiteAttr = "; SameSite=" + sameSiteValue;
+        String secureAttr = secure ? "; Secure" : "";
+        
+        // Access token cookie
+        String accessTokenCookieStr = String.format(
+            "accessToken=%s; HttpOnly; Path=/; Max-Age=%d%s%s",
+            accessToken,
+            cookieConfig.getCookieMaxAge(),
+            sameSiteAttr,
+            secureAttr
+        );
+        response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookieStr);
 
         // Refresh token cookie
-        Cookie refreshTokenCookie = new Cookie("refreshToken", refreshToken);
-        refreshTokenCookie.setHttpOnly(true);
-        refreshTokenCookie.setSecure(cookieConfig.isCookieSecure());
-        refreshTokenCookie.setPath("/");
-        refreshTokenCookie.setMaxAge(cookieConfig.getCookieMaxAge());
-        response.addCookie(refreshTokenCookie);
+        String refreshTokenCookieStr = String.format(
+            "refreshToken=%s; HttpOnly; Path=/; Max-Age=%d%s%s",
+            refreshToken,
+            cookieConfig.getCookieMaxAge(),
+            sameSiteAttr,
+            secureAttr
+        );
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookieStr);
+        
+        // Log cookie settings for debugging
+        org.slf4j.LoggerFactory.getLogger(AuthController.class)
+            .debug("Set auth cookies - SameSite: {}, Secure: {}, MaxAge: {}", sameSiteValue, secure, cookieConfig.getCookieMaxAge());
     }
 }
 

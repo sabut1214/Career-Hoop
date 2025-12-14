@@ -150,16 +150,53 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
   
   // Check if college is saved based on the savedCollegeIds set
   // Convert to string for consistent comparison
-  const collegeIdString = String(college.id)
+  const collegeIdString = String(college?.id || '')
   const isSaved = savedCollegeIds.has(collegeIdString)
+  
+  // Log user and college data for debugging
+  useEffect(() => {
+    if (!user?.id) {
+      console.warn('CollegeCard: User not available', { user })
+    }
+    if (!college?.id) {
+      console.warn('CollegeCard: College ID not available', { college })
+    }
+  }, [user, college])
 
   const handleStarClick = async (e) => {
     e.stopPropagation()
-    if (!user?.id || !college.id || isSaving) return
+    
+    // Detailed logging to debug the issue
+    const hasUserId = !!user?.id
+    const hasCollegeId = !!college.id
+    const isCurrentlySaving = isSaving
+    
+    console.log('Save college check:', {
+      hasUserId,
+      userId: user?.id,
+      user: user,
+      hasCollegeId,
+      collegeId: college.id,
+      college: college,
+      isSaving: isCurrentlySaving
+    })
+    
+    if (!hasUserId || !hasCollegeId || isCurrentlySaving) {
+      console.warn('Cannot save college - missing requirements:', {
+        missingUserId: !hasUserId,
+        missingCollegeId: !hasCollegeId,
+        isSaving: isCurrentlySaving,
+        userId: user?.id,
+        collegeId: college.id
+      })
+      return
+    }
 
+    console.log('Starting save/unsave operation:', { userId: user.id, collegeId: college.id, isSaved })
     setIsSaving(true)
     try {
       if (isSaved) {
+        console.log('Unsave college:', college.id)
         await unsaveCollege(user.id, college.id)
         // Update the saved colleges list
         if (onSaveChange) {
@@ -167,7 +204,9 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
         }
         toast.success("College removed from saved")
       } else {
-        await saveCollege(user.id, college.id)
+        console.log('Save college:', college.id)
+        const result = await saveCollege(user.id, college.id)
+        console.log('Save college result:', result)
         // Update the saved colleges list
         if (onSaveChange) {
           onSaveChange(college.id, true)
@@ -175,7 +214,31 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
         toast.success("College saved successfully")
       }
     } catch (error) {
-      toast.error(error.message || "Failed to update saved college")
+      console.error("Error saving/unsaving college:", error)
+      const errorMessage = error.message || "Failed to update saved college"
+      console.error("Error message:", errorMessage)
+      
+      // Check if it's an authentication error
+      const isAuthError = errorMessage.toLowerCase().includes('session') || 
+                         errorMessage.toLowerCase().includes('expired') ||
+                         errorMessage.toLowerCase().includes('authentication') ||
+                         errorMessage.toLowerCase().includes('missing user context') ||
+                         errorMessage.toLowerCase().includes('log in')
+      
+      if (isAuthError) {
+        toast.error("Your session has expired. Please log in again.", {
+          autoClose: 3000,
+          onClose: () => {
+            // Only redirect after showing the toast
+            if (!window.location.pathname.includes('/login')) {
+              localStorage.removeItem("user")
+              window.location.href = '/login'
+            }
+          }
+        })
+      } else {
+        toast.error(errorMessage)
+      }
     } finally {
       setIsSaving(false)
     }
@@ -217,15 +280,25 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
                 </div>
                 <button
                   onClick={handleStarClick}
-                  disabled={isSaving}
+                  disabled={isSaving || !user?.id || !college?.id}
                   className="transition-colors disabled:opacity-50"
-                  title={isSaved ? "Remove from saved" : "Save college"}
+                  title={
+                    !user?.id 
+                      ? "Please log in to save colleges" 
+                      : !college?.id 
+                        ? "College data incomplete" 
+                        : isSaved 
+                          ? "Remove from saved" 
+                          : "Save college"
+                  }
                 >
                   <Star
-                    className={`h-5 w-5 transition-colors cursor-pointer ${
-                      isSaved
-                        ? "text-yellow-500 fill-yellow-500"
-                        : "text-muted-foreground group-hover:text-accent"
+                    className={`h-5 w-5 transition-colors ${
+                      !user?.id || !college?.id
+                        ? "text-muted-foreground cursor-not-allowed"
+                        : isSaved
+                          ? "text-yellow-500 fill-yellow-500 cursor-pointer"
+                          : "text-muted-foreground group-hover:text-accent cursor-pointer"
                     }`}
                   />
                 </button>
@@ -299,9 +372,10 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
             variant="outline" 
             className="w-full bg-transparent"
             onClick={handleStarClick}
-            disabled={isSaving}
+            disabled={isSaving || !user?.id || !college?.id}
+            title={!user?.id ? "Please log in to save colleges" : !college?.id ? "College data incomplete" : ""}
           >
-            {isSaved ? "Saved" : "Save"}
+            {!user?.id ? "Login to Save" : isSaved ? "Saved" : "Save"}
           </Button>
           <Button className="w-full" onClick={() => college.detailUrl && window.open(college.detailUrl, '_blank')}>
             <ExternalLink className="mr-2 h-4 w-4" />

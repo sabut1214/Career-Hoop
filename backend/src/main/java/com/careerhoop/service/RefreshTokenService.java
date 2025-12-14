@@ -7,10 +7,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -29,8 +31,6 @@ public class RefreshTokenService {
     @Value("${jwt.refresh-token-expiration}")
     private Long refreshTokenExpiration;
 
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-
     /**
      * Generates a new refresh token for a user and stores it in the database.
      * The token is hashed before storage for security.
@@ -43,8 +43,8 @@ public class RefreshTokenService {
         // Generate JWT refresh token
         String token = jwtService.generateRefreshToken(user.getId());
 
-        // Hash the token before storing
-        String tokenHash = passwordEncoder.encode(token);
+        // Hash the token using SHA-256 (no 72-byte limit like BCrypt)
+        String tokenHash = hashToken(token);
 
         // Calculate expiration time
         LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(refreshTokenExpiration / 1000);
@@ -60,6 +60,32 @@ public class RefreshTokenService {
 
         logger.debug("Generated refresh token for user: {}", user.getId());
         return token;
+    }
+
+    /**
+     * Hashes a token using SHA-256.
+     * This is used instead of BCrypt because JWT tokens can be longer than 72 bytes.
+     *
+     * @param token The token to hash
+     * @return The SHA-256 hash of the token
+     */
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            logger.error("SHA-256 algorithm not available", e);
+            throw new RuntimeException("Failed to hash token", e);
+        }
     }
 
     /**
@@ -89,12 +115,15 @@ public class RefreshTokenService {
             return null;
         }
 
+        // Hash the provided token to compare with stored hash
+        String tokenHash = hashToken(token);
+
         // Find all active tokens for this user
         List<RefreshToken> userTokens = refreshTokenRepository.findActiveTokensByUserId(userId, LocalDateTime.now());
 
-        // Check each token hash against the provided token
+        // Check each token hash against the provided token hash
         for (RefreshToken refreshToken : userTokens) {
-            if (passwordEncoder.matches(token, refreshToken.getTokenHash())) {
+            if (tokenHash.equals(refreshToken.getTokenHash())) {
                 // Token found and valid
                 if (refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
                     logger.debug("Refresh token expired");

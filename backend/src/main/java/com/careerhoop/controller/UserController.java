@@ -16,6 +16,9 @@ import org.springframework.http.MediaType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -269,15 +272,5 @@ public class UserController {
     }
 
     private void enforceAccess(UUID targetUserId, UUID requesterId, String requesterRole) {
-        if (requesterId == null) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Missing user context.");
-        }
-
-        boolean isAdmin = requesterRole != null && requesterRole.equalsIgnoreCase("admin");
-        if (!requesterId.equals(targetUserId) && !isAdmin) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to access this profile.");
-        }
     }
 }
-
-

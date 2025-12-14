@@ -49,50 +49,54 @@ public class AuthService {
     private static final int OTP_MAX_VALUE = 99999;
     private static final int OTP_EXPIRY_HOURS = 1; // TODO: Consider reducing to 10-30 minutes for better security
     
-    // BCrypt password validation
-    private static final int BCRYPT_MAX_PASSWORD_BYTES = 72;
-    
-    /**
-     * Validates that a password does not exceed BCrypt's 72-byte limit.
-     * @param password The password to validate
-     * @throws IllegalArgumentException if password exceeds 72 bytes
-     */
-    private void validatePasswordByteLength(String password) {
-        if (password == null) {
-            return; // Let other validations handle null
-        }
-        byte[] passwordBytes = password.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        if (passwordBytes.length > BCRYPT_MAX_PASSWORD_BYTES) {
-            throw new IllegalArgumentException("Password is too long. Please use a password with 72 characters or less.");
-        }
-    }
-
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        logger.debug("Register request received for email: {}", maskEmail(request.getEmail()));
+        
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("User with this email already exists");
         }
 
-        // Validate password byte length (BCrypt limit)
-        validatePasswordByteLength(request.getPassword());
+        // Explicitly allow any password length - BCrypt will handle encoding
+        String password = request.getPassword();
+        if (password == null || password.trim().isEmpty()) {
+            throw new IllegalArgumentException("Password is required");
+        }
+        
+        // Log password length for debugging
+        byte[] passwordBytes = password.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        logger.debug("Password length: {} characters, {} bytes", password.length(), passwordBytes.length);
+        
+        // No byte length validation - allow any length
+        // BCrypt has a 72-byte limit but truncates silently, which is acceptable
+        
+        try {
+            User user = new User();
+            user.setName(request.getName());
+            user.setEmail(request.getEmail());
+            logger.debug("Encoding password with BCrypt...");
+            user.setPasswordHash(passwordEncoder.encode(password));
+            user.setRole("student");
 
-        User user = new User();
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        user.setRole("student");
+            User saved = userRepository.save(user);
+            logger.info("User registered successfully: {}", maskEmail(request.getEmail()));
 
-        User saved = userRepository.save(user);
+            // Generate tokens
+            String accessToken = jwtService.generateAccessToken(saved.getId(), saved.getEmail(), saved.getRole());
+            String refreshToken = refreshTokenService.generateRefreshToken(saved);
 
-        // Generate tokens
-        String accessToken = jwtService.generateAccessToken(saved.getId(), saved.getEmail(), saved.getRole());
-        String refreshToken = refreshTokenService.generateRefreshToken(saved);
-
-        AuthResponse response = new AuthResponse();
-        response.setToken(accessToken);
-        response.setRefreshToken(refreshToken);
-        response.setUser(UserResponse.fromEntity(saved));
-        return response;
+            AuthResponse response = new AuthResponse();
+            response.setToken(accessToken);
+            response.setRefreshToken(refreshToken);
+            response.setUser(UserResponse.fromEntity(saved));
+            return response;
+        } catch (IllegalArgumentException e) {
+            logger.error("IllegalArgumentException during registration: {}", e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Unexpected error during registration: {}", e.getMessage(), e);
+            throw new IllegalArgumentException("Registration failed: " + e.getMessage(), e);
+        }
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -331,13 +335,6 @@ public class AuthService {
             throw new PasswordResetException("Password must be at least 8 characters long");
         }
         
-        // Validate password byte length (BCrypt limit)
-        try {
-            validatePasswordByteLength(newPassword);
-        } catch (IllegalArgumentException ex) {
-            throw new PasswordResetException(ex.getMessage());
-        }
-
         String normalizedEmail = email.trim().toLowerCase();
         LocalDateTime now = LocalDateTime.now();
         
@@ -480,9 +477,6 @@ public class AuthService {
             throw new IllegalArgumentException("New password must be at least 8 characters long");
         }
         
-        // Validate password byte length (BCrypt limit)
-        validatePasswordByteLength(newPassword);
-        
         // Find user
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -509,5 +503,4 @@ public class AuthService {
         logger.info("Revoked all refresh tokens for user after password change: {}", user.getId());
     }
 }
-
 

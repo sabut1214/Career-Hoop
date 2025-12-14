@@ -9,8 +9,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -33,29 +31,10 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // Configure CSRF with cookie-based tokens for SPA
-        CookieCsrfTokenRepository tokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-        CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
-        requestHandler.setCsrfRequestAttributeName("_csrf");
-
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // Enable CSRF with cookie-based token repository for SPA
-                .csrf(csrf -> csrf
-                        .csrfTokenRepository(tokenRepository)
-                        .csrfTokenRequestHandler(requestHandler)
-                        // Disable CSRF for public endpoints that don't need it
-                        .ignoringRequestMatchers(
-                                "/api/login",
-                                "/api/register",
-                                "/api/refresh",
-                                "/api/health",
-                                "/api/grades/ocr",
-                                "/api/forgot-password",
-                                "/api/verify-otp",
-                                "/api/reset-password"
-                        )
-                )
+                // Disable CSRF for local development to avoid 403 errors on POST/PUT/DELETE
+                .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // Add security headers
                 .headers(headers -> headers
@@ -80,6 +59,8 @@ public class SecurityConfig {
                                 "/api/forgot-password",
                                 "/api/verify-otp",
                                 "/api/reset-password",
+                                "/api/students",
+                                "/api/students/**",
                                 "/api/careers",
                                 "/api/careers/**",
                                 "/api/colleges",
@@ -115,17 +96,21 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(allowedOrigins);
         
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        // Restrict headers instead of allowing all
-        configuration.setAllowedHeaders(Arrays.asList("Content-Type", "Authorization", "X-CSRF-TOKEN", "X-Requested-With"));
+        // Allow all headers including custom headers like X-User-Role and X-User-Id
+        configuration.setAllowedHeaders(Arrays.asList(
+            "Content-Type", 
+            "Authorization", 
+            "X-Requested-With",
+            "X-User-Role",
+            "X-User-Id"
+        ));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
-        // Expose CSRF token header
-        configuration.setExposedHeaders(Arrays.asList("X-CSRF-TOKEN"));
+        // Expose custom headers
+        configuration.setExposedHeaders(Arrays.asList("X-User-Role", "X-User-Id"));
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 }
-
-

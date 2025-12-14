@@ -17,7 +17,11 @@ export const studentService = {
   delete: (id) => api.delete(`/api/students/${id}`),
 
   // Get student by email
-  getByEmail: (email) => api.get(`/api/students/email/${email}`),
+  // Treat 404 as a valid "not found" response instead of an error
+  getByEmail: (email) =>
+    api.get(`/api/students/email/${email}`, {
+      validateStatus: (status) => status === 200 || status === 404,
+    }),
 }
 
 export default studentService

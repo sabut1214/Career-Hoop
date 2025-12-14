@@ -930,6 +930,7 @@ export const login = async (email, password) => {
       throw new Error("Invalid credentials")
     }
 
+    console.log('Sending login request to:', `${API_BASE_URL}/login`)
     const response = await fetch(`${API_BASE_URL}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -937,16 +938,30 @@ export const login = async (email, password) => {
       body: JSON.stringify({ email, password }),
     })
 
+    console.log('Login response status:', response.status)
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       const errorMessage = errorData.message || `Login failed with status ${response.status}`
+      console.error('Login failed:', errorMessage, errorData)
       throw new Error(errorMessage)
     }
 
     const data = await response.json()
+    console.log('Login successful, response data:', data)
+    
+    // Check if cookies were set (httpOnly cookies won't show in document.cookie)
+    // But we can check response headers
+    const setCookieHeader = response.headers.get('Set-Cookie')
+    console.log('Set-Cookie header from login:', setCookieHeader ? 'present' : 'missing')
+    
     // Tokens are now stored in httpOnly cookies, not localStorage
+    // Wait a brief moment to ensure cookies are set before returning
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
     return data
   } catch (error) {
+    console.error('Login error:', error)
     throw new Error(error.message || "Failed to connect to server. Make sure the backend is running.")
   }
 }
@@ -1044,36 +1059,44 @@ export const resetPassword = async (email, otp, newPassword) => {
 }
 
 // Token refresh function - now uses cookies
-export const refreshAccessToken = async () => {
-  // CRITICAL FIRST CHECK: If backend is marked as unavailable, return null immediately
-  // This must be the FIRST thing we check to prevent ANY network calls
-  if (backendAvailableCache.value === false) {
-    return null
-  }
-  
-  // Check cached value - if backend is marked as unavailable, skip immediately
-  const now = Date.now()
-  const cacheAge = now - backendAvailableCache.timestamp
-  const cacheDuration = backendAvailableCache.value 
-    ? BACKEND_CHECK_CACHE_DURATION_AVAILABLE 
-    : BACKEND_CHECK_CACHE_DURATION_UNAVAILABLE
-  
-  // Only check backend availability if we think it might be available AND cache is expired
-  let backendAvailable = false
-  if (backendAvailableCache.value === true && cacheAge < cacheDuration) {
-    // Backend was available and cache is still valid
-    backendAvailable = true
-  } else if (cacheAge >= cacheDuration) {
-    // Cache expired - check backend (this might cause one error, but only once every 5 minutes)
-    backendAvailable = await isBackendAvailable()
+// forceRefresh: if true, bypass availability cache check (useful when we know backend is responding, e.g., 403 errors)
+export const refreshAccessToken = async (forceRefresh = false) => {
+  // If forceRefresh is true, skip availability check and try refresh directly
+  // This is useful when we get 403 errors, which means backend IS available
+  if (!forceRefresh) {
+    // CRITICAL FIRST CHECK: If backend is marked as unavailable, return null immediately
+    // This must be the FIRST thing we check to prevent ANY network calls
+    if (backendAvailableCache.value === false) {
+      return null
+    }
+    
+    // Check cached value - if backend is marked as unavailable, skip immediately
+    const now = Date.now()
+    const cacheAge = now - backendAvailableCache.timestamp
+    const cacheDuration = backendAvailableCache.value 
+      ? BACKEND_CHECK_CACHE_DURATION_AVAILABLE 
+      : BACKEND_CHECK_CACHE_DURATION_UNAVAILABLE
+    
+    // Only check backend availability if we think it might be available AND cache is expired
+    let backendAvailable = false
+    if (backendAvailableCache.value === true && cacheAge < cacheDuration) {
+      // Backend was available and cache is still valid
+      backendAvailable = true
+    } else if (cacheAge >= cacheDuration) {
+      // Cache expired - check backend (this might cause one error, but only once every 5 minutes)
+      backendAvailable = await isBackendAvailable()
+    } else {
+      // Use cached value
+      backendAvailable = backendAvailableCache.value || false
+    }
+    
+    // If backend is not available, return null immediately without making any API calls
+    if (!backendAvailable) {
+      return null
+    }
   } else {
-    // Use cached value
-    backendAvailable = backendAvailableCache.value || false
-  }
-  
-  // If backend is not available, return null immediately without making any API calls
-  if (!backendAvailable) {
-    return null
+    // Force refresh - mark backend as available since we got a response (even if 403)
+    backendAvailableCache = { value: true, timestamp: Date.now() }
   }
 
   try {
@@ -1087,7 +1110,9 @@ export const refreshAccessToken = async () => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || "Token refresh failed")
+      const errorMessage = errorData.message || errorData.error || `Token refresh failed (${response.status})`
+      console.error('Token refresh failed:', errorMessage, errorData)
+      throw new Error(errorMessage)
     }
 
     const data = await response.json()
@@ -1117,9 +1142,12 @@ export const refreshAccessToken = async () => {
       backendAvailableCache = { value: false, timestamp: Date.now() }
       return null
     }
-    // For other errors (auth failures), clear user data
-    localStorage.removeItem("user")
-    throw error
+    // For other errors (auth failures like expired refresh token), log but don't clear user data immediately
+    // The calling code will handle redirecting to login if needed
+    console.error('Token refresh error:', error.message)
+    // Don't clear user data here - let the calling code decide
+    // If refresh token is expired, user will need to log in again anyway
+    return null
   }
 }
 
@@ -1138,7 +1166,9 @@ export const logout = async () => {
   localStorage.removeItem("user")
 }
 
-const buildAuthHeaders = () => {
+// CSRF is disabled on backend, so no CSRF token handling needed
+
+const buildAuthHeaders = async () => {
   const headers = {}
   // Tokens are now in httpOnly cookies, not in localStorage
   // Cookies are sent automatically with credentials: 'include'
@@ -1158,33 +1188,115 @@ const buildAuthHeaders = () => {
     // Silently fail - user headers are optional
   }
 
+  // CSRF is disabled on backend for authenticated endpoints
+  // No need to add CSRF token
+
   return headers
 }
 
 // Enhanced fetch with automatic token refresh - cookie-based
 export const fetchWithAuth = async (url, options = {}) => {
-  const headers = buildAuthHeaders()
+  const headers = await buildAuthHeaders()
   
   // Ensure credentials are included for cookie-based auth
   options.credentials = options.credentials || "include"
   options.headers = { ...options.headers, ...headers }
+  
+  console.log(`[fetchWithAuth] Making ${options.method || 'GET'} request to: ${url}`, {
+    hasUserHeaders: !!headers['X-User-Id'],
+    credentials: options.credentials,
+    method: options.method || 'GET'
+  })
 
   let response = await fetch(url, options)
+  
+  console.log(`[fetchWithAuth] Response status: ${response.status} for ${url}`, {
+    hasUserId: !!headers['X-User-Id']
+  })
 
-  // If 401, try to refresh token and retry once
-  if (response.status === 401) {
+  // If 401 or 403, try to refresh token and retry once
+  // 403 can occur when token is expired but Spring Security returns 403 instead of 401
+  // BUT: Don't try to refresh if this is a login/register/refresh endpoint (would cause infinite loop)
+  const isAuthEndpoint = url.includes('/login') || url.includes('/register') || url.includes('/refresh')
+  
+  if ((response.status === 401 || response.status === 403) && !isAuthEndpoint) {
+    // Check if we have user data (which means we should be authenticated)
+    const user = localStorage.getItem("user")
+    if (!user) {
+      // No user data, can't refresh - return the error
+      console.warn('No user data found, cannot refresh token')
+      return response
+    }
+
+    // Check if this is already a retry (to prevent infinite loops)
+    if (options._retry) {
+      // Already retried, return the error
+      console.warn('Already retried, returning error response')
+      return response
+    }
+
     try {
-      const refreshResult = await refreshAccessToken()
+      console.log(`Token may be expired (${response.status}), attempting refresh...`)
+      // Force refresh since we got a response (403 means backend is available)
+      const refreshResult = await refreshAccessToken(true)
+      
+      if (!refreshResult) {
+        // Refresh failed - check the original error to see if it's an auth issue
+        console.warn('Token refresh returned null or failed')
+        
+        // Read the error response to determine if it's an auth error
+        let isAuthError = false
+        try {
+          const errorText = await response.clone().text()
+          const errorData = JSON.parse(errorText)
+          const errorMessage = (errorData.message || errorData.error || '').toLowerCase()
+          isAuthError = errorMessage.includes('missing user context') || 
+                       errorMessage.includes('expired') || 
+                       errorMessage.includes('invalid') ||
+                       errorMessage.includes('session') ||
+                       errorMessage.includes('authentication')
+        } catch (e) {
+          // Can't parse error, assume it might be auth-related if refresh failed
+          console.warn('Could not parse error response, assuming auth issue')
+          isAuthError = true
+        }
+        
+        // Only clear user data and redirect if it's clearly an auth error
+        if (isAuthError) {
+          console.warn('Auth error confirmed, will redirect to login')
+          // Don't clear/redirect here - let the error propagate and handle in UI
+          // The calling code can decide whether to redirect
+        }
+        
+        // Return the original error response
+        return response
+      }
+
       // Update user data if provided
       if (refreshResult && typeof refreshResult === 'object' && refreshResult.user) {
         localStorage.setItem("user", JSON.stringify(refreshResult.user))
       }
-      // Retry request with cookies (automatically included)
-      const newHeaders = buildAuthHeaders()
+      
+      // Mark as retry to prevent infinite loops
+      options._retry = true
+      
+      // Retry request with fresh cookies (automatically included)
+      const newHeaders = await buildAuthHeaders()
       options.headers = { ...options.headers, ...newHeaders }
       response = await fetch(url, options)
+      
+      console.log(`Retry after refresh returned status: ${response.status}`)
+      
+      // If retry still fails with 403, log but don't automatically redirect
+      // Let the calling code handle the error appropriately
+      if (response.status === 403 && options._retry) {
+        console.error('Retry after refresh still returned 403 - authentication may have failed')
+        // Don't redirect here - let the error be handled by the calling code
+        // This prevents automatic redirects that might interrupt user workflow
+      }
     } catch (error) {
-      // Refresh failed, return original 401 response
+      console.error('Token refresh failed:', error)
+      // Refresh failed, return original response
       return response
     }
   }
@@ -1250,6 +1362,10 @@ export const getSavedColleges = async (userId) => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
+    // If unauthorized/forbidden, treat as "no saved colleges" instead of hard error
+    if (response.status === 401 || response.status === 403) {
+      return []
+    }
     throw new Error(errorData.message || "Failed to fetch saved colleges")
   }
 
@@ -1271,6 +1387,7 @@ export const saveCareer = async (userId, careerId, confidenceScore, matchReason,
       confidenceScore: confidenceScore || null,
       matchReason: matchReason || null,
     }
+    console.log(`Attempting to save career by UUID ${careerId} for user ${userId}`)
   } else if (careerName) {
     // Use name-based endpoint
     url = `${API_BASE_URL}/users/${userId}/saved-careers/by-name`
@@ -1279,6 +1396,7 @@ export const saveCareer = async (userId, careerId, confidenceScore, matchReason,
       confidenceScore: confidenceScore || null,
       matchReason: matchReason || null,
     }
+    console.log(`Attempting to save career by name ${careerName} for user ${userId}`)
   } else {
     throw new Error("Career ID or name is required")
   }
@@ -1291,13 +1409,18 @@ export const saveCareer = async (userId, careerId, confidenceScore, matchReason,
     body: JSON.stringify(body),
   })
 
+  console.log(`Save career response status: ${response.status}`)
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
-    const errorMessage = errorData.message || errorData.error || "Failed to save career"
+    const errorMessage = errorData.message || errorData.error || `Failed to save career (${response.status})`
+    console.error('Save career error:', errorMessage, errorData)
     throw new Error(errorMessage)
   }
 
-  return response.json()
+  const result = await response.json()
+  console.log('Career saved successfully:', result)
+  return result
 }
 
 export const unsaveCareer = async (userId, careerId) => {
@@ -1395,6 +1518,8 @@ export const saveCollege = async (userId, collegeId) => {
   if (!userId) throw new Error("User ID is required to save college")
   if (!collegeId) throw new Error("College ID is required")
 
+  console.log(`Attempting to save college ${collegeId} for user ${userId}`)
+  
   const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}/saved-colleges`, {
     method: "POST",
     headers: {
@@ -1403,12 +1528,24 @@ export const saveCollege = async (userId, collegeId) => {
     body: JSON.stringify({ collegeId }),
   })
 
+  console.log(`Save college response status: ${response.status}`)
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.message || "Failed to save college")
+    let errorMessage = errorData.message || errorData.error || `Failed to save college (${response.status})`
+
+    // Avoid showing "session expired" messages on generic 403s in local dev
+    if (response.status === 403 && !errorMessage) {
+      errorMessage = "Failed to save college (403)."
+    }
+    
+    console.error('Save college error:', errorMessage, errorData)
+    throw new Error(errorMessage)
   }
 
-  return response.json()
+  const result = await response.json()
+  console.log('College saved successfully:', result)
+  return result
 }
 
 export const unsaveCollege = async (userId, collegeId) => {
