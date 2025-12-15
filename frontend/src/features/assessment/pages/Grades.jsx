@@ -1,11 +1,11 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Sidebar } from "@/features/dashboard/components/sidebar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
 import { Alert, AlertDescription } from "@/shared/components/ui/alert"
-import { getColleges, analyzeGradeSheet } from "@/shared/lib/api"
+import { getColleges, analyzeGradeSheet, updateUserProfile, getUserProfile, getCollegeRecommendations } from "@/shared/lib/api"
 import {
   UploadCloud,
   Loader2,
@@ -21,6 +21,7 @@ import {
   BookOpen,
   TrendingUp,
 } from "lucide-react"
+import Pagination from "@/shared/components/common/pagination"
 import { useAuth } from "@/shared/context/AuthContext"
 import { getUserStorageKey } from "@/shared/utils/utils"
 import { toast } from "react-toastify"
@@ -187,7 +188,11 @@ export default function GradesPage() {
   const [recommendations, setRecommendations] = useState([])
   const [academicProfile, setAcademicProfile] = useState(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const collegesPerPage = 4
 
   const getGradeColor = (grade) => {
     if (!grade) return "bg-gray-500"
@@ -220,6 +225,90 @@ export default function GradesPage() {
     return "bg-red-500"
   }
 
+  const saveGradesToProfile = async (analysisResult, profile) => {
+    if (!user?.id || !analysisResult || !profile) return
+
+    try {
+      // Extract subject names from analysis
+      const subjectNames = analysisResult.subjects?.map((subject) => subject.name).filter(Boolean) || []
+      
+      // Calculate average GPA from marks (convert percentage to GPA scale 0-4)
+      const averageMarks = profile.averageScore
+      const gpa = averageMarks ? (averageMarks / 100) * 4 : null
+
+      // Update user profile with academic information
+      await updateUserProfile(user.id, {
+        schoolName: analysisResult.schoolName || null,
+        stream: profile.stream || null,
+        subjects: subjectNames.length > 0 ? subjectNames : null,
+        gpa: gpa,
+      })
+    } catch (err) {
+      console.error("Failed to save grades to profile:", err)
+      // Don't show error toast for auto-save, just log it
+    }
+  }
+
+  const reconstructAnalysisFromProfile = (userProfile) => {
+    if (!userProfile || !userProfile.subjects || userProfile.subjects.length === 0) {
+      return null
+    }
+
+    // Reconstruct analysis object from user profile
+    const subjects = userProfile.subjects.map((subjectName) => {
+      // Try to get marks from GPA if available
+      const marks = userProfile.gpa ? Math.round((userProfile.gpa / 4) * 100) : null
+      return {
+        name: subjectName,
+        marks: marks,
+        grade: null, // We don't store grades in profile, only subjects
+      }
+    })
+
+    return {
+      studentName: userProfile.name || null,
+      schoolName: userProfile.schoolName || null,
+      examName: null, // Not stored in profile
+      subjects: subjects,
+    }
+  }
+
+  const loadSavedGrades = async () => {
+    if (!user?.id) return
+
+    setIsLoading(true)
+    try {
+      const userProfile = await getUserProfile(user.id)
+      
+      if (userProfile && (userProfile.subjects?.length > 0 || userProfile.schoolName)) {
+        const reconstructedAnalysis = reconstructAnalysisFromProfile(userProfile)
+        
+        if (reconstructedAnalysis) {
+          setAnalysis(reconstructedAnalysis)
+          const profile = deriveAcademicProfile(reconstructedAnalysis)
+          setAcademicProfile(profile)
+          
+          // Fetch recommendations based on saved profile
+          const recs = await fetchRecommendedColleges(reconstructedAnalysis, profile)
+          setRecommendations(recs)
+          setCurrentPage(1) // Reset to first page when loading saved grades
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load saved grades:", err)
+      // Silently fail - user can still upload new grades
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (user?.id) {
+      loadSavedGrades()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
+
   const handleFileUpload = async (file) => {
     if (!file) return
     if (!user?.id) {
@@ -236,11 +325,18 @@ export default function GradesPage() {
       setAnalysis(result)
       const profile = deriveAcademicProfile(result)
       setAcademicProfile(profile)
+      
+      // Save to localStorage for backward compatibility
       const storageKey = getUserStorageKey("aiGradesAnalysis", user.id)
       localStorage.setItem(storageKey, JSON.stringify(result))
+      
+      // Automatically save to user profile
+      await saveGradesToProfile(result, profile)
+      
       const recs = await fetchRecommendedColleges(result, profile)
       setRecommendations(recs)
-      toast.success("Marksheet analyzed successfully!")
+      setCurrentPage(1) // Reset to first page when new analysis is done
+      toast.success("Marksheet analyzed and saved successfully!")
     } catch (err) {
       const errorMsg = err.message || "Failed to analyze the marksheet. Please try again."
       setError(errorMsg)
@@ -255,34 +351,67 @@ export default function GradesPage() {
 
   const fetchRecommendedColleges = async (analysisData, profileFromState) => {
     try {
-      const response = await getColleges({ page: 0, size: 30 })
-      const raw = response?.data || []
-      const parsed = raw.map(transformCollege)
-      const withDescriptions = parsed.filter((college) => college.overview && college.overview.length > 40)
-      const baseList = (withDescriptions.length > 0 ? withDescriptions : parsed).slice(0, 8)
-
       const profile = profileFromState ?? deriveAcademicProfile(analysisData)
       if (!profile) {
-        return baseList.slice(0, 4)
+        return []
       }
 
-      const enriched = baseList
-        .map((college) => {
-          const matchScore = scoreCollegeForProfile(college, profile)
+      // Calculate average grade from subjects if available
+      let grade12 = profile.averageScore || 70
+      if (analysisData?.subjects && Array.isArray(analysisData.subjects) && analysisData.subjects.length > 0) {
+        const marks = analysisData.subjects
+          .map((s) => (typeof s === "object" && s !== null ? s.marks : null))
+          .filter((m) => m != null && !isNaN(m))
+        if (marks.length > 0) {
+          grade12 = marks.reduce((sum, m) => sum + m, 0) / marks.length
+        }
+      }
+
+      const stream = (profile.stream || "general").toLowerCase()
+      const subjects = analysisData?.subjects
+        ? Array.isArray(analysisData.subjects)
+          ? analysisData.subjects.map((s) => (typeof s === "string" ? s : s?.name || "")).filter(Boolean)
+          : []
+        : []
+
+      // Call Python recommendation service via backend
+      // Fetch more colleges (20) so we can paginate through the best recommendations
+      const recommendations = await getCollegeRecommendations(
+        {
+          grade12: grade12,
+          grade10: analysisData?.grade10 || null,
+          stream: stream,
+          subjects: subjects,
+        },
+        20  // Fetch top 20 colleges for pagination
+      )
+
+      if (recommendations && recommendations.length > 0) {
+        // Transform API response to match UI format
+        return recommendations.map((college) => {
           return {
             ...college,
-            matchScore,
-            highlight: buildMatchHighlight(college, profile),
+            id: college.id || college.name,
+            name: college.name,
+            location: college.location || "Location not specified",
+            overview: college.overview || "",
+            programs: parsePrograms(college.programs),
+            type: college.type || "Unknown",
+            matchScore: college.matchScore || 0,
+            highlight: college.highlight || "",
           }
         })
-        .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))
+      }
 
-      return enriched.slice(0, 4)
+      // Python service returned empty recommendations
+      return []
     } catch (err) {
       console.error("Failed to fetch recommended colleges:", err)
+      // If Python service is not available, return empty array
       return []
     }
   }
+
 
   const resetAnalysis = () => {
     setAnalysis(null)
@@ -290,6 +419,7 @@ export default function GradesPage() {
     setRecommendations([])
     setAcademicProfile(null)
     setError(null)
+    setCurrentPage(1) // Reset to first page
     if (user?.id) {
       const storageKey = getUserStorageKey("aiGradesAnalysis", user.id)
       localStorage.removeItem(storageKey)
@@ -297,6 +427,20 @@ export default function GradesPage() {
     // Also remove old generic key for backward compatibility
     localStorage.removeItem("aiGradesAnalysis")
   }
+
+  // Calculate pagination
+  const totalPages = Math.ceil(recommendations.length / collegesPerPage)
+  const startIndex = (currentPage - 1) * collegesPerPage
+  const endIndex = startIndex + collegesPerPage
+  const paginatedRecommendations = recommendations.slice(startIndex, endIndex)
+
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return
+    setCurrentPage(page)
+    // Scroll to recommendations section
+    window.scrollTo({ top: 700, behavior: "smooth" })
+  }
+
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -325,7 +469,14 @@ export default function GradesPage() {
             </Alert>
           )}
 
-          {!analysis ? (
+          {isLoading ? (
+            <Card className="border-2">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                <p className="text-muted-foreground">Loading saved grades...</p>
+              </CardContent>
+            </Card>
+          ) : !analysis ? (
             <Card className="border-2">
               <CardHeader>
                 <CardTitle>Upload Marksheet</CardTitle>
@@ -565,9 +716,16 @@ export default function GradesPage() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="space-y-4"
             >
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                <h2 className="text-2xl font-semibold">AI Recommended Colleges</h2>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <h2 className="text-2xl font-semibold">AI Recommended Colleges</h2>
+                </div>
+                {totalPages > 1 && (
+                  <p className="text-sm text-muted-foreground">
+                    Showing {startIndex + 1}-{Math.min(endIndex, recommendations.length)} of {recommendations.length} colleges
+                  </p>
+                )}
               </div>
               <p className="text-muted-foreground">
                 Based on your academic profile and strengths, here are some colleges you might want to explore.
@@ -596,7 +754,7 @@ export default function GradesPage() {
                 </div>
               )}
               <div className="grid gap-4 md:grid-cols-2">
-                {recommendations.map((college) => (
+                {paginatedRecommendations.map((college) => (
                   <Card key={college.id} className="border-2 h-full">
                     <CardHeader>
                       <div className="flex items-start justify-between">
@@ -624,7 +782,7 @@ export default function GradesPage() {
                       )}
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {college.programs.length > 0 && (
+                      {college.programs && Array.isArray(college.programs) && college.programs.length > 0 && (
                         <div className="space-y-2">
                           <p className="text-sm font-medium">Popular Programs</p>
                           <div className="flex flex-wrap gap-2">
@@ -651,6 +809,22 @@ export default function GradesPage() {
                   </Card>
                 ))}
               </div>
+              {/* Pagination - Show when there are more than 4 colleges */}
+              {recommendations.length > 0 && (
+                <div className="mt-8 pt-6 border-t">
+                  {recommendations.length > collegesPerPage ? (
+                    <Pagination 
+                      currentPage={currentPage} 
+                      totalPages={totalPages} 
+                      onPageChange={handlePageChange} 
+                    />
+                  ) : (
+                    <p className="text-center text-sm text-muted-foreground">
+                      Showing all {recommendations.length} recommended {recommendations.length === 1 ? 'college' : 'colleges'}
+                    </p>
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
 

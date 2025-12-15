@@ -499,7 +499,7 @@ export const startQuiz = async (trainingId, userId) => {
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}/quiz/start`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/quiz/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ trainingId, userId: resolvedUserId }),
@@ -529,7 +529,7 @@ export const submitQuiz = async (quizSessionId, answers, userId) => {
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}/quiz/submit`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/quiz/submit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ quizSessionId, userId: resolvedUserId, answers }),
@@ -555,7 +555,7 @@ export const getQuizStats = async () => {
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}/quiz/stats`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/quiz/stats`)
   if (!response.ok) throw new Error("Failed to fetch quiz analytics")
   return response.json()
 }
@@ -577,7 +577,7 @@ export const getUserQuizStats = async (userId) => {
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}/quiz/stats/user/${resolvedUserId}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/quiz/stats/user/${resolvedUserId}`)
   if (!response.ok) throw new Error("Failed to fetch user quiz analytics")
   return response.json()
 }
@@ -595,7 +595,7 @@ export const getUserQuizHistory = async (userId) => {
     ]
   }
 
-  const response = await fetch(`${API_BASE_URL}/quiz/history/user/${resolvedUserId}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/quiz/history/user/${resolvedUserId}`)
   if (!response.ok) throw new Error("Failed to fetch quiz history")
   return response.json()
 }
@@ -622,7 +622,7 @@ export const getRecommendedTrainings = async (userId) => {
     ]
   }
 
-  const response = await fetch(`${API_BASE_URL}/recommendations/trainings/user/${resolvedUserId}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/recommendations/trainings/user/${resolvedUserId}`)
   if (!response.ok) throw new Error("Failed to fetch recommended trainings")
   return response.json()
 }
@@ -644,8 +644,33 @@ export const getAIFeedback = async (userId) => {
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}/feedback/ai/user/${resolvedUserId}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/feedback/ai/user/${resolvedUserId}`)
   if (!response.ok) throw new Error("Failed to fetch AI feedback")
+  return response.json()
+}
+
+// College Recommendations
+export const getCollegeRecommendations = async (request, limit = 4) => {
+  if (USE_MOCK_DATA) {
+    return []
+  }
+
+  const queryString = limit ? `?limit=${limit}` : ""
+  const response = await fetchWithAuth(`${API_BASE_URL}/recommendations/colleges${queryString}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  })
+
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error("Authorization required to get college recommendations. Please log in and try again.")
+    }
+    throw new Error("Failed to fetch college recommendations")
+  }
+
   return response.json()
 }
 
@@ -670,19 +695,19 @@ export const getAcademicRecords = async () => {
 }
 
 export const getAcademicRecord = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/academic-records/${id}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/academic-records/${id}`)
   if (!response.ok) throw new Error("Failed to fetch academic record")
   return response.json()
 }
 
 export const getStudentAcademicRecords = async (studentId) => {
-  const response = await fetch(`${API_BASE_URL}/academic-records/student/${studentId}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/academic-records/student/${studentId}`)
   if (!response.ok) throw new Error("Failed to fetch student academic records")
   return response.json()
 }
 
 export const createAcademicRecord = async (data) => {
-  const response = await fetch(`${API_BASE_URL}/academic-records`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/academic-records`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -692,7 +717,7 @@ export const createAcademicRecord = async (data) => {
 }
 
 export const updateAcademicRecord = async (id, data) => {
-  const response = await fetch(`${API_BASE_URL}/academic-records/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/academic-records/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -702,7 +727,7 @@ export const updateAcademicRecord = async (id, data) => {
 }
 
 export const deleteAcademicRecord = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/academic-records/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/academic-records/${id}`, {
     method: "DELETE",
   })
   if (!response.ok) throw new Error("Failed to delete academic record")

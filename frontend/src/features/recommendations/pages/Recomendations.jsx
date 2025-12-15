@@ -27,7 +27,8 @@ import { Sidebar } from "@/features/dashboard/components/sidebar"
 import api from "@/shared/services/api"
 import { useAuth } from "@/shared/context/AuthContext"
 import { getUserStorageKey } from "@/shared/utils/utils"
-import { saveCareer, unsaveCareer, getSavedCareers } from "@/shared/lib/api"
+import { saveCareer, unsaveCareer, getSavedCareers, getUserProfile } from "@/shared/lib/api"
+import recommendationService from "@/features/recommendations/services/recommendationService"
 import { toast } from "react-toastify"
 
 const categoryIconMap = {
@@ -398,18 +399,64 @@ export default function RecommendationsPage() {
       return
     }
 
-    const analysisKey = getUserStorageKey("aiGradesAnalysis", user.id)
-    const storedAnalysis = localStorage.getItem(analysisKey)
-    if (storedAnalysis) {
+    // Try to load grades from user profile first
+    const loadGradesFromProfile = async () => {
       try {
-        const parsed = JSON.parse(storedAnalysis)
-        setAnalysisSummary(parsed)
-        fetchGradeRecommendations(parsed)
+        const userProfile = await getUserProfile(user.id)
+        if (userProfile && (userProfile.subjects?.length > 0 || userProfile.schoolName)) {
+          // Reconstruct analysis from user profile
+          const subjects = (userProfile.subjects || []).map((subjectName) => {
+            const marks = userProfile.gpa ? Math.round((userProfile.gpa / 4) * 100) : null
+            return {
+              name: subjectName,
+              marks: marks,
+              grade: null,
+            }
+          })
+
+          const analysis = {
+            studentName: userProfile.name || null,
+            schoolName: userProfile.schoolName || null,
+            examName: null,
+            stream: userProfile.stream || "general",
+            subjects: subjects,
+            grade12: userProfile.gpa ? (userProfile.gpa / 4) * 100 : 70,
+          }
+
+          setAnalysisSummary(analysis)
+          fetchGradeRecommendations(analysis)
+          return true
+        }
       } catch (error) {
-        console.error("Failed to parse stored analysis:", error)
-        localStorage.removeItem(analysisKey)
+        console.error("Failed to load grades from profile:", error)
       }
+      return false
     }
+
+    // Try localStorage as fallback
+    const loadFromLocalStorage = () => {
+      const analysisKey = getUserStorageKey("aiGradesAnalysis", user.id)
+      const storedAnalysis = localStorage.getItem(analysisKey)
+      if (storedAnalysis) {
+        try {
+          const parsed = JSON.parse(storedAnalysis)
+          setAnalysisSummary(parsed)
+          fetchGradeRecommendations(parsed)
+          return true
+        } catch (error) {
+          console.error("Failed to parse stored analysis:", error)
+          localStorage.removeItem(analysisKey)
+        }
+      }
+      return false
+    }
+
+    // Try profile first, then localStorage
+    loadGradesFromProfile().then((loaded) => {
+      if (!loaded) {
+        loadFromLocalStorage()
+      }
+    })
 
     const interestsKey = getUserStorageKey("userInterests", user.id)
     const storedInterests = localStorage.getItem(interestsKey)
@@ -456,64 +503,64 @@ export default function RecommendationsPage() {
     setLoadingGrades(true)
     setGradeError(null)
     try {
-      const grade12 = analysis.grade12 ?? 70
+      // Calculate average grade from subjects if available
+      let grade12 = analysis.grade12
+      if (!grade12 && analysis.subjects && Array.isArray(analysis.subjects) && analysis.subjects.length > 0) {
+        const marks = analysis.subjects
+          .map((s) => (typeof s === "object" && s !== null ? s.marks : null))
+          .filter((m) => m != null && !isNaN(m))
+        if (marks.length > 0) {
+          grade12 = marks.reduce((sum, m) => sum + m, 0) / marks.length
+        }
+      }
+      grade12 = grade12 ?? 70
+
       const stream = (analysis.stream || "general").toLowerCase()
       const subjects =
         Array.isArray(analysis.subjects)
           ? analysis.subjects.map((s) => (typeof s === "string" ? s : s?.name || "")).filter(Boolean)
           : []
 
-      // Filter careers based on stream and subjects
-      let matchedCareers = []
-
-      if (stream.includes("science")) {
-        // Match with Technology, Engineering, Science, Healthcare careers
-        matchedCareers = allCareers.filter(
-          (career) =>
-            career.category === "Technology" ||
-            career.category === "Engineering" ||
-            career.category === "Science" ||
-            career.category === "Healthcare" ||
-            career.category === "Medical" ||
-            career.category === "Data Science"
-        )
-      } else if (stream.includes("commerce") || stream.includes("business")) {
-        // Match with Business careers
-        matchedCareers = allCareers.filter(
-          (career) => career.category === "Business" || career.category === "Marketing"
-        )
-      } else if (stream.includes("arts")) {
-        // Match with Arts, Design, Media, Education careers
-        matchedCareers = allCareers.filter(
-          (career) =>
-            career.category === "Design" ||
-            career.category === "Media" ||
-            career.category === "Marketing" ||
-            career.category === "Education" ||
-            career.category === "History & Research" ||
-            career.category === "Social Science"
-        )
-      } else {
-        // General stream - show diverse careers
-        matchedCareers = allCareers.slice(0, 20)
-      }
-
-      // Sort by grade (higher grades get better matches)
-      if (grade12 >= 90) {
-        matchedCareers = matchedCareers.slice(0, 15)
-      } else if (grade12 >= 80) {
-        matchedCareers = matchedCareers.slice(0, 12)
-      } else {
-        matchedCareers = matchedCareers.slice(0, 10)
-      }
-
-      // Transform to recommendation format
-      const recommendations = matchedCareers.map((career) => {
-        const matchReason = `Strong academic performance (${grade12}%) in ${stream} stream aligns with ${career.category} careers.`
-        return transformCareerToRecommendation(career, matchReason)
+      // Only use Python recommendation API - no fallback
+      const response = await recommendationService.getByGrades({
+        grade12: grade12,
+        grade10: analysis.grade10 || null,
+        stream: stream,
+        subjects: subjects,
       })
 
-      setGradeRecs(recommendations)
+      if (response?.data?.recommendations && response.data.recommendations.length > 0) {
+        // Transform API response to match UI format
+        const recommendations = response.data.recommendations.map((rec) => {
+          // Find matching career from allCareers if possible
+          const matchingCareer = allCareers.find(
+            (c) => c.title === rec.title || c.careerName === rec.title || c.name === rec.title
+          )
+
+          return {
+            id: rec.id || matchingCareer?.id || `rec-${Date.now()}-${Math.random()}`,
+            careerId: matchingCareer?.id || null,
+            careerName: rec.title,
+            title: rec.title,
+            description: rec.description || matchingCareer?.description || "",
+            category: rec.category || matchingCareer?.category || "General",
+            confidence: rec.confidence || 75,
+            confidenceLevel: rec.confidenceLevel || "Medium",
+            matchReason: rec.matchReason || "",
+            salaryRange: rec.salaryRange || matchingCareer?.salaryRange || "Not specified",
+            jobGrowth: rec.jobGrowth || matchingCareer?.jobGrowth || "Not specified",
+            skills: rec.skills || matchingCareer?.requiredSkills || matchingCareer?.skills || [],
+            opportunities: rec.opportunities || matchingCareer?.opportunities || [],
+            requiredSkills: rec.skills || matchingCareer?.requiredSkills || [],
+          }
+        })
+
+        setGradeRecs(recommendations)
+      } else {
+        // Python service returned empty recommendations
+        setGradeRecs([])
+        setGradeError("Python recommendation service is not available. Please ensure the Python service is running on port 8000.")
+      }
     } catch (error) {
       console.error("Failed to fetch grade recommendations:", error)
       setGradeError("Unable to load grade-based recommendations right now.")
@@ -528,61 +575,46 @@ export default function RecommendationsPage() {
     try {
       const careerFields = interests.careerFields || []
       const activities = interests.activities || []
+      const workEnvironments = interests.workEnvironments || []
 
-      // Map interest fields to career categories
-      const fieldToCategory = {
-        medicine: ["Healthcare", "Medical"],
-        technology: ["Technology", "Gaming"],
-        arts: ["Design", "Media", "Marketing"],
-        engineering: ["Engineering"],
-        business: ["Business"],
-        science: ["Science", "Data Science"],
-        education: ["Education"],
-        media: ["Media", "Marketing"],
-      }
-
-      // Get categories from selected fields
-      const selectedCategories = careerFields
-        .map((field) => fieldToCategory[field.toLowerCase()])
-        .flat()
-        .filter(Boolean)
-
-      // Filter careers based on interests
-      let matchedCareers = []
-
-      if (selectedCategories.length > 0) {
-        matchedCareers = allCareers.filter((career) => selectedCategories.includes(career.category))
-      } else {
-        // If no specific category match, show diverse careers
-        matchedCareers = allCareers.slice(0, 15)
-      }
-
-      // Further filter by activities/skills if available
-      if (activities.length > 0) {
-        const activityKeywords = activities.map((a) => a.toLowerCase())
-        matchedCareers = matchedCareers.filter((career) => {
-          const skills = (career.skills || career.requiredSkills || []).map((s) => s.toLowerCase())
-          const description = (career.description || "").toLowerCase()
-          return (
-            activityKeywords.some((keyword) =>
-              skills.some((skill) => skill.includes(keyword) || keyword.includes(skill))
-            ) ||
-            activityKeywords.some((keyword) => description.includes(keyword))
-          )
-        })
-      }
-
-      // Limit results
-      matchedCareers = matchedCareers.slice(0, 15)
-
-      // Transform to recommendation format
-      const recommendations = matchedCareers.map((career) => {
-        const fieldsStr = careerFields.join(", ")
-        const matchReason = `Your interests in ${fieldsStr} and selected activities align with ${career.careerName || career.name}.`
-        return transformCareerToRecommendation(career, matchReason)
+      // Only use Python recommendation API - no fallback
+      const response = await recommendationService.getByInterests({
+        careerFields: careerFields,
+        activities: activities,
+        workEnvironments: workEnvironments,
       })
 
-      setInterestRecs(recommendations)
+      if (response?.data?.recommendations && response.data.recommendations.length > 0) {
+        // Transform API response to match UI format
+        const recommendations = response.data.recommendations.map((rec) => {
+          const matchingCareer = allCareers.find(
+            (c) => c.title === rec.title || c.careerName === rec.title || c.name === rec.title
+          )
+
+          return {
+            id: rec.id || matchingCareer?.id || `rec-${Date.now()}-${Math.random()}`,
+            careerId: matchingCareer?.id || null,
+            careerName: rec.title,
+            title: rec.title,
+            description: rec.description || matchingCareer?.description || "",
+            category: rec.category || matchingCareer?.category || "General",
+            confidence: rec.confidence || 75,
+            confidenceLevel: rec.confidenceLevel || "Medium",
+            matchReason: rec.matchReason || "",
+            salaryRange: rec.salaryRange || matchingCareer?.salaryRange || "Not specified",
+            jobGrowth: rec.jobGrowth || matchingCareer?.jobGrowth || "Not specified",
+            skills: rec.skills || matchingCareer?.requiredSkills || matchingCareer?.skills || [],
+            opportunities: rec.opportunities || matchingCareer?.opportunities || [],
+            requiredSkills: rec.skills || matchingCareer?.requiredSkills || [],
+          }
+        })
+
+        setInterestRecs(recommendations)
+      } else {
+        // Python service returned empty recommendations
+        setInterestRecs([])
+        setInterestError("Python recommendation service is not available. Please ensure the Python service is running on port 8000.")
+      }
     } catch (error) {
       console.error("Failed to fetch interest recommendations:", error)
       setInterestError("Unable to load interest-based recommendations right now.")
@@ -669,18 +701,7 @@ export default function RecommendationsPage() {
                   <p className="text-muted-foreground">
                     These careers align with your academic strengths and performance in core subjects.
                   </p>
-                  {analysisSummary ? (
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="rounded-lg border p-3">
-                        <p className="text-muted-foreground">Grade 12</p>
-                        <p className="text-lg font-semibold">{analysisSummary.grade12 ?? "—"}%</p>
-                      </div>
-                      <div className="rounded-lg border p-3">
-                        <p className="text-muted-foreground">Stream</p>
-                        <p className="text-lg font-semibold capitalize">{analysisSummary.stream}</p>
-                      </div>
-                    </div>
-                  ) : (
+                  {!analysisSummary && (
                     <AlertMessage message="Upload your marksheet on the Grades page to unlock AI-powered recommendations." />
                   )}
                 </div>

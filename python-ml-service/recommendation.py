@@ -328,3 +328,179 @@ def get_recommendations(
     
     return scored_careers[:limit]
 
+
+def score_college_for_profile(
+    college: Dict[str, Any],
+    grade12: float,
+    stream: str,
+    subjects: List[str],
+    grade10: Optional[float] = None
+) -> Tuple[int, str]:
+    """
+    Score a college based on user profile.
+    
+    Args:
+        college: College data dictionary
+        grade12: Grade 12 percentage
+        stream: Student stream
+        subjects: List of subjects
+        grade10: Optional Grade 10 percentage
+    
+    Returns:
+        Tuple of (score, match_reason)
+    """
+    score = 0
+    reasons = []
+    
+    # Normalize inputs
+    stream_lower = stream.lower() if stream else "general"
+    subjects_lower = [s.lower() for s in subjects] if subjects else []
+    
+    # Extract college information
+    college_name = str(college.get("name", "")).lower()
+    college_overview = str(college.get("overview", "")).lower()
+    college_programs = str(college.get("programs", "")).lower()
+    college_courses = str(college.get("coursesOffered", "")).lower()
+    college_type = str(college.get("type", "")).lower()
+    college_affiliation = str(college.get("affiliation", "")).lower()
+    
+    all_college_text = f"{college_name} {college_overview} {college_programs} {college_courses} {college_type} {college_affiliation}"
+    
+    # Stream-based matching (0-30 points)
+    if "science" in stream_lower:
+        science_keywords = ["science", "engineering", "technology", "medical", "health", "physics", "chemistry", "biology", "math"]
+        if any(keyword in all_college_text for keyword in science_keywords):
+            score += 30
+            reasons.append("Strong match for Science stream")
+    elif any(word in stream_lower for word in ["commerce", "business"]):
+        commerce_keywords = ["commerce", "business", "management", "accounting", "finance", "economics"]
+        if any(keyword in all_college_text for keyword in commerce_keywords):
+            score += 30
+            reasons.append("Strong match for Commerce stream")
+    elif any(word in stream_lower for word in ["arts", "humanities"]):
+        arts_keywords = ["arts", "humanities", "design", "media", "literature", "language", "fine arts"]
+        if any(keyword in all_college_text for keyword in arts_keywords):
+            score += 30
+            reasons.append("Strong match for Arts stream")
+    else:
+        score += 15  # General stream gets partial points
+        reasons.append("General stream match")
+    
+    # Grade-based matching (0-25 points)
+    if grade12 >= 90:
+        score += 25
+        reasons.append(f"Excellent grades ({grade12:.1f}%)")
+    elif grade12 >= 80:
+        score += 20
+        reasons.append(f"Good grades ({grade12:.1f}%)")
+    elif grade12 >= 70:
+        score += 15
+        reasons.append(f"Average grades ({grade12:.1f}%)")
+    else:
+        score += 10
+        reasons.append(f"Grades ({grade12:.1f}%)")
+    
+    # Subject-based matching (0-20 points)
+    subject_keywords = {
+        "mathematics": ["math", "mathematics", "engineering", "science"],
+        "physics": ["physics", "engineering", "science", "technology"],
+        "chemistry": ["chemistry", "science", "medical", "pharmacy"],
+        "biology": ["biology", "medical", "health", "pharmacy", "nursing"],
+        "economics": ["economics", "commerce", "business", "finance"],
+        "accounting": ["accounting", "commerce", "business", "finance"],
+        "english": ["english", "literature", "language", "arts", "humanities"],
+    }
+    
+    subject_score = 0
+    for subject in subjects_lower:
+        if subject in subject_keywords:
+            keywords = subject_keywords[subject]
+            if any(keyword in all_college_text for keyword in keywords):
+                subject_score += 10
+    
+    score += min(20, subject_score)
+    if subject_score > 0:
+        reasons.append("Relevant subject alignment")
+    
+    # College quality indicators (0-15 points)
+    if college.get("rating"):
+        try:
+            rating = float(college.get("rating", 0))
+            if rating >= 4.5:
+                score += 15
+            elif rating >= 4.0:
+                score += 10
+            elif rating >= 3.5:
+                score += 5
+        except (ValueError, TypeError):
+            pass
+    
+    if college.get("overview") and len(str(college.get("overview", ""))) > 100:
+        score += 5
+        reasons.append("Well-documented college")
+    
+    # Cap total score at 100
+    total_score = min(100, score)
+    
+    # Generate match reason
+    if not reasons:
+        match_reason = f"General match based on {stream} stream and {grade12:.1f}% grades"
+    else:
+        match_reason = ", ".join(reasons[:3])  # Limit to top 3 reasons
+    
+    return total_score, match_reason
+
+
+def get_college_recommendations(
+    colleges: List[Dict[str, Any]],
+    grade12: float,
+    stream: str,
+    subjects: Optional[List[str]] = None,
+    grade10: Optional[float] = None,
+    limit: int = 4
+) -> List[Dict[str, Any]]:
+    """
+    Get college recommendations based on user profile.
+    
+    Args:
+        colleges: List of college dictionaries from backend
+        grade12: Grade 12 percentage
+        stream: Student stream
+        subjects: Optional list of subjects
+        grade10: Optional Grade 10 percentage
+        limit: Maximum number of recommendations to return
+    
+    Returns:
+        List of scored college recommendations
+    """
+    subjects = subjects or []
+    
+    scored_colleges = []
+    
+    for college in colleges:
+        score, match_reason = score_college_for_profile(
+            college, grade12, stream, subjects, grade10
+        )
+        
+        # Skip colleges with very low scores
+        if score < 30:
+            continue
+        
+        # Add score and match reason to college
+        college_with_score = {
+            **college,
+            "matchScore": score,
+            "highlight": match_reason,
+            "_totalScore": score  # Internal use for sorting
+        }
+        
+        scored_colleges.append(college_with_score)
+    
+    # Sort by total score (descending) and return top N
+    scored_colleges.sort(key=lambda x: x.get("_totalScore", 0), reverse=True)
+    
+    # Remove internal score field before returning
+    for college in scored_colleges:
+        college.pop("_totalScore", None)
+    
+    return scored_colleges[:limit]

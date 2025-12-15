@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import { LayoutDashboard, Users, BookOpen, Building2, Zap, FileText, LogOut, ChevronLeft, ChevronRight, Menu, X } from "lucide-react"
+import { LayoutDashboard, Users, BookOpen, Building2, Zap, FileText, LogOut, ChevronLeft, ChevronRight, Menu, X, Sun, Moon } from "lucide-react"
 import { Button } from "@/shared/components/ui/button"
+import { Switch } from "@/shared/components/ui/switch"
 import { useAuth } from "@/shared/context/AuthContext"
+import { useTheme } from "@/shared/context/ThemeContext"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,11 +36,16 @@ export function AdminSidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { logout, user } = useAuth()
+  const { isDarkMode, setTheme } = useTheme()
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem("adminSidebarCollapsed")
     return saved ? JSON.parse(saved) : false
   })
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+
+  const handleThemeChange = (checked) => {
+    setTheme(checked ? "dark" : "light")
+  }
 
   useEffect(() => {
     localStorage.setItem("adminSidebarCollapsed", JSON.stringify(isCollapsed))
@@ -256,6 +263,46 @@ export function AdminSidebar() {
           "flex-shrink-0 border-t border-border/50 bg-background/50 backdrop-blur-sm",
           isCollapsed ? "p-2" : "p-3"
         )}>
+          {/* Theme Toggle */}
+          <div className={cn("mb-2", isCollapsed ? "flex justify-center" : "")}>
+            {isCollapsed ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center justify-center gap-2 p-2 rounded-lg hover:bg-muted/50">
+                      {isDarkMode ? (
+                        <Moon className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Sun className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={8}>
+                    <div className="flex items-center gap-2">
+                      <Sun className="h-3 w-3" />
+                      <Switch
+                        checked={isDarkMode}
+                        onCheckedChange={handleThemeChange}
+                        aria-label="Toggle theme"
+                      />
+                      <Moon className="h-3 w-3" />
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50">
+                <Sun className="h-4 w-4 text-muted-foreground" />
+                <Switch
+                  checked={isDarkMode}
+                  onCheckedChange={handleThemeChange}
+                  aria-label="Toggle theme"
+                />
+                <Moon className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+
           {isCollapsed ? (
             <TooltipProvider>
               <Tooltip>

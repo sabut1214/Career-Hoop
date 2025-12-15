@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 import uvicorn
 from config import config
-from recommendation import get_recommendations
+from recommendation import get_recommendations, get_college_recommendations
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -63,6 +63,33 @@ class CareerRecommendation(BaseModel):
 
 class RecommendationResponse(BaseModel):
     recommendations: List[CareerRecommendation]
+
+
+class CollegeInput(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    location: Optional[str] = None
+    affiliation: Optional[str] = None
+    overview: Optional[str] = None
+    programs: Optional[str] = None
+    coursesOffered: Optional[str] = None
+    type: Optional[str] = None
+    rating: Optional[float] = None
+    feesRange: Optional[str] = None
+    website: Optional[str] = None
+    students: Optional[str] = None
+    tuition: Optional[str] = None
+    acceptanceRate: Optional[str] = None
+
+
+class CollegeRecommendationRequest(BaseModel):
+    grades: GradesInput
+    colleges: List[CollegeInput] = Field(..., description="List of colleges to score")
+    limit: Optional[int] = Field(4, ge=1, le=20, description="Maximum number of recommendations")
+
+
+class CollegeRecommendationResponse(BaseModel):
+    recommendations: List[dict]  # Colleges with scores added
 
 
 # Health check endpoint
@@ -211,6 +238,30 @@ async def get_interest_recommendations(interests: InterestsInput):
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating recommendations: {str(e)}")
+
+
+# College recommendation endpoint
+@app.post("/recommend/colleges", response_model=CollegeRecommendationResponse)
+async def get_college_recommendations_endpoint(request: CollegeRecommendationRequest):
+    """Get college recommendations based on user grades and profile."""
+    try:
+        # Convert Pydantic models to dictionaries
+        colleges_data = [college.dict(exclude_none=True) for college in request.colleges]
+        
+        # Get recommendations
+        recommendations = get_college_recommendations(
+            colleges=colleges_data,
+            grade12=request.grades.grade12,
+            stream=request.grades.stream,
+            subjects=request.grades.subjects or [],
+            grade10=request.grades.grade10,
+            limit=request.limit or 20
+        )
+        
+        return CollegeRecommendationResponse(recommendations=recommendations)
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating college recommendations: {str(e)}")
 
 
 if __name__ == "__main__":
