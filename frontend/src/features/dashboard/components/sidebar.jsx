@@ -156,66 +156,54 @@ export function Sidebar() {
           "lg:translate-x-0"
         )}
       >
+        {/* Toggle Arrow Button - Overlapping right edge */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={toggleSidebar}
+                className={cn(
+                  "absolute top-4 z-50 h-8 w-8 rounded-md bg-card border-border/50 shadow-md hover:bg-muted/50 transition-all duration-200",
+                  isCollapsed ? "right-[-16px]" : "right-[-16px]"
+                )}
+                aria-label={isCollapsed ? "Open sidebar" : "Close sidebar"}
+              >
+                {isCollapsed ? (
+                  <ChevronLeft className="h-4 w-4 text-foreground" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-foreground" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              <p>{isCollapsed ? "Open sidebar" : "Close sidebar"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
         {/* Top Header Area */}
         <div className={cn(
           "flex-shrink-0 border-b border-border/50",
           isCollapsed ? "p-3" : "p-4"
         )}>
           {isCollapsed ? (
-            /* Collapsed: Logo + Small Expand Button */
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div 
-                    className="relative flex items-center justify-center w-full cursor-pointer group"
-                    onClick={toggleSidebar}
-                  >
-                    {/* Logo - No background, flush on sidebar */}
-                    <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain" />
-                    
-                    {/* Small Square Expand Button - Only visible when collapsed, positioned at right edge */}
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-muted/30 group-hover:bg-muted/70 transition-colors border border-border/30 group-hover:border-border/60" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8}>
-                  <p>Open sidebar</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : (
-            /* Expanded: Logo + Brand Name + Collapse Button */
-            <div className="flex items-center justify-between gap-3">
-              {/* Logo and Brand */}
-              <Link 
-                to="/" 
-                className="flex items-center flex-1"
-              >
-                <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain shrink-0" />
-                <span className="text-2xl font-bold text-foreground whitespace-nowrap">
-                  areer<span className="text-primary">Hoop</span>
-                </span>
-              </Link>
-              
-              {/* Collapse Button - Only visible when expanded */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={toggleSidebar}
-                      className="h-8 w-8 shrink-0 hover:bg-muted/50 rounded-lg"
-                      aria-label="Collapse sidebar"
-                    >
-                      <ChevronLeft className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>Collapse sidebar</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+            /* Collapsed: Logo only */
+            <div className="flex items-center justify-center w-full">
+              <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain" />
             </div>
+          ) : (
+            /* Expanded: Logo + Brand Name */
+            <Link 
+              to="/" 
+              className="flex items-center gap-0"
+            >
+              <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain shrink-0" />
+              <span className="text-2xl font-bold text-foreground whitespace-nowrap">
+                areer<span className="text-primary">Hoop</span>
+              </span>
+            </Link>
           )}
         </div>
 
@@ -288,29 +276,27 @@ export function Sidebar() {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex items-center justify-center gap-2 p-2 rounded-lg hover:bg-muted/50">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleThemeChange(!isDarkMode)}
+                      className="h-10 w-10 rounded-lg hover:bg-muted/50"
+                      aria-label="Toggle theme"
+                    >
                       {isDarkMode ? (
                         <Moon className="h-4 w-4 text-muted-foreground" />
                       ) : (
                         <Sun className="h-4 w-4 text-muted-foreground" />
                       )}
-                    </div>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent side="right" sideOffset={8}>
-                    <div className="flex items-center gap-2">
-                      <Sun className="h-3 w-3" />
-                      <Switch
-                        checked={isDarkMode}
-                        onCheckedChange={handleThemeChange}
-                        aria-label="Toggle theme"
-                      />
-                      <Moon className="h-3 w-3" />
-                    </div>
+                    <p>{isDarkMode ? "Switch to light mode" : "Switch to dark mode"}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50">
+              <div className="flex items-center justify-center gap-2 p-2 rounded-lg hover:bg-muted/50">
                 <Sun className="h-4 w-4 text-muted-foreground" />
                 <Switch
                   checked={isDarkMode}
