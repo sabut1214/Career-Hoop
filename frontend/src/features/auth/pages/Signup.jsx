@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Input } from "@/shared/components/ui/input"
 import { Label } from "@/shared/components/ui/label"
 import { Alert, AlertDescription } from "@/shared/components/ui/alert"
+import { PasswordStrengthMeter } from "@/shared/components/forms/PasswordStrengthMeter"
 import { useAuth } from "@/shared/context/AuthContext"
 import { register } from "@/shared/lib/api"
 import { toast } from "react-toastify"
@@ -26,6 +27,9 @@ export default function Signup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [emailError, setEmailError] = useState("")
+  const [passwordError, setPasswordError] = useState("")
+  const [confirmPasswordError, setConfirmPasswordError] = useState("")
 
   const isValidEmail = (value) => /\S+@\S+\.\S+/.test(value)
   const validatePassword = (value) => {
@@ -130,10 +134,27 @@ export default function Signup() {
                   type="email"
                   placeholder="you@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setEmailError("")
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value && !isValidEmail(e.target.value)) {
+                      setEmailError("Please enter a valid email address")
+                    } else {
+                      setEmailError("")
+                    }
+                  }}
                   required
                   disabled={loading}
+                  aria-invalid={!!emailError}
+                  aria-describedby={emailError ? "email-error" : undefined}
                 />
+                {emailError && (
+                  <p id="email-error" className="text-sm text-destructive" role="alert">
+                    {emailError}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -144,20 +165,42 @@ export default function Signup() {
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value)
+                      setPasswordError("")
+                    }}
+                    onBlur={(e) => {
+                      const passwordErrors = validatePassword(e.target.value)
+                      if (passwordErrors) {
+                        setPasswordError(`Password must include ${passwordErrors.join(", ")}.`)
+                      } else {
+                        setPasswordError("")
+                      }
+                    }}
                     required
                     disabled={loading}
                     className="h-10 pr-10"
+                    aria-invalid={!!passwordError}
+                    aria-describedby={passwordError ? "password-error" : password ? "password-strength" : undefined}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     disabled={loading}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {password && (
+                  <PasswordStrengthMeter password={password} id="password-strength" />
+                )}
+                {passwordError && (
+                  <p id="password-error" className="text-sm text-destructive" role="alert">
+                    {passwordError}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -168,20 +211,38 @@ export default function Signup() {
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value)
+                      setConfirmPasswordError("")
+                    }}
+                    onBlur={(e) => {
+                      if (e.target.value && e.target.value !== password) {
+                        setConfirmPasswordError("Passwords do not match")
+                      } else {
+                        setConfirmPasswordError("")
+                      }
+                    }}
                     required
                     disabled={loading}
                     className="h-10 pr-10"
+                    aria-invalid={!!confirmPasswordError}
+                    aria-describedby={confirmPasswordError ? "confirm-password-error" : undefined}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     disabled={loading}
+                    aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {confirmPasswordError && (
+                  <p id="confirm-password-error" className="text-sm text-destructive" role="alert">
+                    {confirmPasswordError}
+                  </p>
+                )}
               </div>
 
               {error && (
@@ -191,7 +252,7 @@ export default function Signup() {
                 </Alert>
               )}
 
-              <Button type="submit" className="w-full h-10" disabled={loading}>
+              <Button type="submit" className="w-full h-10" loading={loading} disabled={loading}>
                 {loading ? "Creating account..." : "Create Account"}
               </Button>
             </form>

@@ -5,6 +5,7 @@ import com.careerhoop.service.AdminDashboardService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -13,16 +14,14 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/dashboard")
 @CrossOrigin
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminDashboardController {
 
     @Autowired
     private AdminDashboardService adminDashboardService;
 
     @GetMapping("/stats")
-    public ResponseEntity<AdminDashboardStatsDto> getStats(
-            @RequestHeader(value = "X-User-Role", required = false) String requesterRole
-    ) {
-        enforceAdminAccess(requesterRole);
+    public ResponseEntity<AdminDashboardStatsDto> getStats() {
         try {
             AdminDashboardStatsDto stats = adminDashboardService.getStats();
             return ResponseEntity.ok(stats);
@@ -32,10 +31,7 @@ public class AdminDashboardController {
     }
 
     @GetMapping("/recent-activity")
-    public ResponseEntity<List<RecentActivityDto>> getRecentActivity(
-            @RequestHeader(value = "X-User-Role", required = false) String requesterRole
-    ) {
-        enforceAdminAccess(requesterRole);
+    public ResponseEntity<List<RecentActivityDto>> getRecentActivity() {
         try {
             List<RecentActivityDto> activities = adminDashboardService.getRecentActivity();
             return ResponseEntity.ok(activities);
@@ -45,10 +41,7 @@ public class AdminDashboardController {
     }
 
     @GetMapping("/growth-metrics")
-    public ResponseEntity<List<GrowthMetricsDto>> getGrowthMetrics(
-            @RequestHeader(value = "X-User-Role", required = false) String requesterRole
-    ) {
-        enforceAdminAccess(requesterRole);
+    public ResponseEntity<List<GrowthMetricsDto>> getGrowthMetrics() {
         try {
             List<GrowthMetricsDto> metrics = adminDashboardService.getGrowthMetrics();
             return ResponseEntity.ok(metrics);
@@ -59,10 +52,8 @@ public class AdminDashboardController {
 
     @GetMapping("/trends")
     public ResponseEntity<List<TrendDataDto>> getTrends(
-            @RequestParam(defaultValue = "30") int days,
-            @RequestHeader(value = "X-User-Role", required = false) String requesterRole
+            @RequestParam(defaultValue = "30") int days
     ) {
-        enforceAdminAccess(requesterRole);
         try {
             if (days < 1 || days > 365) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Days parameter must be between 1 and 365");
@@ -77,10 +68,7 @@ public class AdminDashboardController {
     }
 
     @GetMapping("/system-health")
-    public ResponseEntity<SystemHealthDto> getSystemHealth(
-            @RequestHeader(value = "X-User-Role", required = false) String requesterRole
-    ) {
-        enforceAdminAccess(requesterRole);
+    public ResponseEntity<SystemHealthDto> getSystemHealth() {
         try {
             SystemHealthDto health = adminDashboardService.getSystemHealth();
             return ResponseEntity.ok(health);
@@ -90,10 +78,7 @@ public class AdminDashboardController {
     }
 
     @GetMapping("/engagement")
-    public ResponseEntity<UserEngagementDto> getEngagement(
-            @RequestHeader(value = "X-User-Role", required = false) String requesterRole
-    ) {
-        enforceAdminAccess(requesterRole);
+    public ResponseEntity<UserEngagementDto> getEngagement() {
         try {
             UserEngagementDto engagement = adminDashboardService.getUserEngagement();
             return ResponseEntity.ok(engagement);
@@ -103,21 +88,12 @@ public class AdminDashboardController {
     }
 
     @GetMapping("/pending-counts")
-    public ResponseEntity<PendingCountsDto> getPendingCounts(
-            @RequestHeader(value = "X-User-Role", required = false) String requesterRole
-    ) {
-        enforceAdminAccess(requesterRole);
+    public ResponseEntity<PendingCountsDto> getPendingCounts() {
         try {
             PendingCountsDto counts = adminDashboardService.getPendingCounts();
             return ResponseEntity.ok(counts);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to fetch pending counts: " + e.getMessage());
-        }
-    }
-
-    private void enforceAdminAccess(String requesterRole) {
-        if (requesterRole == null || !requesterRole.equalsIgnoreCase("admin")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
         }
     }
 }

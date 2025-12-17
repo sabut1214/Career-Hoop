@@ -42,6 +42,47 @@ function ChartContainer({ id, className, children, config, ...props }) {
   )
 }
 
+/**
+ * Sanitizes CSS color values to prevent XSS attacks.
+ * Only allows valid CSS color formats (hex, rgb, rgba, hsl, hsla, named colors).
+ */
+function sanitizeCssColor(color) {
+  if (!color || typeof color !== "string") {
+    return ""
+  }
+  
+  // Remove any potentially dangerous characters
+  const sanitized = color.trim()
+  
+  // Allow only safe CSS color formats:
+  // - Hex colors: #rgb, #rrggbb, #rrggbbaa
+  // - RGB/RGBA: rgb(...), rgba(...)
+  // - HSL/HSLA: hsl(...), hsla(...)
+  // - Named colors: basic CSS color names
+  // - CSS variables: var(--...)
+  const safeColorPattern = /^(#[0-9a-fA-F]{3,8}|rgb\([^)]+\)|rgba\([^)]+\)|hsl\([^)]+\)|hsla\([^)]+\)|var\(--[^)]+\)|[a-zA-Z]+)$/
+  
+  if (safeColorPattern.test(sanitized)) {
+    return sanitized
+  }
+  
+  // If color doesn't match safe pattern, return empty string
+  console.warn(`Unsafe CSS color value detected and filtered: ${color}`)
+  return ""
+}
+
+/**
+ * Sanitizes CSS custom property names to prevent injection.
+ */
+function sanitizeCssPropertyName(name) {
+  if (!name || typeof name !== "string") {
+    return ""
+  }
+  
+  // Only allow alphanumeric characters, hyphens, and underscores
+  return name.replace(/[^a-zA-Z0-9_-]/g, "")
+}
+
 const ChartStyle = ({ id, config }) => {
   const colorConfig = Object.entries(config).filter(([, config]) => config.theme || config.color)
 
@@ -49,26 +90,42 @@ const ChartStyle = ({ id, config }) => {
     return null
   }
 
-  return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color = itemConfig.theme?.[theme] || itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
-  })
-  .join("\n")}
-}
-`,
-          )
-          .join("\n"),
-      }}
-    />
-  )
+  // Sanitize the chart ID to prevent injection
+  const sanitizedId = sanitizeCssPropertyName(id)
+
+  // Build CSS safely without dangerouslySetInnerHTML
+  const cssContent = Object.entries(THEMES)
+    .map(([theme, prefix]) => {
+      const themePrefix = prefix || ""
+      const colorRules = colorConfig
+        .map(([key, itemConfig]) => {
+          const color = itemConfig.theme?.[theme] || itemConfig.color
+          if (!color) return null
+          
+          const sanitizedColor = sanitizeCssColor(color)
+          const sanitizedKey = sanitizeCssPropertyName(key)
+          
+          if (!sanitizedColor || !sanitizedKey) return null
+          
+          return `  --color-${sanitizedKey}: ${sanitizedColor};`
+        })
+        .filter(Boolean)
+        .join("\n")
+      
+      if (!colorRules) return ""
+      
+      return `${themePrefix} [data-chart=${sanitizedId}] {\n${colorRules}\n}`
+    })
+    .filter(Boolean)
+    .join("\n\n")
+
+  if (!cssContent) {
+    return null
+  }
+
+  // Use a style tag with text content instead of dangerouslySetInnerHTML
+  // React will safely escape the content
+  return <style>{cssContent}</style>
 }
 
 const ChartTooltip = RechartsPrimitive.Tooltip

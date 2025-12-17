@@ -51,7 +51,7 @@ export function Footer() {
                   key={label}
                   href="#"
                   aria-label={label}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground transition-all duration-200 hover:bg-primary hover:text-primary-foreground active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   <Icon className="h-5 w-5" />
                 </a>
@@ -66,11 +66,11 @@ export function Footer() {
                 {links.map((link) => (
                   <li key={link.name}>
                     {link.href === "#" ? (
-                      <a href={link.href} className="text-muted-foreground transition-colors hover:text-primary">
+                      <a href={link.href} className="text-muted-foreground transition-all duration-200 hover:text-primary active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                         {link.name}
                       </a>
                     ) : (
-                      <Link to={link.href} className="text-muted-foreground transition-colors hover:text-primary">
+                      <Link to={link.href} className="text-muted-foreground transition-all duration-200 hover:text-primary active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                         {link.name}
                       </Link>
                     )}
@@ -84,13 +84,13 @@ export function Footer() {
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border/50 pt-8 text-sm text-muted-foreground md:flex-row">
           <p>© 2025 CareerHoop. All rights reserved.</p>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-foreground">
+            <a href="#" className="transition-all duration-200 hover:text-foreground active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               Privacy Policy
             </a>
-            <a href="#" className="hover:text-foreground">
+            <a href="#" className="transition-all duration-200 hover:text-foreground active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               Terms of Service
             </a>
-            <a href="#" className="hover:text-foreground">
+            <a href="#" className="transition-all duration-200 hover:text-foreground active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               Cookies
             </a>
           </div>

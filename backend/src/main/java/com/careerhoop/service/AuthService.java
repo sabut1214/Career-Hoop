@@ -47,7 +47,7 @@ public class AuthService {
     // OTP configuration constants
     private static final int OTP_MIN_VALUE = 10000;
     private static final int OTP_MAX_VALUE = 99999;
-    private static final int OTP_EXPIRY_HOURS = 1; // TODO: Consider reducing to 10-30 minutes for better security
+    private static final int OTP_EXPIRY_MINUTES = 10; // Reduced from 1 hour for better security
     
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -208,7 +208,7 @@ public class AuthService {
         OtpResetToken otpToken = new OtpResetToken();
         otpToken.setEmail(normalizedEmail);
         otpToken.setOtpHash(otpHash);
-        otpToken.setExpiresAt(now.plusHours(OTP_EXPIRY_HOURS));
+        otpToken.setExpiresAt(now.plusMinutes(OTP_EXPIRY_MINUTES));
         otpToken.setUsed(false);
         otpToken.setFailedAttempts(0);
         

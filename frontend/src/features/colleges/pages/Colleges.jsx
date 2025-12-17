@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, memo } from "react"
+import { useDebounce } from "@/shared/hooks/useDebounce"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
@@ -16,6 +17,7 @@ import {
   DollarSign,
   Clock,
   ExternalLink,
+  Loader2,
 } from "lucide-react"
 import { Sidebar } from "@/features/dashboard/components/sidebar"
 import { getColleges, saveCollege, unsaveCollege, checkCollegeSaved, getSavedColleges } from "@/shared/lib/api"
@@ -24,6 +26,10 @@ import { useAuth } from "@/shared/context/AuthContext"
 import { toast } from "react-toastify"
 import { collegeService } from "../services/collegeService"
 import { useNavigate } from "react-router-dom"
+import { logger } from "@/shared/lib/utils/logger"
+import { CollegeCardListSkeleton } from "@/shared/components/common/LoadingSkeleton"
+import { extractErrorMessage, isAuthError } from "@/shared/utils/errorMessages"
+import { EmptySearchState, EmptyErrorState } from "@/shared/components/common/EmptyState"
 
 const PUBLIC_KEYWORDS = ["campus", "public", "government", "constituent", "state", "community"]
 const PRIVATE_KEYWORDS = ["college", "academy", "institute", "school", "private"]
@@ -143,7 +149,7 @@ const dedupeColleges = (colleges) => {
   })
 }
 
-const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
+const CollegeCard = memo(({ college, index, savedCollegeIds, onSaveChange }) => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [isSaving, setIsSaving] = useState(false)
@@ -156,10 +162,10 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
   // Log user and college data for debugging
   useEffect(() => {
     if (!user?.id) {
-      console.warn('CollegeCard: User not available', { user })
+      logger.warn('CollegeCard: User not available', { user })
     }
     if (!college?.id) {
-      console.warn('CollegeCard: College ID not available', { college })
+      logger.warn('CollegeCard: College ID not available', { college })
     }
   }, [user, college])
 
@@ -171,7 +177,7 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
     const hasCollegeId = !!college.id
     const isCurrentlySaving = isSaving
     
-    console.log('Save college check:', {
+    logger.log('Save college check:', {
       hasUserId,
       userId: user?.id,
       user: user,
@@ -182,7 +188,7 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
     })
     
     if (!hasUserId || !hasCollegeId || isCurrentlySaving) {
-      console.warn('Cannot save college - missing requirements:', {
+      logger.warn('Cannot save college - missing requirements:', {
         missingUserId: !hasUserId,
         missingCollegeId: !hasCollegeId,
         isSaving: isCurrentlySaving,
@@ -192,11 +198,11 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
       return
     }
 
-    console.log('Starting save/unsave operation:', { userId: user.id, collegeId: college.id, isSaved })
+    logger.log('Starting save/unsave operation:', { userId: user.id, collegeId: college.id, isSaved })
     setIsSaving(true)
     try {
       if (isSaved) {
-        console.log('Unsave college:', college.id)
+        logger.log('Unsave college:', college.id)
         await unsaveCollege(user.id, college.id)
         // Update the saved colleges list
         if (onSaveChange) {
@@ -204,9 +210,9 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
         }
         toast.success("College removed from saved")
       } else {
-        console.log('Save college:', college.id)
+        logger.log('Save college:', college.id)
         const result = await saveCollege(user.id, college.id)
-        console.log('Save college result:', result)
+        logger.log('Save college result:', result)
         // Update the saved colleges list
         if (onSaveChange) {
           onSaveChange(college.id, true)
@@ -214,25 +220,21 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
         toast.success("College saved successfully")
       }
     } catch (error) {
-      console.error("Error saving/unsaving college:", error)
-      const errorMessage = error.message || "Failed to update saved college"
-      console.error("Error message:", errorMessage)
+      logger.error("Error saving/unsaving college:", error)
+      const errorMessage = extractErrorMessage(error)
+      logger.error("Error message:", errorMessage)
       
       // Check if it's an authentication error
-      const isAuthError = errorMessage.toLowerCase().includes('session') || 
-                         errorMessage.toLowerCase().includes('expired') ||
-                         errorMessage.toLowerCase().includes('authentication') ||
-                         errorMessage.toLowerCase().includes('missing user context') ||
-                         errorMessage.toLowerCase().includes('log in')
-      
-      if (isAuthError) {
+      if (isAuthError(error)) {
         toast.error("Your session has expired. Please log in again.", {
           autoClose: 3000,
           onClose: () => {
             // Only redirect after showing the toast
             if (!window.location.pathname.includes('/login')) {
               localStorage.removeItem("user")
-              window.location.href = '/login'
+              import('@/shared/lib/navigation').then(({ navigate }) => {
+                navigate('/login')
+              })
             }
           }
         })
@@ -259,6 +261,10 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
               src={college.logo || "/placeholder.svg"}
               alt={`${college.name} logo`}
               className="w-16 h-16 rounded-lg object-cover border border-border"
+              loading="lazy"
+              decoding="async"
+              width={64}
+              height={64}
               onError={(e) => {
                 e.target.style.display = 'none'
               }}
@@ -282,6 +288,16 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
                   onClick={handleStarClick}
                   disabled={isSaving || !user?.id || !college?.id}
                   className="transition-colors disabled:opacity-50"
+                  aria-label={
+                    !user?.id 
+                      ? "Please log in to save colleges" 
+                      : !college?.id 
+                        ? "College data incomplete" 
+                        : isSaved 
+                          ? "Remove from saved" 
+                          : "Save college"
+                  }
+                  aria-pressed={isSaved}
                   title={
                     !user?.id 
                       ? "Please log in to save colleges" 
@@ -292,15 +308,19 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
                           : "Save college"
                   }
                 >
-                  <Star
-                    className={`h-5 w-5 transition-colors ${
-                      !user?.id || !college?.id
-                        ? "text-muted-foreground cursor-not-allowed"
-                        : isSaved
-                          ? "text-yellow-500 fill-yellow-500 cursor-pointer"
-                          : "text-muted-foreground group-hover:text-accent cursor-pointer"
-                    }`}
-                  />
+                  {isSaving ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  ) : (
+                    <Star
+                      className={`h-5 w-5 transition-colors ${
+                        !user?.id || !college?.id
+                          ? "text-muted-foreground cursor-not-allowed"
+                          : isSaved
+                            ? "text-yellow-500 fill-yellow-500 cursor-pointer"
+                            : "text-muted-foreground group-hover:text-accent cursor-pointer"
+                      }`}
+                    />
+                  )}
                 </button>
               </div>
             <div className="flex items-center space-x-4 text-sm">
@@ -386,7 +406,34 @@ const CollegeCard = ({ college, index, savedCollegeIds, onSaveChange }) => {
     </Card>
     </motion.div>
   )
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function for memo
+  // Only re-render if college data or saved status changes
+  const prevCollegeId = String(prevProps.college?.id || '')
+  const nextCollegeId = String(nextProps.college?.id || '')
+  const prevIsSaved = prevProps.savedCollegeIds?.has(prevCollegeId)
+  const nextIsSaved = nextProps.savedCollegeIds?.has(nextCollegeId)
+  
+  // Re-render if college ID changed
+  if (prevCollegeId !== nextCollegeId) {
+    return false
+  }
+  
+  // Re-render if saved status changed
+  if (prevIsSaved !== nextIsSaved) {
+    return false
+  }
+  
+  // Re-render if index changed (for animation)
+  if (prevProps.index !== nextProps.index) {
+    return false
+  }
+  
+  // Don't re-render if nothing relevant changed
+  return true
+})
+
+CollegeCard.displayName = 'CollegeCard'
 
 export default function CollegesPage() {
   const [allColleges, setAllColleges] = useState([])
@@ -394,6 +441,7 @@ export default function CollegesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const debouncedSearchTerm = useDebounce(searchTerm, 300)
   const [filterType, setFilterType] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
@@ -437,14 +485,16 @@ export default function CollegesPage() {
           )
           setSavedCollegesFullData(savedCollegesData)
         } catch (err) {
-          console.error("Failed to fetch saved colleges full data:", err)
+          logger.error("Failed to fetch saved colleges full data:", err)
           setSavedCollegesFullData([])
         }
       } else {
         setSavedCollegesFullData([])
       }
     } catch (error) {
-      console.error("Failed to fetch saved colleges:", error)
+        logger.error("Failed to fetch saved colleges:", error)
+        const errorMessage = extractErrorMessage(error)
+        toast.error(errorMessage)
       setSavedCollegeIds(new Set())
       setSavedCollegesFullData([])
     }
@@ -509,7 +559,9 @@ export default function CollegesPage() {
         }
         setAllColleges(completeColleges)
       } catch (err) {
-        console.error("Failed to fetch all colleges:", err)
+        logger.error("Failed to fetch all colleges:", err)
+        const errorMessage = extractErrorMessage(err)
+        toast.error(errorMessage)
         setAllColleges([])
         setError("Unable to load colleges right now. Please try again later.")
       } finally {
@@ -554,7 +606,9 @@ export default function CollegesPage() {
           size: pageSize,
         })
       } catch (err) {
-        console.error("Failed to fetch colleges:", err)
+        logger.error("Failed to fetch colleges:", err)
+        const errorMessage = extractErrorMessage(err)
+        toast.error(errorMessage)
         setColleges([])
         setPageMeta({ totalPages: 1, totalElements: 0 })
         setError("Unable to load colleges right now. Please try again later.")
@@ -563,14 +617,14 @@ export default function CollegesPage() {
       }
     }
 
-    if (searchTerm.trim()) {
+    if (debouncedSearchTerm.trim()) {
       // When searching, fetch all colleges
       fetchAllColleges()
     } else {
       // When not searching, use pagination
       fetchCollegesPaginated(currentPage)
     }
-  }, [searchTerm, currentPage, filters])
+  }, [debouncedSearchTerm, currentPage, filters])
 
   const handlePageChange = (page) => {
     if (page < 1) return
@@ -580,12 +634,12 @@ export default function CollegesPage() {
   }
 
   // Filter colleges - use allColleges when searching, colleges when paginating
-  const filteredColleges = (searchTerm.trim() ? allColleges : colleges)
+  const filteredColleges = (debouncedSearchTerm.trim() ? allColleges : colleges)
     .filter((college) => {
-      const matchesSearch = searchTerm.trim()
-        ? (college.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           college.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           (college.programs && college.programs.some((program) => program.toLowerCase().includes(searchTerm.toLowerCase()))))
+      const matchesSearch = debouncedSearchTerm.trim()
+        ? (college.name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+           college.location?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+           (college.programs && college.programs.some((program) => program.toLowerCase().includes(debouncedSearchTerm.toLowerCase()))))
         : true
 
       const matchesType = filterType === "all" || (college.type && college.type.toLowerCase() === filterType)
@@ -616,7 +670,7 @@ export default function CollegesPage() {
 
   // Paginate combined results
   let paginatedColleges
-  if (searchTerm.trim()) {
+  if (debouncedSearchTerm.trim()) {
     // When searching, paginate the combined list normally
     paginatedColleges = combinedColleges.slice((currentPage - 1) * pageSize, currentPage * pageSize)
   } else {
@@ -635,7 +689,7 @@ export default function CollegesPage() {
   }
 
   // Update pagination metadata
-  const displayMeta = searchTerm.trim()
+  const displayMeta = debouncedSearchTerm.trim()
     ? {
         totalPages: Math.ceil(combinedColleges.length / pageSize),
         totalElements: combinedColleges.length,
@@ -721,17 +775,19 @@ export default function CollegesPage() {
           </motion.div>
 
           {error && (
-            <Card>
-              <CardContent className="text-center text-destructive py-4">{error}</CardContent>
-            </Card>
+            <EmptyErrorState
+              error={error}
+              onRetry={() => {
+                setError(null)
+                setCurrentPage(1)
+                // Trigger refetch by updating a dependency
+                setSearchTerm(searchTerm)
+              }}
+            />
           )}
 
           {/* Loading State */}
-          {loading && (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          )}
+          {loading && <CollegeCardListSkeleton count={6} />}
 
           {/* Colleges Grid */}
           {!loading && (
@@ -749,13 +805,15 @@ export default function CollegesPage() {
           )}
 
           {/* Empty State */}
-          {!loading && paginatedColleges.length === 0 && (
-            <Card>
-              <CardContent className="pt-12 text-center">
-                <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No colleges found matching your criteria.</p>
-              </CardContent>
-            </Card>
+          {!loading && paginatedColleges.length === 0 && !error && (
+            <EmptySearchState
+              searchTerm={debouncedSearchTerm}
+              onClearSearch={() => {
+                setSearchTerm("")
+                setFilterType("all")
+                setCurrentPage(1)
+              }}
+            />
           )}
 
           {/* Pagination */}

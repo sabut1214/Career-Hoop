@@ -1,3 +1,6 @@
+import { logger } from "@/shared/lib/utils/logger"
+import { extractErrorMessage, createErrorResponse, isNetworkError, isAuthError } from "@/shared/utils/errorMessages"
+
 // Normalize API_BASE_URL to always end with /api
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"
 const API_BASE_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`
@@ -955,7 +958,7 @@ export const login = async (email, password) => {
       throw new Error("Invalid credentials")
     }
 
-    console.log('Sending login request to:', `${API_BASE_URL}/login`)
+    logger.log('Sending login request to:', `${API_BASE_URL}/login`)
     const response = await fetch(`${API_BASE_URL}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -963,22 +966,22 @@ export const login = async (email, password) => {
       body: JSON.stringify({ email, password }),
     })
 
-    console.log('Login response status:', response.status)
+    logger.log('Login response status:', response.status)
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       const errorMessage = errorData.message || `Login failed with status ${response.status}`
-      console.error('Login failed:', errorMessage, errorData)
+      logger.error('Login failed:', errorMessage, errorData)
       throw new Error(errorMessage)
     }
 
     const data = await response.json()
-    console.log('Login successful, response data:', data)
+    logger.log('Login successful, response data:', data)
     
     // Check if cookies were set (httpOnly cookies won't show in document.cookie)
     // But we can check response headers
     const setCookieHeader = response.headers.get('Set-Cookie')
-    console.log('Set-Cookie header from login:', setCookieHeader ? 'present' : 'missing')
+    logger.log('Set-Cookie header from login:', setCookieHeader ? 'present' : 'missing')
     
     // Tokens are now stored in httpOnly cookies, not localStorage
     // Wait a brief moment to ensure cookies are set before returning
@@ -986,7 +989,7 @@ export const login = async (email, password) => {
     
     return data
   } catch (error) {
-    console.error('Login error:', error)
+    logger.error('Login error:', error)
     throw new Error(error.message || "Failed to connect to server. Make sure the backend is running.")
   }
 }
@@ -1136,7 +1139,7 @@ export const refreshAccessToken = async (forceRefresh = false) => {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       const errorMessage = errorData.message || errorData.error || `Token refresh failed (${response.status})`
-      console.error('Token refresh failed:', errorMessage, errorData)
+      logger.error('Token refresh failed:', errorMessage, errorData)
       throw new Error(errorMessage)
     }
 
@@ -1169,7 +1172,7 @@ export const refreshAccessToken = async (forceRefresh = false) => {
     }
     // For other errors (auth failures like expired refresh token), log but don't clear user data immediately
     // The calling code will handle redirecting to login if needed
-    console.error('Token refresh error:', error.message)
+    logger.error('Token refresh error:', error.message)
     // Don't clear user data here - let the calling code decide
     // If refresh token is expired, user will need to log in again anyway
     return null
@@ -1227,15 +1230,38 @@ export const fetchWithAuth = async (url, options = {}) => {
   options.credentials = options.credentials || "include"
   options.headers = { ...options.headers, ...headers }
   
-  console.log(`[fetchWithAuth] Making ${options.method || 'GET'} request to: ${url}`, {
+  logger.log(`[fetchWithAuth] Making ${options.method || 'GET'} request to: ${url}`, {
     hasUserHeaders: !!headers['X-User-Id'],
     credentials: options.credentials,
     method: options.method || 'GET'
   })
 
-  let response = await fetch(url, options)
+  let response
+  try {
+    response = await fetch(url, options)
+  } catch (error) {
+    // Handle network errors (connection refused, timeout, etc.)
+    if (error.name === "AbortError" || 
+        error.message.includes("Failed to fetch") || 
+        error.message.includes("ERR_CONNECTION_REFUSED") ||
+        error.message.includes("NetworkError") ||
+        error.message.includes("Network request failed")) {
+      logger.error(`[fetchWithAuth] Network error for ${url}:`, error.message)
+      
+      // Create a mock Response object that represents a network error
+      // This allows calling code to handle it consistently
+      const networkError = new Error("Unable to connect to the server. Please check your internet connection or ensure the backend server is running.")
+      networkError.name = "NetworkError"
+      networkError.status = 0
+      networkError.statusText = "Network Error"
+      networkError.url = url
+      throw networkError
+    }
+    // Re-throw other errors
+    throw error
+  }
   
-  console.log(`[fetchWithAuth] Response status: ${response.status} for ${url}`, {
+  logger.log(`[fetchWithAuth] Response status: ${response.status} for ${url}`, {
     hasUserId: !!headers['X-User-Id']
   })
 
@@ -1249,25 +1275,25 @@ export const fetchWithAuth = async (url, options = {}) => {
     const user = localStorage.getItem("user")
     if (!user) {
       // No user data, can't refresh - return the error
-      console.warn('No user data found, cannot refresh token')
+      logger.warn('No user data found, cannot refresh token')
       return response
     }
 
     // Check if this is already a retry (to prevent infinite loops)
     if (options._retry) {
       // Already retried, return the error
-      console.warn('Already retried, returning error response')
+      logger.warn('Already retried, returning error response')
       return response
     }
 
     try {
-      console.log(`Token may be expired (${response.status}), attempting refresh...`)
+      logger.log(`Token may be expired (${response.status}), attempting refresh...`)
       // Force refresh since we got a response (403 means backend is available)
       const refreshResult = await refreshAccessToken(true)
       
       if (!refreshResult) {
         // Refresh failed - check the original error to see if it's an auth issue
-        console.warn('Token refresh returned null or failed')
+        logger.warn('Token refresh returned null or failed')
         
         // Read the error response to determine if it's an auth error
         let isAuthError = false
@@ -1282,13 +1308,13 @@ export const fetchWithAuth = async (url, options = {}) => {
                        errorMessage.includes('authentication')
         } catch (e) {
           // Can't parse error, assume it might be auth-related if refresh failed
-          console.warn('Could not parse error response, assuming auth issue')
+          logger.warn('Could not parse error response, assuming auth issue')
           isAuthError = true
         }
         
         // Only clear user data and redirect if it's clearly an auth error
         if (isAuthError) {
-          console.warn('Auth error confirmed, will redirect to login')
+          logger.warn('Auth error confirmed, will redirect to login')
           // Don't clear/redirect here - let the error propagate and handle in UI
           // The calling code can decide whether to redirect
         }
@@ -1308,19 +1334,37 @@ export const fetchWithAuth = async (url, options = {}) => {
       // Retry request with fresh cookies (automatically included)
       const newHeaders = await buildAuthHeaders()
       options.headers = { ...options.headers, ...newHeaders }
-      response = await fetch(url, options)
+      try {
+        response = await fetch(url, options)
+      } catch (error) {
+        // Handle network errors on retry
+        if (error.name === "AbortError" || 
+            error.message.includes("Failed to fetch") || 
+            error.message.includes("ERR_CONNECTION_REFUSED") ||
+            error.message.includes("NetworkError") ||
+            error.message.includes("Network request failed")) {
+          logger.error(`[fetchWithAuth] Network error on retry for ${url}:`, error.message)
+          const networkError = new Error("Unable to connect to the server. Please check your internet connection or ensure the backend server is running.")
+          networkError.name = "NetworkError"
+          networkError.status = 0
+          networkError.statusText = "Network Error"
+          networkError.url = url
+          throw networkError
+        }
+        throw error
+      }
       
-      console.log(`Retry after refresh returned status: ${response.status}`)
+      logger.log(`Retry after refresh returned status: ${response.status}`)
       
       // If retry still fails with 403, log but don't automatically redirect
       // Let the calling code handle the error appropriately
       if (response.status === 403 && options._retry) {
-        console.error('Retry after refresh still returned 403 - authentication may have failed')
+        logger.error('Retry after refresh still returned 403 - authentication may have failed')
         // Don't redirect here - let the error be handled by the calling code
         // This prevents automatic redirects that might interrupt user workflow
       }
     } catch (error) {
-      console.error('Token refresh failed:', error)
+      logger.error('Token refresh failed:', error)
       // Refresh failed, return original response
       return response
     }
@@ -1412,7 +1456,7 @@ export const saveCareer = async (userId, careerId, confidenceScore, matchReason,
       confidenceScore: confidenceScore || null,
       matchReason: matchReason || null,
     }
-    console.log(`Attempting to save career by UUID ${careerId} for user ${userId}`)
+    logger.log(`Attempting to save career by UUID ${careerId} for user ${userId}`)
   } else if (careerName) {
     // Use name-based endpoint
     url = `${API_BASE_URL}/users/${userId}/saved-careers/by-name`
@@ -1421,7 +1465,7 @@ export const saveCareer = async (userId, careerId, confidenceScore, matchReason,
       confidenceScore: confidenceScore || null,
       matchReason: matchReason || null,
     }
-    console.log(`Attempting to save career by name ${careerName} for user ${userId}`)
+    logger.log(`Attempting to save career by name ${careerName} for user ${userId}`)
   } else {
     throw new Error("Career ID or name is required")
   }
@@ -1434,17 +1478,17 @@ export const saveCareer = async (userId, careerId, confidenceScore, matchReason,
     body: JSON.stringify(body),
   })
 
-  console.log(`Save career response status: ${response.status}`)
+  logger.log(`Save career response status: ${response.status}`)
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
     const errorMessage = errorData.message || errorData.error || `Failed to save career (${response.status})`
-    console.error('Save career error:', errorMessage, errorData)
+    logger.error('Save career error:', errorMessage, errorData)
     throw new Error(errorMessage)
   }
 
   const result = await response.json()
-  console.log('Career saved successfully:', result)
+  logger.log('Career saved successfully:', result)
   return result
 }
 
@@ -1543,7 +1587,7 @@ export const saveCollege = async (userId, collegeId) => {
   if (!userId) throw new Error("User ID is required to save college")
   if (!collegeId) throw new Error("College ID is required")
 
-  console.log(`Attempting to save college ${collegeId} for user ${userId}`)
+  logger.log(`Attempting to save college ${collegeId} for user ${userId}`)
   
   const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}/saved-colleges`, {
     method: "POST",
@@ -1553,7 +1597,7 @@ export const saveCollege = async (userId, collegeId) => {
     body: JSON.stringify({ collegeId }),
   })
 
-  console.log(`Save college response status: ${response.status}`)
+  logger.log(`Save college response status: ${response.status}`)
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
@@ -1564,12 +1608,12 @@ export const saveCollege = async (userId, collegeId) => {
       errorMessage = "Failed to save college (403)."
     }
     
-    console.error('Save college error:', errorMessage, errorData)
+    logger.error('Save college error:', errorMessage, errorData)
     throw new Error(errorMessage)
   }
 
   const result = await response.json()
-  console.log('College saved successfully:', result)
+  logger.log('College saved successfully:', result)
   return result
 }
 

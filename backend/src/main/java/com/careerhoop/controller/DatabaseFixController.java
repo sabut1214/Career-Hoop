@@ -22,7 +22,9 @@ public class DatabaseFixController {
     public ResponseEntity<Map<String, String>> fixCollegeColumns() {
         Map<String, String> response = new HashMap<>();
         try {
-            String[] columns = {
+            // Whitelist of allowed column names to prevent SQL injection
+            // Only these exact column names are allowed
+            final List<String> allowedColumns = List.of(
                     "name",
                     "location",
                     "affiliation",
@@ -35,13 +37,26 @@ public class DatabaseFixController {
                     "extra_information",
                     "facilities",
                     "map_embed_url"
-            };
+            );
 
-            for (String column : columns) {
-                String columnReference = "\"" + column + "\"";
-                entityManager.createNativeQuery(
-                        "ALTER TABLE colleges ALTER COLUMN " + columnReference + " TYPE TEXT USING " + columnReference + "::text"
-                ).executeUpdate();
+            for (String column : allowedColumns) {
+                // Validate column name is in whitelist (defense in depth)
+                if (!allowedColumns.contains(column)) {
+                    throw new IllegalArgumentException("Invalid column name: " + column);
+                }
+                
+                // Use parameterized query with proper escaping
+                // PostgreSQL identifier quoting with double quotes
+                String quotedColumn = "\"" + column.replace("\"", "\"\"") + "\"";
+                
+                // Execute ALTER TABLE with validated column name
+                // Note: ALTER TABLE doesn't support parameters, but we've validated the column name
+                String sql = String.format(
+                    "ALTER TABLE colleges ALTER COLUMN %s TYPE TEXT USING %s::text",
+                    quotedColumn, quotedColumn
+                );
+                
+                entityManager.createNativeQuery(sql).executeUpdate();
             }
             
             response.put("status", "success");

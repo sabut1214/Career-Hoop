@@ -16,7 +16,7 @@ export function AboutSection() {
           </div>
 
           <div className="order-1 space-y-6 lg:order-2">
-            <div className="inline-block rounded-full bg-secondary/20 px-4 py-1.5 text-sm font-medium text-secondary-foreground">
+            <div className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary border border-primary/20 transition-all duration-200 hover:bg-primary/15 active:scale-[0.98]">
               About CareerHoop
             </div>
 

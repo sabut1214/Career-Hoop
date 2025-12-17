@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
@@ -51,35 +52,35 @@ const categoryIconMap = {
 }
 
 const categoryColorMap = {
-  Technology: "bg-blue-500",
-  "Data Science": "bg-green-500",
-  Healthcare: "bg-red-500",
-  Medical: "bg-red-500",
-  Design: "bg-purple-500",
-  Engineering: "bg-orange-500",
-  Science: "bg-teal-500",
-  Business: "bg-indigo-500",
-  Education: "bg-yellow-500",
-  Media: "bg-pink-500",
-  Marketing: "bg-rose-500",
-  Gaming: "bg-violet-500",
-  "History & Research": "bg-amber-500",
-  "Social Science": "bg-cyan-500",
-  "Space & Aeronautics": "bg-violet-500",
-  default: "bg-gray-500",
+  Technology: "bg-info",
+  "Data Science": "bg-success",
+  Healthcare: "bg-destructive",
+  Medical: "bg-destructive",
+  Design: "bg-secondary",
+  Engineering: "bg-warning",
+  Science: "bg-accent",
+  Business: "bg-primary",
+  Education: "bg-warning",
+  Media: "bg-accent",
+  Marketing: "bg-secondary",
+  Gaming: "bg-accent",
+  "History & Research": "bg-warning",
+  "Social Science": "bg-info",
+  "Space & Aeronautics": "bg-accent",
+  default: "bg-muted",
 }
 
 const getConfidenceColor = (level) => {
   switch (level) {
     case "High":
     case "Very High":
-      return "text-green-600 bg-green-100"
+      return "text-success-foreground bg-success/20"
     case "Medium":
-      return "text-yellow-600 bg-yellow-100"
+      return "text-warning-foreground bg-warning/20"
     case "Low":
-      return "text-red-600 bg-red-100"
+      return "text-destructive-foreground bg-destructive/20"
     default:
-      return "text-gray-600 bg-gray-100"
+      return "text-muted-foreground bg-muted"
   }
 }
 
@@ -249,7 +250,7 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center space-x-2">
-                <DollarSign className="h-4 w-4 text-green-600" />
+                <DollarSign className="h-4 w-4 text-success" />
                 <span className="text-sm font-medium">Salary Range</span>
               </div>
               <span className="text-sm font-semibold">{career.salary}</span>
@@ -257,10 +258,10 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
 
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 text-blue-600" />
+                <TrendingUp className="h-4 w-4 text-info" />
                 <span className="text-sm font-medium">Job Outlook</span>
               </div>
-              <span className="text-sm font-semibold text-green-600">{career.growth}</span>
+              <span className="text-sm font-semibold text-success">{career.growth}</span>
             </div>
           </div>
 
@@ -311,6 +312,7 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
 
 export default function RecommendationsPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState("grades")
   const [allCareers, setAllCareers] = useState([])
   const [gradeRecs, setGradeRecs] = useState([])
@@ -654,8 +656,8 @@ export default function RecommendationsPage() {
           >
             {[
               { label: "Total Matches", value: stats.total, icon: Target, color: "text-primary" },
-              { label: "High Confidence", value: stats.high, icon: TrendingUp, color: "text-green-600" },
-              { label: "Medium Confidence", value: stats.medium, icon: Clock, color: "text-yellow-600" },
+              { label: "High Confidence", value: stats.high, icon: TrendingUp, color: "text-success" },
+              { label: "Medium Confidence", value: stats.medium, icon: Clock, color: "text-warning" },
               { label: "Saved Careers", value: stats.saved, icon: Star, color: "text-accent" },
             ].map((stat) => (
               <Card key={stat.label} className="border-2">
@@ -788,7 +790,7 @@ export default function RecommendationsPage() {
                   opportunities to get started.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button size="lg" className="px-8" onClick={() => window.location.assign("/colleges")}>
+                  <Button size="lg" className="px-8" onClick={() => navigate("/colleges")}>
                     <MapPin className="mr-2 h-5 w-5" />
                     Explore Colleges
                   </Button>
@@ -796,7 +798,7 @@ export default function RecommendationsPage() {
                     variant="outline"
                     size="lg"
                     className="px-8 bg-transparent"
-                    onClick={() => window.location.assign("/trainings")}
+                    onClick={() => navigate("/trainings")}
                   >
                     <BookOpen className="mr-2 h-5 w-5" />
                     Find Training Programs

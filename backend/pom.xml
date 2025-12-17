@@ -161,9 +161,9 @@
 				<artifactId>flyway-maven-plugin</artifactId>
 				<version>11.7.2</version>
 				<configuration>
-					<url>jdbc:postgresql://localhost:5432/careerhoop</url>
-					<user>careerhoop</user>
-					<password>secret</password>
+					<url>${flyway.url:jdbc:postgresql://localhost:5432/careerhoop}</url>
+					<user>${flyway.user:${DB_USERNAME:careerhoop}}</user>
+					<password>${flyway.password:${DB_PASSWORD:secret}}</password>
 					<locations>
 						<location>classpath:db/migration</location>
 					</locations>

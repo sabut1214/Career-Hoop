@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { refreshAccessToken } from '@/shared/lib/api';
+import { navigate } from '@/shared/lib/navigation';
 
 // Get API base URL from environment or default to localhost:8080
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -64,7 +65,7 @@ const refreshTokenAndRetry = async (originalRequest) => {
     // Refresh failed - redirect to login
     localStorage.removeItem("user");
     if (!window.location.pathname.includes('/login')) {
-      window.location.href = '/login';
+      navigate('/login');
     }
     return Promise.reject(error);
   }
@@ -120,7 +121,7 @@ api.interceptors.response.use(
       localStorage.removeItem("refreshToken");
       // Redirect to login if not already there
       if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
+        navigate('/login');
       }
     } else if (status === 403) {
       console.error('API Error: Forbidden - Token may be missing or invalid');
@@ -130,7 +131,7 @@ api.interceptors.response.use(
       if (!user) {
         console.error('No user found - redirecting to login');
         if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
+          navigate('/login');
         }
       } else {
         // User exists but got 403 - might be token expired, try refresh
@@ -140,7 +141,7 @@ api.interceptors.response.use(
           console.error('Retry also failed with 403 - redirecting to login');
           localStorage.removeItem("user");
           if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/login';
+            navigate('/login');
           }
           return Promise.reject(error);
         }

@@ -79,14 +79,16 @@ export function Navbar() {
           className="flex h-10 w-10 items-center justify-center rounded-lg md:hidden"
           onClick={() => setMobileMenuOpen((prev) => !prev)}
           aria-label="Toggle menu"
+          aria-expanded={mobileMenuOpen}
+          aria-controls="mobile-menu"
         >
           {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
 
       {mobileMenuOpen && (
-        <div className="border-t border-border/40 bg-background px-4 py-4 md:hidden">
-          <nav className="flex flex-col gap-4">
+        <div id="mobile-menu" className="border-t border-border/40 bg-background px-4 py-4 md:hidden">
+          <nav className="flex flex-col gap-4" aria-label="Mobile navigation">
             {navLinks.map((link) => (
               <Link
                 key={link.href}

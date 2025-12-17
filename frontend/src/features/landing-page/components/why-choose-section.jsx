@@ -50,7 +50,7 @@ export function WhyChooseSection() {
     <section className="px-4 py-20 md:py-28">
       <div className="container mx-auto max-w-6xl">
         <div className="mb-16 text-center">
-          <div className="mb-4 inline-block rounded-full bg-secondary/20 px-4 py-1.5 text-sm font-medium text-secondary-foreground">
+          <div className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary border border-primary/20 transition-all duration-200 hover:bg-primary/15 active:scale-[0.98]">
             Why CareerHoop
           </div>
           <h2 className="mb-4 font-sans text-3xl font-bold text-foreground md:text-4xl text-balance">

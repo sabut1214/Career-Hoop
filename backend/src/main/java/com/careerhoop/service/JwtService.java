@@ -23,6 +23,19 @@ public class JwtService {
     @Value("${jwt.secret}")
     private String secret;
 
+    /**
+     * Validates that the JWT secret is properly configured.
+     * This is a secondary check - primary validation happens in JwtSecretValidator.
+     */
+    private void validateSecret() {
+        if (secret == null || secret.trim().isEmpty()) {
+            throw new IllegalStateException("JWT secret cannot be null or empty");
+        }
+        if (secret.length() < 32) {
+            throw new IllegalStateException("JWT secret must be at least 32 characters long for security");
+        }
+    }
+
     @Value("${jwt.access-token-expiration}")
     private Long accessTokenExpiration;
 
@@ -30,6 +43,7 @@ public class JwtService {
     private Long refreshTokenExpiration;
 
     private SecretKey getSigningKey() {
+        validateSecret();
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 

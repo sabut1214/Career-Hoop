@@ -25,6 +25,8 @@ import Pagination from "@/shared/components/common/pagination"
 import { useAuth } from "@/shared/context/AuthContext"
 import { getUserStorageKey } from "@/shared/utils/utils"
 import { toast } from "react-toastify"
+import { logger } from "@/shared/lib/utils/logger"
+import { extractErrorMessage, isNetworkError } from "@/shared/utils/errorMessages"
 
 const parsePrograms = (programs) => {
   if (!programs) return []
@@ -244,7 +246,7 @@ export default function GradesPage() {
         gpa: gpa,
       })
     } catch (err) {
-      console.error("Failed to save grades to profile:", err)
+      logger.error("Failed to save grades to profile:", err)
       // Don't show error toast for auto-save, just log it
     }
   }
@@ -295,8 +297,16 @@ export default function GradesPage() {
         }
       }
     } catch (err) {
-      console.error("Failed to load saved grades:", err)
-      // Silently fail - user can still upload new grades
+      logger.error("Failed to load saved grades:", err)
+      
+      // Show user-friendly error message for network errors
+      // Other errors (like 404) can fail silently as user can still upload new grades
+      if (isNetworkError(err)) {
+        toast.error(
+          "Unable to connect to the server. Please check your internet connection or ensure the backend server is running.",
+          { autoClose: 5000 }
+        )
+      }
     } finally {
       setIsLoading(false)
     }
@@ -406,7 +416,7 @@ export default function GradesPage() {
       // Python service returned empty recommendations
       return []
     } catch (err) {
-      console.error("Failed to fetch recommended colleges:", err)
+      logger.error("Failed to fetch recommended colleges:", err)
       // If Python service is not available, return empty array
       return []
     }

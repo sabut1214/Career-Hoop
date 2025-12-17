@@ -32,13 +32,23 @@ public class GradesOcrService {
 
     public GradeSheetDto extractFromImage(MultipartFile file) {
         try {
-            // Validate file type
+            // Validate file type by content-type
             String contentType = file.getContentType();
             if (contentType == null || !contentType.startsWith("image/")) {
                 throw new IllegalArgumentException("Only PNG or JPEG images are supported right now.");
             }
             if (!contentType.equals("image/png") && !contentType.equals("image/jpeg") && !contentType.equals("image/jpg")) {
                 throw new IllegalArgumentException("Unsupported image type: " + contentType + ". Use PNG or JPEG.");
+            }
+
+            // Validate file signature (magic numbers) to prevent content-type spoofing
+            byte[] fileBytes = file.getBytes();
+            if (fileBytes.length < 8) {
+                throw new IllegalArgumentException("File is too small to be a valid image.");
+            }
+            
+            if (!isValidImageSignature(fileBytes)) {
+                throw new IllegalArgumentException("Invalid file signature. File does not match declared content type. Only PNG or JPEG images are supported.");
             }
 
             // Check if API key is configured
@@ -199,6 +209,44 @@ public class GradesOcrService {
             log.error("Failed to extract grades from image", e);
             throw new RuntimeException("Failed to extract grades from image: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Validates file signature (magic numbers) to ensure the file is actually an image
+     * and matches the declared content type. This prevents content-type spoofing attacks.
+     * 
+     * PNG signature: 89 50 4E 47 0D 0A 1A 0A
+     * JPEG signature: FF D8 FF
+     * 
+     * @param fileBytes The file bytes to validate
+     * @return true if the file signature matches a valid image format
+     */
+    private boolean isValidImageSignature(byte[] fileBytes) {
+        if (fileBytes.length < 3) {
+            return false;
+        }
+
+        // Check for JPEG signature: FF D8 FF
+        if (fileBytes[0] == (byte) 0xFF && fileBytes[1] == (byte) 0xD8 && fileBytes[2] == (byte) 0xFF) {
+            return true;
+        }
+
+        // Check for PNG signature: 89 50 4E 47 0D 0A 1A 0A
+        if (fileBytes.length >= 8) {
+            byte[] pngSignature = {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+            boolean isPng = true;
+            for (int i = 0; i < 8; i++) {
+                if (fileBytes[i] != pngSignature[i]) {
+                    isPng = false;
+                    break;
+                }
+            }
+            if (isPng) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 

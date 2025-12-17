@@ -16,12 +16,32 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 public class UserProfileService {
 
     private static final Logger log = LoggerFactory.getLogger(UserProfileService.class);
+
+    /**
+     * Whitelist of trusted domains for profile picture URLs to prevent SSRF attacks.
+     * Only URLs from these domains (or their subdomains) are allowed.
+     */
+    private static final List<String> ALLOWED_PROFILE_PICTURE_DOMAINS = Arrays.asList(
+        "imgur.com",
+        "i.imgur.com",
+        "cloudinary.com",
+        "res.cloudinary.com",
+        "s3.amazonaws.com",
+        "github.com",
+        "githubusercontent.com",
+        "raw.githubusercontent.com",
+        "cdn.jsdelivr.net",
+        "unpkg.com"
+        // Add your own trusted CDN/domain here
+    );
 
     @Autowired
     private UserRepository userRepository;
@@ -112,24 +132,10 @@ public class UserProfileService {
                         throw new IllegalArgumentException("Profile picture must be a valid image (JPEG, PNG, GIF, or WebP)");
                     }
                 } else if (picture.startsWith("http://") || picture.startsWith("https://")) {
-                    // Validate URL format
-                    try {
-                        java.net.URL url = new java.net.URL(picture);
-                        String host = url.getHost().toLowerCase();
-                        // Basic validation - allow common image hosting domains
-                        if (host.endsWith(".com") || host.endsWith(".org") || host.endsWith(".net") || 
-                            host.endsWith(".io") || host.endsWith(".co") || host.contains("github") || 
-                            host.contains("imgur") || host.contains("cloudinary") || host.contains("s3")) {
-                            log.info("Setting profilePicture - valid URL, length: {}", picture.length());
-                            user.setProfilePicture(picture);
-                        } else {
-                            log.warn("Profile picture URL from untrusted domain: {}", host);
-                            throw new IllegalArgumentException("Profile picture URL must be from a trusted domain");
-                        }
-                    } catch (java.net.MalformedURLException e) {
-                        log.warn("Invalid profile picture URL format");
-                        throw new IllegalArgumentException("Invalid profile picture URL format");
-                    }
+                    // Validate URL format and domain whitelist to prevent SSRF attacks
+                    validateProfilePictureUrl(picture);
+                    log.info("Setting profilePicture - valid URL, length: {}", picture.length());
+                    user.setProfilePicture(picture);
                 } else {
                     // Reject base64 without data URL prefix for security
                     log.warn("Profile picture provided without proper data URL prefix");
@@ -270,6 +276,56 @@ public class UserProfileService {
             throw new IllegalArgumentException(fieldName + " URL is invalid: " + e.getMessage());
         }
         return trimmed;
+    }
+
+    /**
+     * Validates that a profile picture URL is from a trusted domain to prevent SSRF attacks.
+     * Only allows URLs from domains in the ALLOWED_PROFILE_PICTURE_DOMAINS whitelist.
+     * 
+     * @param urlString The URL string to validate
+     * @throws IllegalArgumentException if the URL is invalid or from an untrusted domain
+     */
+    private void validateProfilePictureUrl(String urlString) {
+        try {
+            URL url = new URL(urlString);
+            String host = url.getHost().toLowerCase();
+            
+            // Check if host matches any allowed domain or is a subdomain of an allowed domain
+            boolean isAllowed = ALLOWED_PROFILE_PICTURE_DOMAINS.stream()
+                .anyMatch(allowedDomain -> {
+                    String allowedDomainLower = allowedDomain.toLowerCase();
+                    // Exact match or subdomain match (e.g., subdomain.imgur.com matches imgur.com)
+                    return host.equals(allowedDomainLower) || host.endsWith("." + allowedDomainLower);
+                });
+            
+            if (!isAllowed) {
+                log.warn("Profile picture URL from untrusted domain: {} (allowed domains: {})", 
+                    host, ALLOWED_PROFILE_PICTURE_DOMAINS);
+                throw new IllegalArgumentException(
+                    "Profile picture URL must be from a trusted domain. " +
+                    "Allowed domains: " + String.join(", ", ALLOWED_PROFILE_PICTURE_DOMAINS)
+                );
+            }
+            
+            // Additional security: Reject localhost and private IP addresses
+            if (host.equals("localhost") || host.equals("127.0.0.1") || 
+                host.startsWith("192.168.") || host.startsWith("10.") || 
+                host.startsWith("172.16.") || host.startsWith("172.17.") ||
+                host.startsWith("172.18.") || host.startsWith("172.19.") ||
+                host.startsWith("172.20.") || host.startsWith("172.21.") ||
+                host.startsWith("172.22.") || host.startsWith("172.23.") ||
+                host.startsWith("172.24.") || host.startsWith("172.25.") ||
+                host.startsWith("172.26.") || host.startsWith("172.27.") ||
+                host.startsWith("172.28.") || host.startsWith("172.29.") ||
+                host.startsWith("172.30.") || host.startsWith("172.31.")) {
+                log.warn("Profile picture URL points to localhost or private IP: {}", host);
+                throw new IllegalArgumentException("Profile picture URL cannot point to localhost or private IP addresses");
+            }
+            
+        } catch (MalformedURLException e) {
+            log.warn("Invalid profile picture URL format: {}", urlString);
+            throw new IllegalArgumentException("Invalid profile picture URL format: " + e.getMessage());
+        }
     }
 }
 

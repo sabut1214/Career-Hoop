@@ -89,6 +89,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private static final int REFRESH_LIMIT = 10;
     private static final Duration REFRESH_WINDOW = Duration.ofMinutes(1);
 
+    private static final int FILE_UPLOAD_LIMIT = 5;
+    private static final Duration FILE_UPLOAD_WINDOW = Duration.ofHours(1);
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
@@ -127,7 +130,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
                path.equals("/api/register") ||
                path.equals("/api/forgot-password") ||
                path.equals("/api/reset-password") ||
-               path.equals("/api/refresh");
+               path.equals("/api/refresh") ||
+               path.equals("/api/grades/ocr");
     }
 
     /**
@@ -207,6 +211,11 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             return Bandwidth.builder()
                     .capacity(REFRESH_LIMIT)
                     .refillIntervally(REFRESH_LIMIT, REFRESH_WINDOW)
+                    .build();
+        } else if (path.equals("/api/grades/ocr")) {
+            return Bandwidth.builder()
+                    .capacity(FILE_UPLOAD_LIMIT)
+                    .refillIntervally(FILE_UPLOAD_LIMIT, FILE_UPLOAD_WINDOW)
                     .build();
         }
         

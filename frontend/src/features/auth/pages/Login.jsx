@@ -187,7 +187,7 @@ export default function Login() {
               )}
 
               {/* Login Button */}
-              <Button type="submit" className="w-full h-10" disabled={loading}>
+              <Button type="submit" className="w-full h-10" loading={loading} disabled={loading}>
                 {loading ? "Signing in..." : "Sign In"}
               </Button>
             </form>

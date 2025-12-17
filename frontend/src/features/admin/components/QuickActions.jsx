@@ -34,37 +34,37 @@ export function QuickActions() {
       label: "Add Student",
       icon: UserPlus,
       onClick: () => navigate("/admin/students"),
-      color: "bg-blue-100 text-blue-600 hover:bg-blue-200"
+      color: "bg-info/20 text-info hover:bg-info/30"
     },
     {
       label: "Add Career",
       icon: BookOpen,
       onClick: () => navigate("/admin/careers"),
-      color: "bg-green-100 text-green-600 hover:bg-green-200"
+      color: "bg-success/20 text-success hover:bg-success/30"
     },
     {
       label: "Add College",
       icon: Building2,
       onClick: () => navigate("/admin/colleges"),
-      color: "bg-purple-100 text-purple-600 hover:bg-purple-200"
+      color: "bg-secondary/20 text-secondary hover:bg-secondary/30"
     },
     {
       label: "Add Training",
       icon: Zap,
       onClick: () => navigate("/admin/trainings"),
-      color: "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+      color: "bg-warning/20 text-warning hover:bg-warning/30"
     },
     {
       label: "Import Data",
       icon: Upload,
       onClick: handleImportData,
-      color: "bg-orange-100 text-orange-600 hover:bg-orange-200"
+      color: "bg-primary/20 text-primary hover:bg-primary/30"
     },
     {
       label: "Export Data",
       icon: Download,
       onClick: handleExportData,
-      color: "bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
+      color: "bg-accent/20 text-accent hover:bg-accent/30"
     },
   ]
 
