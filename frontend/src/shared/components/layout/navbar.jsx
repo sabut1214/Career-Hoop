@@ -36,7 +36,7 @@ export function Navbar() {
         <Link to="/landing" className="flex items-center">
           <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain" />
           <span className="text-xl font-bold text-foreground">
-            areer<span className="text-primary">Hoop</span>
+            Career<span className="text-primary">Hoop</span>
           </span>
         </Link>
 

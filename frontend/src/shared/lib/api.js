@@ -932,11 +932,24 @@ export const analyzeGradeSheet = async (file) => {
     const response = await fetch(`${API_BASE_URL}/grades/ocr`, {
       method: "POST",
       body: formData,
+      credentials: 'include', // Include cookies for CORS
+      // Don't set Content-Type header - let browser set it with boundary for multipart/form-data
     })
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `Grade analysis failed with status ${response.status}`)
+      const errorMessage = errorData.message || `Grade analysis failed with status ${response.status}`
+      
+      // Provide more specific error messages
+      if (response.status === 403) {
+        throw new Error("Access denied. Please ensure you're logged in or try refreshing the page.")
+      } else if (response.status === 413) {
+        throw new Error("File is too large. Please upload a file smaller than 10MB.")
+      } else if (response.status === 415) {
+        throw new Error("Unsupported file type. Please upload a PNG or JPEG image.")
+      }
+      
+      throw new Error(errorMessage)
     }
 
     return response.json()

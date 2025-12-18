@@ -39,7 +39,7 @@ export function Footer() {
             <Link to="/landing" className="mb-4 flex items-center">
               <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain" />
               <span className="text-xl font-bold text-foreground">
-                areer<span className="text-primary">Hoop</span>
+                Career<span className="text-primary">Hoop</span>
               </span>
             </Link>
             <p className="mb-6 max-w-sm text-muted-foreground">

@@ -18,9 +18,10 @@ import {
   Clock,
   ExternalLink,
   Loader2,
+  CheckCircle,
 } from "lucide-react"
 import { Sidebar } from "@/features/dashboard/components/sidebar"
-import { getColleges, saveCollege, unsaveCollege, checkCollegeSaved, getSavedColleges } from "@/shared/lib/api"
+import { getColleges, saveCollege, unsaveCollege, checkCollegeSaved, getSavedColleges, getCollegeRecommendations } from "@/shared/lib/api"
 import Pagination from "@/shared/components/common/pagination"
 import { useAuth } from "@/shared/context/AuthContext"
 import { toast } from "react-toastify"
@@ -30,6 +31,7 @@ import { logger } from "@/shared/lib/utils/logger"
 import { CollegeCardListSkeleton } from "@/shared/components/common/LoadingSkeleton"
 import { extractErrorMessage, isAuthError } from "@/shared/utils/errorMessages"
 import { EmptySearchState, EmptyErrorState } from "@/shared/components/common/EmptyState"
+import { getUserStorageKey } from "@/shared/utils/utils"
 
 const PUBLIC_KEYWORDS = ["campus", "public", "government", "constituent", "state", "community"]
 const PRIVATE_KEYWORDS = ["college", "academy", "institute", "school", "private"]
@@ -153,6 +155,7 @@ const CollegeCard = memo(({ college, index, savedCollegeIds, onSaveChange }) => 
   const { user } = useAuth()
   const navigate = useNavigate()
   const [isSaving, setIsSaving] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
   
   // Check if college is saved based on the savedCollegeIds set
   // Convert to string for consistent comparison
@@ -217,6 +220,9 @@ const CollegeCard = memo(({ college, index, savedCollegeIds, onSaveChange }) => 
         if (onSaveChange) {
           onSaveChange(college.id, true)
         }
+        // Show success animation
+        setShowSuccess(true)
+        setTimeout(() => setShowSuccess(false), 2000)
         toast.success("College saved successfully")
       }
     } catch (error) {
@@ -287,7 +293,7 @@ const CollegeCard = memo(({ college, index, savedCollegeIds, onSaveChange }) => 
                 <button
                   onClick={handleStarClick}
                   disabled={isSaving || !user?.id || !college?.id}
-                  className="transition-colors disabled:opacity-50"
+                  className="transition-colors disabled:opacity-50 relative"
                   aria-label={
                     !user?.id 
                       ? "Please log in to save colleges" 
@@ -311,15 +317,30 @@ const CollegeCard = memo(({ college, index, savedCollegeIds, onSaveChange }) => 
                   {isSaving ? (
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   ) : (
-                    <Star
-                      className={`h-5 w-5 transition-colors ${
-                        !user?.id || !college?.id
-                          ? "text-muted-foreground cursor-not-allowed"
-                          : isSaved
-                            ? "text-yellow-500 fill-yellow-500 cursor-pointer"
-                            : "text-muted-foreground group-hover:text-accent cursor-pointer"
-                      }`}
-                    />
+                    <motion.div
+                      animate={showSuccess ? { scale: [1, 1.3, 1], rotate: [0, 180, 360] } : {}}
+                      transition={{ duration: 0.6 }}
+                    >
+                      <Star
+                        className={`h-5 w-5 transition-colors ${
+                          !user?.id || !college?.id
+                            ? "text-muted-foreground cursor-not-allowed"
+                            : isSaved
+                              ? "text-yellow-500 fill-yellow-500 cursor-pointer"
+                              : "text-muted-foreground group-hover:text-accent cursor-pointer"
+                        }`}
+                      />
+                    </motion.div>
+                  )}
+                  {showSuccess && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      className="absolute -top-1 -right-1"
+                    >
+                      <CheckCircle className="h-4 w-4 text-green-500 fill-green-500" />
+                    </motion.div>
                   )}
                 </button>
               </div>
@@ -460,6 +481,11 @@ export default function CollegesPage() {
   })
   const { user } = useAuth()
 
+  // AI college recommendations (grades + interests)
+  const [aiColleges, setAiColleges] = useState([])
+  const [loadingAiColleges, setLoadingAiColleges] = useState(false)
+  const [aiCollegesError, setAiCollegesError] = useState(null)
+
   // Function to fetch saved college IDs and full data
   const fetchSavedColleges = async () => {
     if (!user?.id) {
@@ -477,13 +503,24 @@ export default function CollegesPage() {
       // Fetch full college data for all saved colleges
       if (savedColleges.length > 0) {
         try {
-          // Fetch all colleges to get full data for saved ones
-          const response = await getColleges({ size: 10000 })
-          const allColleges = (response.data || []).map(transformCollege)
-          const savedCollegesData = allColleges.filter(college => 
-            ids.has(String(college.id))
-          )
-          setSavedCollegesFullData(savedCollegesData)
+          // Fetch only the saved colleges by ID using the backend batch endpoint
+          const uniqueIds = Array.from(ids)
+          const rawApiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"
+          const apiBase = rawApiUrl.endsWith("/api") ? rawApiUrl : `${rawApiUrl}/api`
+          const response = await fetch(`${apiBase}/colleges/batch`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(uniqueIds),
+          })
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch saved colleges full data (${response.status})`)
+          }
+
+          const data = await response.json()
+          const fullColleges = (Array.isArray(data) ? data : []).map(transformCollege)
+          setSavedCollegesFullData(fullColleges)
         } catch (err) {
           logger.error("Failed to fetch saved colleges full data:", err)
           setSavedCollegesFullData([])
@@ -503,6 +540,86 @@ export default function CollegesPage() {
   // Fetch saved college IDs when user is available
   useEffect(() => {
     fetchSavedColleges()
+  }, [user?.id])
+
+  // Fetch AI-powered college recommendations based on grades + interests
+  useEffect(() => {
+    const fetchAiColleges = async () => {
+      if (!user?.id) {
+        setAiColleges([])
+        setAiCollegesError(null)
+        return
+      }
+
+      try {
+        setLoadingAiColleges(true)
+        setAiCollegesError(null)
+
+        const gradesKey = getUserStorageKey("aiGradesAnalysis", user.id)
+        const interestsKey = getUserStorageKey("userInterests", user.id)
+        const storedGrades = localStorage.getItem(gradesKey)
+        const storedInterests = localStorage.getItem(interestsKey)
+
+        if (!storedGrades || !storedInterests) {
+          setAiColleges([])
+          return
+        }
+
+        let grades
+        let interests
+        try {
+          grades = JSON.parse(storedGrades)
+          interests = JSON.parse(storedInterests)
+        } catch (parseError) {
+          logger.error("Failed to parse stored grades/interests for AI colleges:", parseError)
+          setAiColleges([])
+          return
+        }
+
+        const grade10 = grades.grade_10_percentage ?? null
+        const grade12 = grades.grade_12_percentage ?? null
+        const stream = (grades.stream || "general").toLowerCase()
+        const subjects = Array.isArray(grades.subjects) ? grades.subjects : []
+
+        const careerFields = interests.careerFields || []
+        const activities = interests.activities || []
+        const workEnvironments = interests.workEnvironments || []
+
+        if (!grade12 || !stream || subjects.length === 0) {
+          setAiColleges([])
+          return
+        }
+
+        const request = {
+          grade10,
+          grade12,
+          stream,
+          subjects,
+          careerFields,
+          activities,
+          workEnvironments,
+        }
+
+        const response = await getCollegeRecommendations(request, 4)
+        const recommendations = Array.isArray(response) ? response : response?.data || []
+
+        if (!Array.isArray(recommendations) || recommendations.length === 0) {
+          setAiColleges([])
+          return
+        }
+
+        const transformed = recommendations.map(transformCollege).filter(hasCompleteData)
+        setAiColleges(transformed)
+      } catch (error) {
+        logger.error("Failed to fetch AI college recommendations:", error)
+        const message = extractErrorMessage(error)
+        setAiCollegesError(message)
+      } finally {
+        setLoadingAiColleges(false)
+      }
+    }
+
+    fetchAiColleges()
   }, [user?.id])
 
   // Callback to update saved college IDs when a college is saved/unsaved
@@ -773,6 +890,71 @@ export default function CollegesPage() {
               Personalized for you
             </Badge>
           </motion.div>
+
+          {/* AI Recommended Colleges (Grades + Interests) */}
+          {(loadingAiColleges || aiColleges.length > 0 || aiCollegesError) && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.25 }}
+              className="space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    AI Recommended Colleges
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Ranked using your grades and interests from the assessment.
+                  </p>
+                </div>
+                {user?.id ? (
+                  <Badge variant="secondary" className="bg-primary/10 text-primary">
+                    Grades + Interests
+                  </Badge>
+                ) : null}
+              </div>
+
+              {aiCollegesError && (
+                <EmptyErrorState
+                  error={aiCollegesError}
+                  onRetry={() => {
+                    setAiCollegesError(null)
+                  }}
+                />
+              )}
+
+              {loadingAiColleges && !aiCollegesError && <CollegeCardListSkeleton count={4} />}
+
+              {!loadingAiColleges && !aiCollegesError && aiColleges.length === 0 && user?.id && (
+                <EmptyState
+                  icon={GraduationCap}
+                  title="Complete your assessment to unlock AI college matches"
+                  description="Upload your marksheet and choose your interests so our AI can match you with the best-fit colleges."
+                  action={{
+                    label: "Go to Assessment",
+                    onClick: () => window.location.assign("/assessment"),
+                    variant: "default",
+                  }}
+                />
+              )}
+
+              {!loadingAiColleges && !aiCollegesError && aiColleges.length > 0 && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {aiColleges.map((college, index) => (
+                    <CollegeCard
+                      key={`ai-${college.id || index}`}
+                      college={college}
+                      index={index}
+                      savedCollegeIds={savedCollegeIds}
+                      onSaveChange={handleSaveChange}
+                    />
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
 
           {error && (
             <EmptyErrorState

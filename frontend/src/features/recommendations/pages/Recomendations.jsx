@@ -23,6 +23,9 @@ import {
   Beaker,
   Users,
   Sparkles,
+  Upload,
+  AlertCircle,
+  CheckCircle,
 } from "lucide-react"
 import { Sidebar } from "@/features/dashboard/components/sidebar"
 import api from "@/shared/services/api"
@@ -31,6 +34,9 @@ import { getUserStorageKey } from "@/shared/utils/utils"
 import { saveCareer, unsaveCareer, getSavedCareers, getUserProfile } from "@/shared/lib/api"
 import recommendationService from "@/features/recommendations/services/recommendationService"
 import { toast } from "react-toastify"
+import { EmptyState } from "@/shared/components/common/EmptyState"
+import { CareerCardSkeletonGrid } from "@/shared/components/common/CareerCardSkeleton"
+import { getRecommendationError } from "@/shared/utils/userFriendlyErrors"
 
 const categoryIconMap = {
   Technology: Code,
@@ -114,6 +120,7 @@ const transformCareerToRecommendation = (career, matchReason = "") => {
 const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
   const { user } = useAuth()
   const [isSaving, setIsSaving] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
   const category = career.category || "default"
   const Icon = categoryIconMap[category] || categoryIconMap.default
   const color = categoryColorMap[category] || categoryColorMap.default
@@ -181,6 +188,9 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
             onSaveChange(result.careerName || careerName, true)
           }
         }
+        // Show success animation
+        setShowSuccess(true)
+        setTimeout(() => setShowSuccess(false), 2000)
         toast.success("Career saved successfully")
       }
     } catch (error) {
@@ -222,16 +232,31 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
             <button
               onClick={handleStarClick}
               disabled={isSaving}
-              className="transition-colors disabled:opacity-50"
+              className="transition-colors disabled:opacity-50 relative"
               title={isSaved ? "Remove from saved" : "Save career"}
             >
-              <Star
-                className={`h-5 w-5 transition-colors cursor-pointer ${
-                  isSaved
-                    ? "text-yellow-500 fill-yellow-500"
-                    : "text-muted-foreground group-hover:text-accent"
-                }`}
-              />
+              <motion.div
+                animate={showSuccess ? { scale: [1, 1.3, 1], rotate: [0, 180, 360] } : {}}
+                transition={{ duration: 0.6 }}
+              >
+                <Star
+                  className={`h-5 w-5 transition-colors cursor-pointer ${
+                    isSaved
+                      ? "text-yellow-500 fill-yellow-500"
+                      : "text-muted-foreground group-hover:text-accent"
+                  }`}
+                />
+              </motion.div>
+              {showSuccess && (
+                <motion.div
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  className="absolute -top-1 -right-1"
+                >
+                  <CheckCircle className="h-4 w-4 text-green-500 fill-green-500" />
+                </motion.div>
+              )}
             </button>
           </div>
 
@@ -561,11 +586,11 @@ export default function RecommendationsPage() {
       } else {
         // Python service returned empty recommendations
         setGradeRecs([])
-        setGradeError("Python recommendation service is not available. Please ensure the Python service is running on port 8000.")
+        setGradeError(getRecommendationError("Service temporarily unavailable"))
       }
     } catch (error) {
       console.error("Failed to fetch grade recommendations:", error)
-      setGradeError("Unable to load grade-based recommendations right now.")
+      setGradeError(getRecommendationError(error))
     } finally {
       setLoadingGrades(false)
     }
@@ -615,11 +640,11 @@ export default function RecommendationsPage() {
       } else {
         // Python service returned empty recommendations
         setInterestRecs([])
-        setInterestError("Python recommendation service is not available. Please ensure the Python service is running on port 8000.")
+        setInterestError(getRecommendationError("Service temporarily unavailable"))
       }
     } catch (error) {
       console.error("Failed to fetch interest recommendations:", error)
-      setInterestError("Unable to load interest-based recommendations right now.")
+      setInterestError(getRecommendationError(error))
     } finally {
       setLoadingInterests(false)
     }
@@ -704,14 +729,32 @@ export default function RecommendationsPage() {
                     These careers align with your academic strengths and performance in core subjects.
                   </p>
                   {!analysisSummary && (
-                    <AlertMessage message="Upload your marksheet on the Grades page to unlock AI-powered recommendations." />
+                    <EmptyState
+                      icon={Upload}
+                      title="No Grade Data Yet"
+                      description="Upload your marksheet to unlock AI-powered career recommendations based on your academic performance."
+                      action={{
+                        label: "Start Assessment",
+                        onClick: () => navigate("/assessment"),
+                        variant: "default"
+                      }}
+                    />
                   )}
                 </div>
 
                 {loadingCareers || loadingGrades ? (
-                  <LoaderState />
+                  <CareerCardSkeletonGrid count={6} />
                 ) : gradeError ? (
-                  <AlertMessage message={gradeError} />
+                  <EmptyState
+                    icon={AlertCircle}
+                    title="Unable to Load Recommendations"
+                    description={gradeError}
+                    action={{
+                      label: "Try Again",
+                      onClick: () => window.location.reload(),
+                      variant: "secondary"
+                    }}
+                  />
                 ) : gradeRecs.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     {sortedGradeRecs.map((career, index) => (
@@ -725,7 +768,16 @@ export default function RecommendationsPage() {
                     ))}
                   </div>
                 ) : (
-                  <AlertMessage message="No grade-based recommendations yet. Upload a marksheet to get started." />
+                  <EmptyState
+                    icon={BookOpen}
+                    title="No Recommendations Yet"
+                    description="Complete your assessment by uploading your marksheet to get personalized career recommendations."
+                    action={{
+                      label: "Upload Marksheet",
+                      onClick: () => navigate("/assessment"),
+                      variant: "default"
+                    }}
+                  />
                 )}
               </TabsContent>
 
@@ -749,14 +801,32 @@ export default function RecommendationsPage() {
                       ))}
                     </div>
                   ) : (
-                    <AlertMessage message="Complete the Interests flow to personalize these recommendations." />
+                    <EmptyState
+                      icon={Target}
+                      title="No Interests Selected"
+                      description="Complete the interests section in your assessment to get personalized career recommendations based on what excites you."
+                      action={{
+                        label: "Select Interests",
+                        onClick: () => navigate("/assessment"),
+                        variant: "default"
+                      }}
+                    />
                   )}
                 </div>
 
                 {loadingCareers || loadingInterests ? (
-                  <LoaderState />
+                  <CareerCardSkeletonGrid count={6} />
                 ) : interestError ? (
-                  <AlertMessage message={interestError} />
+                  <EmptyState
+                    icon={AlertCircle}
+                    title="Unable to Load Recommendations"
+                    description={interestError}
+                    action={{
+                      label: "Try Again",
+                      onClick: () => window.location.reload(),
+                      variant: "secondary"
+                    }}
+                  />
                 ) : interestRecs.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     {sortedInterestRecs.map((career, index) => (
@@ -770,7 +840,16 @@ export default function RecommendationsPage() {
                     ))}
                   </div>
                 ) : (
-                  <AlertMessage message="No interest-based recommendations yet. Share your interests to continue." />
+                  <EmptyState
+                    icon={Target}
+                    title="No Recommendations Yet"
+                    description="Share your interests in the assessment to get personalized career recommendations that match your passions."
+                    action={{
+                      label: "Select Interests",
+                      onClick: () => navigate("/assessment"),
+                      variant: "default"
+                    }}
+                  />
                 )}
               </TabsContent>
             </Tabs>
@@ -813,15 +892,4 @@ export default function RecommendationsPage() {
   )
 }
 
-const AlertMessage = ({ message }) => (
-  <Card className="border border-dashed bg-muted/30">
-    <CardContent className="py-6 text-center text-sm text-muted-foreground">{message}</CardContent>
-  </Card>
-)
 
-const LoaderState = () => (
-  <div className="flex items-center justify-center py-12">
-    <Sparkles className="h-6 w-6 animate-spin text-primary" />
-    <span className="ml-2 text-sm text-muted-foreground">Generating recommendations…</span>
-  </div>
-)

@@ -44,14 +44,13 @@ import { cn } from "@/shared/lib/utils"
 import logoImg from "@/assets/images/Logo.png"
 
 const navigationItems = [
-  { icon: Home, label: "Dashboard", href: "/dashboard" },
-  { icon: BookOpen, label: "Enter Grades", href: "/grades" },
-  { icon: Target, label: "Interests", href: "/interests" },
-  { icon: BarChart3, label: "Recommendations", href: "/recommendations" },
-  { icon: Building2, label: "Colleges", href: "/colleges" },
-  { icon: Briefcase, label: "Careers", href: "/careers" },
-  { icon: BookOpen, label: "Training", href: "/trainings" },
-  { icon: Activity, label: "Quiz Analytics", href: "/quiz/analytics" },
+  { icon: Home, label: "Dashboard", href: "/dashboard", tooltip: "View your dashboard and progress" },
+  { icon: Target, label: "Assessment", href: "/assessment", tooltip: "Complete your career assessment (grades, interests, location)" },
+  { icon: BarChart3, label: "Recommendations", href: "/recommendations", tooltip: "View personalized career recommendations" },
+  { icon: Building2, label: "Colleges", href: "/colleges", tooltip: "Explore colleges and universities" },
+  { icon: Briefcase, label: "Careers", href: "/careers", tooltip: "Browse career options" },
+  { icon: BookOpen, label: "Training", href: "/trainings", tooltip: "Access skill training programs" },
+  { icon: Activity, label: "My Quizzes", href: "/quiz/analytics", tooltip: "View your quiz results and analytics" },
 ]
 
 export function Sidebar() {
@@ -124,7 +123,7 @@ export function Sidebar() {
       <Button
         variant="outline"
         size="icon"
-        className="lg:hidden fixed top-4 right-4 z-50 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border-border/50 hover:bg-background"
+        className="lg:hidden fixed top-20 right-4 z-50 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border-border/50 hover:bg-background"
         onClick={toggleMobileSidebar}
       >
         {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -201,7 +200,7 @@ export function Sidebar() {
             >
               <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain shrink-0" />
               <span className="text-2xl font-bold text-foreground whitespace-nowrap">
-                areer<span className="text-primary">Hoop</span>
+                Career<span className="text-primary">Hoop</span>
               </span>
             </Link>
           )}
@@ -253,13 +252,25 @@ export function Sidebar() {
                         {navItem}
                       </TooltipTrigger>
                       <TooltipContent side="right" sideOffset={8}>
-                        <p>{item.label}</p>
+                        <p>{item.tooltip || item.label}</p>
                       </TooltipContent>
                     </Tooltip>
                   )
                 }
 
-                return navItem
+                // For expanded sidebar, wrap with tooltip that shows on hover
+                return (
+                  <Tooltip key={item.label}>
+                    <TooltipTrigger asChild>
+                      {navItem}
+                    </TooltipTrigger>
+                    {item.tooltip && (
+                      <TooltipContent side="right" sideOffset={8}>
+                        <p>{item.tooltip}</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                )
               })}
             </nav>
           </TooltipProvider>

@@ -148,7 +148,7 @@ export default function WhyChooseUs() {
       {/* Hero Section */}
       <section className="px-4 py-20 md:py-28">
         <div className="container mx-auto max-w-4xl text-center">
-          <div className="mb-4 inline-block rounded-full bg-secondary/20 px-4 py-1.5 text-sm font-medium text-secondary-foreground">
+          <div className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary border border-primary/20 transition-all duration-200 hover:bg-primary/15 active:scale-[0.98]">
             Why Choose Us
           </div>
           <h1 className="mb-6 font-sans text-4xl font-bold leading-tight text-foreground md:text-5xl text-balance">

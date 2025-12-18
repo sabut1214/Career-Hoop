@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react"
+import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
@@ -24,9 +25,22 @@ import { useAuth } from "@/shared/context/AuthContext"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog"
 import { getUserStorageKey } from "@/shared/utils/utils"
 import { getSavedCareers, getSavedColleges, getUserProfile } from "@/shared/lib/api"
+import { EmptyState } from "@/shared/components/common/EmptyState"
+import { Rocket } from "lucide-react"
+import { useOnboarding } from "@/features/onboarding/hooks/useOnboarding"
+import { DashboardCardSkeletonGrid } from "@/shared/components/common/DashboardCardSkeleton"
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const { hasCompletedOnboarding, isChecking } = useOnboarding()
+
+  // Redirect to onboarding if not completed
+  useEffect(() => {
+    if (!isChecking && user?.id && !hasCompletedOnboarding && user.role !== "admin") {
+      navigate("/onboarding", { replace: true })
+    }
+  }, [hasCompletedOnboarding, isChecking, user?.id, user?.role, navigate])
   const userName = user?.name || user?.fullName || "Alex"
   const [showProfilePrompt, setShowProfilePrompt] = useState(false)
   const [profileCompletion, setProfileCompletion] = useState(0)
@@ -175,11 +189,10 @@ export default function Dashboard() {
   // Calculate progress steps based on real data
   const progressSteps = useMemo(() => {
     const steps = [
-      { id: 1, title: "Enter Grades", completed: hasGrades, current: !hasGrades && !hasInterests },
-      { id: 2, title: "Select Interests", completed: hasInterests, current: hasGrades && !hasInterests },
-      { id: 3, title: "Get Recommendations", completed: savedCareersCount > 0, current: hasGrades && hasInterests && savedCareersCount === 0 },
-      { id: 4, title: "Explore Colleges", completed: savedCollegesCount > 0, current: savedCareersCount > 0 && savedCollegesCount === 0 },
-      { id: 5, title: "Build Skills", completed: false, current: savedCollegesCount > 0 },
+      { id: 1, title: "Complete Assessment", completed: hasGrades && hasInterests, current: !hasGrades || !hasInterests },
+      { id: 2, title: "Get Recommendations", completed: savedCareersCount > 0, current: hasGrades && hasInterests && savedCareersCount === 0 },
+      { id: 3, title: "Explore Colleges", completed: savedCollegesCount > 0, current: savedCareersCount > 0 && savedCollegesCount === 0 },
+      { id: 4, title: "Build Skills", completed: false, current: savedCollegesCount > 0 },
     ]
     return steps
   }, [hasGrades, hasInterests, savedCareersCount, savedCollegesCount])
@@ -216,26 +229,17 @@ export default function Dashboard() {
       size: "lg", // Large card
     },
     {
-      title: "Enter Your Grades",
-      description: "Input your academic performance",
-      icon: BookOpen,
+      title: "Start Assessment",
+      description: hasGrades && hasInterests 
+        ? "Assessment completed - View or update your profile" 
+        : "Complete your career assessment (grades, interests, location)",
+      icon: Target,
       color: "bg-primary",
       textColor: "text-primary-foreground",
       borderColor: "border-primary/20",
-      href: "/grades",
-      completed: hasGrades,
-      size: "md",
-    },
-    {
-      title: "Select Interests",
-      description: "Choose fields that excite you",
-      icon: Target,
-      color: "bg-secondary",
-      textColor: "text-secondary-foreground",
-      borderColor: "border-secondary/20",
-      href: "/interests",
-      completed: hasInterests,
-      size: "md",
+      href: "/assessment",
+      completed: hasGrades && hasInterests,
+      size: "lg", // Large card - make it prominent
     },
     {
       title: "Explore Colleges",
@@ -260,6 +264,25 @@ export default function Dashboard() {
       size: "md",
     },
   ], [hasGrades, hasInterests, savedCareersCount, savedCollegesCount])
+
+  // Show loading while checking onboarding status
+  if (isChecking) {
+    return (
+      <ProtectedRoute requiredRole="student">
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    )
+  }
+
+  // Don't render dashboard if onboarding not completed (redirect will happen)
+  if (!hasCompletedOnboarding && user?.role !== "admin") {
+    return null
+  }
 
   return (
     <ProtectedRoute requiredRole="student">
@@ -365,8 +388,11 @@ export default function Dashboard() {
               className="space-y-6"
             >
               <h2 className="text-2xl font-bold">Quick Actions</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-max">
-                {actionCards.map((card, index) => (
+              {loading ? (
+                <DashboardCardSkeletonGrid count={5} />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-max">
+                  {actionCards.map((card, index) => (
                   <motion.div
                     key={card.title}
                     initial={{ opacity: 0, y: 20 }}
@@ -406,8 +432,9 @@ export default function Dashboard() {
                       </Card>
                     </Link>
                   </motion.div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
 
             {/* Recent Activity */}
@@ -425,7 +452,16 @@ export default function Dashboard() {
                   {loading ? (
                     <div className="text-center py-4 text-muted-foreground">Loading activity...</div>
                   ) : recentActivity.length === 0 ? (
-                    <div className="text-center py-4 text-muted-foreground">No recent activity. Start exploring to see your progress here!</div>
+                    <EmptyState
+                      icon={Rocket}
+                      title="No Recent Activity"
+                      description="Start your career discovery journey to see your progress and achievements here."
+                      action={{
+                        label: "Start Assessment",
+                        onClick: () => navigate("/assessment"),
+                        variant: "default"
+                      }}
+                    />
                   ) : (
                     recentActivity.map((activity, index) => (
                     <motion.div

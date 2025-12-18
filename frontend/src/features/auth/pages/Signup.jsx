@@ -100,7 +100,7 @@ export default function Signup() {
           <div className="flex items-center justify-center mb-4">
             <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
             <span className="text-2xl font-bold text-foreground">
-              areer<span className="text-primary">Hoop</span>
+              Career<span className="text-primary">Hoop</span>
             </span>
           </div>
           <h1 className="text-3xl font-bold mb-2">Create an Account</h1>
@@ -158,7 +158,20 @@ export default function Signup() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                </div>
+                {/* Password Requirements Info */}
+                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-2">
+                  <p className="text-xs font-medium text-blue-900 dark:text-blue-100 mb-2">Password must include:</p>
+                  <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
+                    <li>At least 8 characters</li>
+                    <li>One uppercase letter</li>
+                    <li>One lowercase letter</li>
+                    <li>One number</li>
+                    <li>One special character</li>
+                  </ul>
+                </div>
                 <div className="relative">
                   <Input
                     id="password"

@@ -177,7 +177,7 @@ export function AdminSidebar() {
               >
                 <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain shrink-0" />
                 <span className="text-2xl font-bold text-foreground whitespace-nowrap">
-                  areer<span className="text-primary">Hoop</span>
+                  Career<span className="text-primary">Hoop</span>
                 </span>
               </Link>
               <span className="text-xs text-muted-foreground ml-[2.5rem] mt-0.5">

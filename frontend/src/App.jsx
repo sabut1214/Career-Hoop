@@ -28,6 +28,7 @@ const QuizAnalytics = lazy(() => import("@/features/trainings/pages/QuizAnalytic
 const Profile = lazy(() => import("@/features/profile/pages/Profile"))
 const Recommendations = lazy(() => import("@/features/recommendations/pages/Recomendations"))
 const Dashboard = lazy(() => import("@/features/dashboard/pages/Dashboard"))
+const Onboarding = lazy(() => import("@/features/onboarding/pages/Onboarding"))
 const AdminDashboard = lazy(() => import("@/features/admin/pages/AdminDashboard"))
 const AdminStudents = lazy(() => import("@/features/admin/pages/Students"))
 const AdminCareers = lazy(() => import("@/features/admin/pages/Careers"))
@@ -103,6 +104,7 @@ function AppContent() {
                   <Route path="/contact" element={<Contact />} />
 
                   {/* Protected Dashboard Routes - Show Sidebar (handled in components) */}
+                  <Route path="/onboarding" element={<Onboarding />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/landing" element={<Landing />} />
                   <Route path="/assessment" element={<Assessment />} />

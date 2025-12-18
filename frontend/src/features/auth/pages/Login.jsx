@@ -115,7 +115,7 @@ export default function Login() {
           <div className="flex items-center justify-center mb-4">
             <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
             <span className="text-2xl font-bold text-foreground">
-              areer<span className="text-primary">Hoop</span>
+              Career<span className="text-primary">Hoop</span>
             </span>
           </div>
           <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>

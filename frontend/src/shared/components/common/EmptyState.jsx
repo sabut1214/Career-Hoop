@@ -1,112 +1,91 @@
-"use client"
-
-import { Search, BookOpen, Heart, AlertCircle, Inbox } from "lucide-react"
+import { Search, AlertCircle } from "lucide-react"
 import { Button } from "@/shared/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card"
-import { cn } from "@/shared/lib/utils"
+import { Card, CardContent } from "@/shared/components/ui/card"
 
 /**
- * Empty state component for displaying when there's no data.
+ * Reusable EmptyState component for displaying empty states with optional CTAs
+ * @param {Object} props
+ * @param {React.ComponentType} props.icon - Icon component to display
+ * @param {string} props.title - Title text
+ * @param {string} props.description - Description text
+ * @param {Object} [props.action] - Optional action button
+ * @param {string} props.action.label - Button label
+ * @param {Function} props.action.onClick - Button click handler
+ * @param {'primary' | 'secondary'} [props.action.variant] - Button variant
  */
-export function EmptyState({
-  icon: Icon = Inbox,
-  title = "No items found",
-  description = "There are no items to display at this time.",
-  action,
-  actionLabel,
-  className,
-}) {
+export function EmptyState({ icon: Icon, title, description, action }) {
   return (
-    <Card className={cn("border-dashed", className)}>
-      <CardHeader className="text-center">
-        <div className="flex justify-center mb-4">
-          <div className="rounded-full bg-muted p-3">
-            <Icon className="h-6 w-6 text-muted-foreground" />
+    <Card className="border-2 border-dashed bg-muted/30">
+      <CardContent className="py-12 px-6">
+        <div className="flex flex-col items-center justify-center text-center space-y-4">
+          {Icon && (
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+              <Icon className="h-8 w-8 text-muted-foreground" />
+            </div>
+          )}
+          <div className="space-y-2 max-w-md">
+            <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+            <p className="text-sm text-muted-foreground">{description}</p>
           </div>
+          {action && (
+            <Button
+              onClick={action.onClick}
+              variant={action.variant || "default"}
+              size="lg"
+              className="mt-4"
+            >
+              {action.label}
+            </Button>
+          )}
         </div>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      {action && actionLabel && (
-        <CardContent className="flex justify-center">
-          <Button onClick={action} variant="default">
-            {actionLabel}
-          </Button>
-        </CardContent>
-      )}
+      </CardContent>
     </Card>
   )
 }
 
 /**
- * Empty state for search results.
+ * Empty state for search results
+ * @param {Object} props
+ * @param {string} props.searchTerm - Current search term
+ * @param {Function} props.onClearSearch - Handler to clear search
  */
 export function EmptySearchState({ searchTerm, onClearSearch }) {
   return (
     <EmptyState
       icon={Search}
-      title="No results found"
-      description={`We couldn't find any colleges matching "${searchTerm}". Try adjusting your search terms.`}
-      action={onClearSearch}
-      actionLabel="Clear Search"
+      title="No Colleges Found"
+      description={searchTerm 
+        ? `We couldn't find any colleges matching "${searchTerm}". Try adjusting your search or filters.`
+        : "No colleges match your current filters. Try adjusting your search criteria."}
+      action={searchTerm ? {
+        label: "Clear Search",
+        onClick: onClearSearch,
+        variant: "secondary"
+      } : undefined}
     />
   )
 }
 
 /**
- * Empty state for saved items.
+ * Empty state for error scenarios
+ * @param {Object} props
+ * @param {string|Error} [props.error] - Error message or error object to display
+ * @param {string} [props.message] - Error message to display (alternative to error prop)
+ * @param {Function} [props.onRetry] - Optional retry handler
  */
-export function EmptySavedState({ type = "colleges", onBrowse }) {
-  const titles = {
-    colleges: "No saved colleges",
-    careers: "No saved careers",
-  }
-  const descriptions = {
-    colleges: "You haven't saved any colleges yet. Start exploring and save colleges you're interested in!",
-    careers: "You haven't saved any careers yet. Start exploring and save careers you're interested in!",
-  }
+export function EmptyErrorState({ error, message, onRetry }) {
+  const errorMessage = message || (typeof error === 'string' ? error : error?.message) || "We're having trouble loading the data. Please try again."
   
   return (
     <EmptyState
-      icon={Heart}
-      title={titles[type] || "No saved items"}
-      description={descriptions[type] || "You haven't saved any items yet."}
-      action={onBrowse}
-      actionLabel={`Browse ${type}`}
-    />
-  )
-}
-
-/**
- * Empty state for error states.
- */
-export function EmptyErrorState({ error, onRetry }) {
-  return (
-    <EmptyState
       icon={AlertCircle}
-      title="Something went wrong"
-      description={error || "An unexpected error occurred. Please try again."}
-      action={onRetry}
-      actionLabel="Try Again"
-      className="border-destructive/50"
+      title="Something Went Wrong"
+      description={errorMessage}
+      action={onRetry ? {
+        label: "Try Again",
+        onClick: onRetry,
+        variant: "default"
+      } : undefined}
     />
   )
 }
-
-/**
- * Empty state for no data.
- */
-export function EmptyDataState({ type = "items", onAdd }) {
-  return (
-    <EmptyState
-      icon={BookOpen}
-      title={`No ${type} available`}
-      description={`There are no ${type} to display at this time.`}
-      action={onAdd}
-      actionLabel={`Add ${type}`}
-    />
-  )
-}
-
-export default EmptyState
-
