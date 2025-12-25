@@ -49,12 +49,6 @@ const team = [
     avatar: "/professional-cto-portrait.png",
   },
   {
-    name: "Priya Sharma",
-    role: "Head of Mentorship",
-    bio: "Built mentorship programs connecting 10,000+ students with industry professionals.",
-    avatar: "/professional-indian-woman-portrait.png",
-  },
-  {
     name: "Marcus Johnson",
     role: "Head of Content",
     bio: "Former career counselor with a passion for making career education accessible.",
@@ -102,7 +96,7 @@ export default function About() {
                 </p>
                 <p>
                   Today, we've helped over 50,000 students discover careers that align with their passions, skills, and
-                  goals. Our AI-powered platform, combined with human mentorship, creates a unique experience that
+                  goals. Our AI-powered platform creates a unique experience that
                   guides students from confusion to clarity.
                 </p>
               </div>

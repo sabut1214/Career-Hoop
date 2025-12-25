@@ -334,7 +334,10 @@ def score_college_for_profile(
     grade12: float,
     stream: str,
     subjects: List[str],
-    grade10: Optional[float] = None
+    grade10: Optional[float] = None,
+    career_fields: Optional[List[str]] = None,
+    activities: Optional[List[str]] = None,
+    work_environments: Optional[List[str]] = None,
 ) -> Tuple[int, str]:
     """
     Score a college based on user profile.
@@ -355,6 +358,7 @@ def score_college_for_profile(
     # Normalize inputs
     stream_lower = stream.lower() if stream else "general"
     subjects_lower = [s.lower() for s in subjects] if subjects else []
+    career_fields_lower = [f.lower() for f in (career_fields or [])]
     
     # Extract college information
     college_name = str(college.get("name", "")).lower()
@@ -438,6 +442,20 @@ def score_college_for_profile(
     if college.get("overview") and len(str(college.get("overview", ""))) > 100:
         score += 5
         reasons.append("Well-documented college")
+
+    # Interest-based matching (0-15 points)
+    if career_fields_lower:
+        interest_score = 0
+
+        # Simple keyword overlap between interests and college text
+        for field in career_fields_lower:
+            if field and field in all_college_text:
+                interest_score += 5
+
+        if interest_score > 0:
+            added = min(15, interest_score)
+            score += added
+            reasons.append("Matches your selected interest areas")
     
     # Cap total score at 100
     total_score = min(100, score)
@@ -457,7 +475,10 @@ def get_college_recommendations(
     stream: str,
     subjects: Optional[List[str]] = None,
     grade10: Optional[float] = None,
-    limit: int = 4
+    career_fields: Optional[List[str]] = None,
+    activities: Optional[List[str]] = None,
+    work_environments: Optional[List[str]] = None,
+    limit: int = 4,
 ) -> List[Dict[str, Any]]:
     """
     Get college recommendations based on user profile.
@@ -468,18 +489,31 @@ def get_college_recommendations(
         stream: Student stream
         subjects: Optional list of subjects
         grade10: Optional Grade 10 percentage
+        career_fields: Optional list of career fields of interest
+        activities: Optional list of activities (currently not used for scoring)
+        work_environments: Optional list of preferred work environments (currently not used)
         limit: Maximum number of recommendations to return
     
     Returns:
         List of scored college recommendations
     """
     subjects = subjects or []
+    career_fields = career_fields or []
+    activities = activities or []
+    work_environments = work_environments or []
     
     scored_colleges = []
     
     for college in colleges:
         score, match_reason = score_college_for_profile(
-            college, grade12, stream, subjects, grade10
+            college=college,
+            grade12=grade12,
+            stream=stream,
+            subjects=subjects,
+            grade10=grade10,
+            career_fields=career_fields,
+            activities=activities,
+            work_environments=work_environments,
         )
         
         # Skip colleges with very low scores

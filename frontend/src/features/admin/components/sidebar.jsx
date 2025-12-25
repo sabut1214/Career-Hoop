@@ -171,8 +171,8 @@ export function AdminSidebar() {
           ) : (
             /* Expanded: Logo + Brand Name */
             <div className="flex flex-col flex-1 min-w-0">
-              <Link 
-                to="/admin" 
+              <Link
+                to="/admin"
                 className="flex items-center gap-0"
               >
                 <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain shrink-0" />
@@ -207,8 +207,8 @@ export function AdminSidebar() {
                         className={cn(
                           "w-full text-sm transition-all duration-200 rounded-lg",
                           isCollapsed ? "justify-center h-10 px-0" : "justify-start h-11 gap-3 px-3",
-                          isActive 
-                            ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90" 
+                          isActive
+                            ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
                             : "hover:bg-muted/50 hover:text-foreground text-muted-foreground"
                         )}
                         onClick={() => {

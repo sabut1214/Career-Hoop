@@ -107,14 +107,14 @@ const features = [
     image: "/features/career-explorer.jpg",
   },
   {
-    icon: Users,
-    title: "Mentorship Program",
+    icon: Zap,
+    title: "Skill Builder",
     description:
-      "Connect one-on-one with professionals in your fields of interest for guidance and real-world insights.",
-    benefits: ["Book virtual sessions", "Ask career questions", "Get industry advice", "Build your network"],
-    color: "bg-primary/10",
-    iconColor: "text-primary",
-    image: "/features/mentorship-program.jpg",
+      "Access curated courses and resources to develop the skills employers are looking for in your target career.",
+    benefits: ["Personalized learning paths", "Track skill progress", "Earn certificates", "Practice with projects"],
+    color: "bg-secondary/20",
+    iconColor: "text-secondary-foreground",
+    image: "/features/skill-builder.jpg",
   },
   {
     icon: Zap,

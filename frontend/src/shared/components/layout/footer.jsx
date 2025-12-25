@@ -6,7 +6,7 @@ const footerLinks = {
   product: [
     { name: "Features", href: "/features" },
     { name: "Career Explorer", href: "/features" },
-    { name: "Mentorship", href: "/features" },
+    { name: "Colleges", href: "/colleges" },
     { name: "Pricing", href: "#" },
   ],
   company: [
@@ -43,7 +43,7 @@ export function Footer() {
               </span>
             </Link>
             <p className="mb-6 max-w-sm text-muted-foreground">
-              Empowering students to discover their perfect career path with personalized guidance and expert mentorship.
+              Empowering students to discover their perfect career path with personalized guidance and AI-powered recommendations.
             </p>
             <div className="flex gap-4">
               {socialLinks.map(({ icon: Icon, label }) => (
@@ -99,4 +99,3 @@ export function Footer() {
     </footer>
   )
 }
-

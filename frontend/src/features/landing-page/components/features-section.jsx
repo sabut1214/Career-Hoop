@@ -47,18 +47,18 @@ const features = [
     iconColor: "text-accent-foreground",
   },
   {
-    icon: Users,
-    title: "Mentorship",
-    description: "Connect with industry professionals for guidance",
-    color: "bg-primary/10",
-    iconColor: "text-primary",
-  },
-  {
     icon: Zap,
     title: "Skill Training",
     description: "Build skills that matter for your dream career",
     color: "bg-secondary/20",
     iconColor: "text-secondary-foreground",
+  },
+  {
+    icon: User,
+    title: "Student Profile",
+    description: "Track your journey and showcase your achievements",
+    color: "bg-accent",
+    iconColor: "text-accent-foreground",
   },
   {
     icon: User,
@@ -93,8 +93,15 @@ export function FeaturesSection() {
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <CardContent className="p-6">
-                <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${feature.color} transition-transform duration-300 group-hover:scale-110`}>
-                  <feature.icon className={`h-7 w-7 ${feature.iconColor}`} />
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${feature.color} transition-transform duration-300 group-hover:scale-110`}>
+                    <feature.icon className={`h-7 w-7 ${feature.iconColor}`} />
+                  </div>
+                  {feature.comingSoon && (
+                    <span className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-2 py-1 rounded-full font-medium">
+                      Coming Soon
+                    </span>
+                  )}
                 </div>
                 <h3 className="mb-2 text-lg font-semibold text-foreground">{feature.title}</h3>
                 <p className="text-sm leading-relaxed text-foreground/80">{feature.description}</p>
@@ -106,4 +113,3 @@ export function FeaturesSection() {
     </section>
   )
 }
-

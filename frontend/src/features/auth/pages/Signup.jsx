@@ -171,6 +171,7 @@ export default function Signup() {
                     <li>One number</li>
                     <li>One special character</li>
                   </ul>
+                  <p className="text-xs text-blue-600 dark:text-blue-300 mt-2 font-medium">Example: Pass@2024</p>
                 </div>
                 <div className="relative">
                   <Input

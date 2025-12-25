@@ -1,5 +1,6 @@
 package com.careerhoop.controller;
 
+import com.careerhoop.dto.CollegeAIRecommendationRequest;
 import com.careerhoop.dto.GradeRecommendationRequest;
 import com.careerhoop.dto.InterestRecommendationRequest;
 import com.careerhoop.dto.RecommendationResponse;
@@ -54,7 +55,7 @@ public class RecommendationController {
 
     @PostMapping("/colleges")
     public ResponseEntity<List<Map<String, Object>>> getCollegeRecommendations(
-            @RequestBody GradeRecommendationRequest request,
+            @RequestBody CollegeAIRecommendationRequest request,
             @RequestParam(value = "limit", defaultValue = "20") Integer limit) {
 
         // Only use Python service - no fallback
@@ -72,6 +73,9 @@ public class RecommendationController {
                 request.grade12(),
                 request.stream(),
                 request.subjects(),
+                request.careerFields(),
+                request.activities(),
+                request.workEnvironments(),
                 colleges,
                 limit
         );

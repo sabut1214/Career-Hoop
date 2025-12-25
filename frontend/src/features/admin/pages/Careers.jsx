@@ -13,8 +13,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog"
-import { getCareers, deleteCareer, createCareer } from "@/shared/lib/api"
-import { Trash2, Plus } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog"
+import { getCareers, deleteCareer, createCareer, updateCareer } from "@/shared/lib/api"
+import { Trash2, Plus, Pencil } from "lucide-react"
 import { ProtectedRoute } from "@/shared/components/protected-route"
 import { toast } from "react-toastify"
 
@@ -23,6 +33,10 @@ export default function AdminCareersPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [careerToDelete, setCareerToDelete] = useState(null)
+  const [editingCareer, setEditingCareer] = useState(null)
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -31,6 +45,7 @@ export default function AdminCareersPage() {
     requiredSkills: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     fetchCareers()
@@ -39,7 +54,6 @@ export default function AdminCareersPage() {
   const fetchCareers = async () => {
     try {
       const response = await getCareers()
-      // Handle different response structures
       const careersData = Array.isArray(response) ? response : (response.data || [])
       setCareers(careersData)
     } catch (error) {
@@ -51,16 +65,25 @@ export default function AdminCareersPage() {
     }
   }
 
-  const handleDelete = async (id) => {
-    if (confirm("Are you sure you want to delete this career?")) {
-      try {
-        await deleteCareer(id)
-        setCareers(careers.filter((c) => c.id !== id))
-        toast.success("Career deleted successfully.")
-      } catch (error) {
-        console.error("Failed to delete career:", error)
-        toast.error("Failed to delete career. Please try again.")
-      }
+  const handleDeleteClick = (career) => {
+    setCareerToDelete(career)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!careerToDelete || isDeleting) return
+    setIsDeleting(true)
+    try {
+      await deleteCareer(careerToDelete.id)
+      setCareers(careers.filter((c) => c.id !== careerToDelete.id))
+      toast.success("Career deleted successfully.")
+    } catch (error) {
+      console.error("Failed to delete career:", error)
+      toast.error("Failed to delete career. Please try again.")
+    } finally {
+      setIsDeleting(false)
+      setDeleteDialogOpen(false)
+      setCareerToDelete(null)
     }
   }
 
@@ -78,13 +101,7 @@ export default function AdminCareersPage() {
       await createCareer(careerData)
       toast.success("Career created successfully.")
       setIsAddDialogOpen(false)
-      setFormData({
-        name: "",
-        description: "",
-        outlook: "",
-        salaryRange: "",
-        requiredSkills: "",
-      })
+      resetForm()
       fetchCareers()
     } catch (error) {
       console.error("Failed to create career:", error)
@@ -94,7 +111,55 @@ export default function AdminCareersPage() {
     }
   }
 
-  const filteredCareers = careers.filter((career) => 
+  const handleEditClick = (career) => {
+    setEditingCareer(career)
+    setFormData({
+      name: career.name || career.title || "",
+      description: career.description || "",
+      outlook: career.outlook || "",
+      salaryRange: career.salaryRange || career.salary_range || "",
+      requiredSkills: Array.isArray(career.requiredSkills) ? career.requiredSkills.join(", ") : (career.requiredSkills || ""),
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditCareer = async (e) => {
+    e.preventDefault()
+    if (!editingCareer) return
+    setIsSubmitting(true)
+    try {
+      const careerData = {
+        name: formData.name,
+        description: formData.description || null,
+        outlook: formData.outlook || null,
+        salaryRange: formData.salaryRange || null,
+        requiredSkills: formData.requiredSkills ? formData.requiredSkills.split(",").map(s => s.trim()).filter(s => s) : null,
+      }
+      await updateCareer(editingCareer.id, careerData)
+      toast.success("Career updated successfully.")
+      setIsEditDialogOpen(false)
+      resetForm()
+      fetchCareers()
+    } catch (error) {
+      console.error("Failed to update career:", error)
+      toast.error(error.message || "Failed to update career. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      description: "",
+      outlook: "",
+      salaryRange: "",
+      requiredSkills: "",
+    })
+    setEditingCareer(null)
+  }
+
+  const filteredCareers = careers.filter((career) =>
     (career.name || career.title)?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
@@ -153,15 +218,23 @@ export default function AdminCareersPage() {
                         {filteredCareers.map((career) => (
                           <tr key={career.id} className="border-b hover:bg-muted/50">
                             <td className="py-3 px-4 font-medium">{career.name || career.title || "N/A"}</td>
-                            <td className="py-3 px-4 text-muted-foreground">
-                              {career.description?.substring(0, 50) || "N/A"}...
+                            <td className="py-3 px-4 text-muted-foreground max-w-xs truncate">
+                              {career.description?.substring(0, 50) || "N/A"}{career.description?.length > 50 ? "..." : ""}
                             </td>
-                            <td className="py-3 px-4">{career.salary_range || "N/A"}</td>
-                            <td className="py-3 px-4 text-right">
+                            <td className="py-3 px-4">{career.salaryRange || career.salary_range || "N/A"}</td>
+                            <td className="py-3 px-4 text-right space-x-2">
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDelete(career.id)}
+                                onClick={() => handleEditClick(career)}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteClick(career)}
                                 className="text-destructive hover:text-destructive"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -176,7 +249,8 @@ export default function AdminCareersPage() {
               </CardContent>
             </Card>
 
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            {/* Add Career Dialog */}
+            <Dialog open={isAddDialogOpen} onOpenChange={(open) => { setIsAddDialogOpen(open); if (!open) resetForm(); }}>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Add New Career</DialogTitle>
@@ -249,10 +323,107 @@ export default function AdminCareersPage() {
                 </form>
               </DialogContent>
             </Dialog>
+
+            {/* Edit Career Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={(open) => { setIsEditDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Edit Career</DialogTitle>
+                  <DialogDescription>
+                    Update career information.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleEditCareer} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-name">Career Name *</Label>
+                    <Input
+                      id="edit-name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                      placeholder="Enter career name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-description">Description</Label>
+                    <Textarea
+                      id="edit-description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Enter career description"
+                      rows={4}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-outlook">Career Outlook</Label>
+                    <Textarea
+                      id="edit-outlook"
+                      value={formData.outlook}
+                      onChange={(e) => setFormData({ ...formData, outlook: e.target.value })}
+                      placeholder="Enter career outlook and future prospects"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-salaryRange">Salary Range</Label>
+                    <Input
+                      id="edit-salaryRange"
+                      value={formData.salaryRange}
+                      onChange={(e) => setFormData({ ...formData, salaryRange: e.target.value })}
+                      placeholder="e.g., $50,000 - $100,000"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-requiredSkills">Required Skills</Label>
+                    <Input
+                      id="edit-requiredSkills"
+                      value={formData.requiredSkills}
+                      onChange={(e) => setFormData({ ...formData, requiredSkills: e.target.value })}
+                      placeholder="Comma-separated (e.g., Python, JavaScript, Communication)"
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsEditDialogOpen(false)}
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Career</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete <strong>{careerToDelete?.name || careerToDelete?.title}</strong>?
+                    This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteConfirm}
+                    disabled={isDeleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeleting ? "Deleting..." : "Delete"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </main>
       </div>
     </ProtectedRoute>
   )
 }
-

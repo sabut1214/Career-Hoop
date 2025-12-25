@@ -1,12 +1,12 @@
 import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
-import { 
-  UserPlus, 
-  BookOpen, 
-  Building2, 
-  Zap, 
-  Download, 
+import {
+  UserPlus,
+  BookOpen,
+  Building2,
+  Zap,
+  Download,
   Upload
 } from "lucide-react"
 import { importAllData } from "@/shared/lib/api"
@@ -64,7 +64,9 @@ export function QuickActions() {
       label: "Export Data",
       icon: Download,
       onClick: handleExportData,
-      color: "bg-accent/20 text-accent hover:bg-accent/30"
+      color: "bg-muted/50 text-muted-foreground cursor-not-allowed opacity-60",
+      disabled: true,
+      tooltip: "Coming soon"
     },
   ]
 
@@ -82,7 +84,9 @@ export function QuickActions() {
                 key={index}
                 variant="outline"
                 className={`flex flex-col items-center justify-center h-20 gap-2 ${action.color}`}
-                onClick={action.onClick}
+                onClick={action.disabled ? undefined : action.onClick}
+                disabled={action.disabled}
+                title={action.tooltip}
               >
                 <Icon className="h-5 w-5" />
                 <span className="text-xs font-medium">{action.label}</span>
@@ -94,4 +98,3 @@ export function QuickActions() {
     </Card>
   )
 }
-

@@ -13,8 +13,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog"
-import { getColleges, deleteCollege, createCollege } from "@/shared/lib/api"
-import { Trash2, Plus } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog"
+import { getColleges, deleteCollege, createCollege, updateCollege } from "@/shared/lib/api"
+import { Trash2, Plus, Pencil } from "lucide-react"
 import { ProtectedRoute } from "@/shared/components/protected-route"
 import { toast } from "react-toastify"
 
@@ -23,6 +33,10 @@ export default function AdminCollegesPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [collegeToDelete, setCollegeToDelete] = useState(null)
+  const [editingCollege, setEditingCollege] = useState(null)
   const [formData, setFormData] = useState({
     name: "",
     location: "",
@@ -32,6 +46,7 @@ export default function AdminCollegesPage() {
     type: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     fetchColleges()
@@ -40,7 +55,6 @@ export default function AdminCollegesPage() {
   const fetchColleges = async () => {
     try {
       const response = await getColleges()
-      // Handle different response structures (direct array or { data: [...] })
       const collegesData = Array.isArray(response) ? response : (response.data || [])
       setColleges(collegesData)
     } catch (error) {
@@ -52,16 +66,25 @@ export default function AdminCollegesPage() {
     }
   }
 
-  const handleDelete = async (id) => {
-    if (confirm("Are you sure you want to delete this college?")) {
-      try {
-        await deleteCollege(id)
-        setColleges(colleges.filter((c) => c.id !== id))
-        toast.success("College deleted successfully.")
-      } catch (error) {
-        console.error("Failed to delete college:", error)
-        toast.error("Failed to delete college. Please try again.")
-      }
+  const handleDeleteClick = (college) => {
+    setCollegeToDelete(college)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!collegeToDelete || isDeleting) return
+    setIsDeleting(true)
+    try {
+      await deleteCollege(collegeToDelete.id)
+      setColleges(colleges.filter((c) => c.id !== collegeToDelete.id))
+      toast.success("College deleted successfully.")
+    } catch (error) {
+      console.error("Failed to delete college:", error)
+      toast.error("Failed to delete college. Please try again.")
+    } finally {
+      setIsDeleting(false)
+      setDeleteDialogOpen(false)
+      setCollegeToDelete(null)
     }
   }
 
@@ -80,14 +103,7 @@ export default function AdminCollegesPage() {
       await createCollege(collegeData)
       toast.success("College created successfully.")
       setIsAddDialogOpen(false)
-      setFormData({
-        name: "",
-        location: "",
-        affiliation: "",
-        establishedYear: "",
-        overview: "",
-        type: "",
-      })
+      resetForm()
       fetchColleges()
     } catch (error) {
       console.error("Failed to create college:", error)
@@ -95,6 +111,57 @@ export default function AdminCollegesPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleEditClick = (college) => {
+    setEditingCollege(college)
+    setFormData({
+      name: college.name || "",
+      location: college.location || "",
+      affiliation: college.affiliation || "",
+      establishedYear: college.establishedYear?.toString() || "",
+      overview: college.overview || "",
+      type: college.type || "",
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditCollege = async (e) => {
+    e.preventDefault()
+    if (!editingCollege) return
+    setIsSubmitting(true)
+    try {
+      const collegeData = {
+        name: formData.name,
+        location: formData.location || null,
+        affiliation: formData.affiliation || null,
+        establishedYear: formData.establishedYear ? parseInt(formData.establishedYear) : null,
+        overview: formData.overview || null,
+        type: formData.type || null,
+      }
+      await updateCollege(editingCollege.id, collegeData)
+      toast.success("College updated successfully.")
+      setIsEditDialogOpen(false)
+      resetForm()
+      fetchColleges()
+    } catch (error) {
+      console.error("Failed to update college:", error)
+      toast.error(error.message || "Failed to update college. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      location: "",
+      affiliation: "",
+      establishedYear: "",
+      overview: "",
+      type: "",
+    })
+    setEditingCollege(null)
   }
 
   const filteredColleges = colleges.filter((college) => college.name?.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -146,7 +213,7 @@ export default function AdminCollegesPage() {
                         <tr>
                           <th className="text-left py-3 px-4 font-semibold">Name</th>
                           <th className="text-left py-3 px-4 font-semibold">Location</th>
-                          <th className="text-left py-3 px-4 font-semibold">Ranking</th>
+                          <th className="text-left py-3 px-4 font-semibold">Type</th>
                           <th className="text-right py-3 px-4 font-semibold">Actions</th>
                         </tr>
                       </thead>
@@ -155,12 +222,20 @@ export default function AdminCollegesPage() {
                           <tr key={college.id} className="border-b hover:bg-muted/50">
                             <td className="py-3 px-4 font-medium">{college.name || "N/A"}</td>
                             <td className="py-3 px-4">{college.location || "N/A"}</td>
-                            <td className="py-3 px-4">{college.ranking || "N/A"}</td>
-                            <td className="py-3 px-4 text-right">
+                            <td className="py-3 px-4">{college.type || "N/A"}</td>
+                            <td className="py-3 px-4 text-right space-x-2">
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDelete(college.id)}
+                                onClick={() => handleEditClick(college)}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteClick(college)}
                                 className="text-destructive hover:text-destructive"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -175,7 +250,8 @@ export default function AdminCollegesPage() {
               </CardContent>
             </Card>
 
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            {/* Add College Dialog */}
+            <Dialog open={isAddDialogOpen} onOpenChange={(open) => { setIsAddDialogOpen(open); if (!open) resetForm(); }}>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Add New College</DialogTitle>
@@ -261,10 +337,120 @@ export default function AdminCollegesPage() {
                 </form>
               </DialogContent>
             </Dialog>
+
+            {/* Edit College Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={(open) => { setIsEditDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Edit College</DialogTitle>
+                  <DialogDescription>
+                    Update college information.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleEditCollege} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-name">College Name *</Label>
+                    <Input
+                      id="edit-name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                      placeholder="Enter college name"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-location">Location</Label>
+                      <Input
+                        id="edit-location"
+                        value={formData.location}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        placeholder="Enter location"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-affiliation">Affiliation</Label>
+                      <Input
+                        id="edit-affiliation"
+                        value={formData.affiliation}
+                        onChange={(e) => setFormData({ ...formData, affiliation: e.target.value })}
+                        placeholder="Enter affiliation"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-establishedYear">Established Year</Label>
+                      <Input
+                        id="edit-establishedYear"
+                        type="number"
+                        value={formData.establishedYear}
+                        onChange={(e) => setFormData({ ...formData, establishedYear: e.target.value })}
+                        placeholder="e.g., 1950"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-type">Type</Label>
+                      <Input
+                        id="edit-type"
+                        value={formData.type}
+                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                        placeholder="e.g., Public, Private"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-overview">Overview</Label>
+                    <Textarea
+                      id="edit-overview"
+                      value={formData.overview}
+                      onChange={(e) => setFormData({ ...formData, overview: e.target.value })}
+                      placeholder="Enter college overview"
+                      rows={4}
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsEditDialogOpen(false)}
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete College</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete <strong>{collegeToDelete?.name}</strong>?
+                    This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteConfirm}
+                    disabled={isDeleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeleting ? "Deleting..." : "Delete"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </main>
       </div>
     </ProtectedRoute>
   )
 }
-

@@ -233,7 +233,7 @@ export default function GradesPage() {
     try {
       // Extract subject names from analysis
       const subjectNames = analysisResult.subjects?.map((subject) => subject.name).filter(Boolean) || []
-      
+
       // Calculate average GPA from marks (convert percentage to GPA scale 0-4)
       const averageMarks = profile.averageScore
       const gpa = averageMarks ? (averageMarks / 100) * 4 : null
@@ -281,15 +281,15 @@ export default function GradesPage() {
     setIsLoading(true)
     try {
       const userProfile = await getUserProfile(user.id)
-      
+
       if (userProfile && (userProfile.subjects?.length > 0 || userProfile.schoolName)) {
         const reconstructedAnalysis = reconstructAnalysisFromProfile(userProfile)
-        
+
         if (reconstructedAnalysis) {
           setAnalysis(reconstructedAnalysis)
           const profile = deriveAcademicProfile(reconstructedAnalysis)
           setAcademicProfile(profile)
-          
+
           // Fetch recommendations based on saved profile
           const recs = await fetchRecommendedColleges(reconstructedAnalysis, profile)
           setRecommendations(recs)
@@ -298,7 +298,7 @@ export default function GradesPage() {
       }
     } catch (err) {
       logger.error("Failed to load saved grades:", err)
-      
+
       // Show user-friendly error message for network errors
       // Other errors (like 404) can fail silently as user can still upload new grades
       if (isNetworkError(err)) {
@@ -335,14 +335,14 @@ export default function GradesPage() {
       setAnalysis(result)
       const profile = deriveAcademicProfile(result)
       setAcademicProfile(profile)
-      
+
       // Save to localStorage for backward compatibility
       const storageKey = getUserStorageKey("aiGradesAnalysis", user.id)
       localStorage.setItem(storageKey, JSON.stringify(result))
-      
+
       // Automatically save to user profile
       await saveGradesToProfile(result, profile)
-      
+
       const recs = await fetchRecommendedColleges(result, profile)
       setRecommendations(recs)
       setCurrentPage(1) // Reset to first page when new analysis is done
@@ -527,9 +527,9 @@ export default function GradesPage() {
                     <div className="flex flex-col items-center gap-4 text-center">
                       <UploadCloud className="h-12 w-12 text-primary" />
                       <div>
-                        <h3 className="font-semibold">Drop your marksheet here</h3>
+                        <h3 className="font-semibold">Upload your +2 marksheet</h3>
                         <p className="text-sm text-muted-foreground">
-                          Drag & drop or click to browse files. Make sure the text is clear for best results.
+                          We'll automatically extract your marks and suggest matching colleges
                         </p>
                       </div>
                       {uploadedFileName && (
@@ -541,6 +541,14 @@ export default function GradesPage() {
                     </div>
                   )}
                 </label>
+
+                {/* Privacy Assurance */}
+                <div className="mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                  <span>Your marksheet is encrypted and never shared with anyone</span>
+                </div>
               </CardContent>
             </Card>
           ) : (
@@ -643,7 +651,7 @@ export default function GradesPage() {
                           <p className="text-sm text-muted-foreground">Detailed breakdown of your academic achievements</p>
                         </div>
                       </div>
-                      
+
                       <div className="grid gap-3">
                         {analysis.subjects.map((subject, index) => (
                           <motion.div
@@ -686,7 +694,7 @@ export default function GradesPage() {
                           </motion.div>
                         ))}
                       </div>
-                      
+
                       <div className="pt-4 border-t-2 bg-muted/30 rounded-lg p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -823,10 +831,10 @@ export default function GradesPage() {
               {recommendations.length > 0 && (
                 <div className="mt-8 pt-6 border-t">
                   {recommendations.length > collegesPerPage ? (
-                    <Pagination 
-                      currentPage={currentPage} 
-                      totalPages={totalPages} 
-                      onPageChange={handlePageChange} 
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
                     />
                   ) : (
                     <p className="text-center text-sm text-muted-foreground">

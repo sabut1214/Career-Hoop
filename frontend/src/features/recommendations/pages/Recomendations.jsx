@@ -148,7 +148,7 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
             const idStr = String(id)
             const careerIdStr = String(careerId || "")
             const careerNameStr = String(careerName || "").toLowerCase()
-            return idStr === careerIdStr || 
+            return idStr === careerIdStr ||
                    (careerNameStr && idStr.toLowerCase() === careerNameStr) ||
                    (careerNameStr && idStr.toLowerCase().includes(careerNameStr))
           })
@@ -156,7 +156,7 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
             idToUnsave = savedCareerIdStr
           }
         }
-        
+
         await unsaveCareer(user.id, idToUnsave)
         // Update the saved careers list - remove both ID and name
         if (onSaveChange) {
@@ -260,9 +260,14 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
             </button>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" title="Match confidence shows how well this career fits your profile based on your grades, interests, and activities. Higher scores = better fit for you.">
             <div className="flex justify-between text-sm">
-              <span>Match Confidence</span>
+              <span className="flex items-center gap-1 cursor-help">
+                Match Confidence
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+              </span>
               <span className="font-medium">{career.confidence}%</span>
             </div>
             <Progress value={career.confidence} className="h-2" />
@@ -320,8 +325,8 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
 
           <div className="flex space-x-2">
             <Button className="flex-1">Learn More</Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="flex-1 bg-transparent"
               onClick={handleStarClick}
               disabled={isSaving}
@@ -413,7 +418,7 @@ export default function RecommendationsPage() {
       }
       return newSet
     })
-    
+
     // Refetch to ensure consistency with backend after a short delay
     setTimeout(() => {
       fetchSavedCareers()
@@ -758,9 +763,9 @@ export default function RecommendationsPage() {
                 ) : gradeRecs.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     {sortedGradeRecs.map((career, index) => (
-                      <CareerCard 
-                        key={career.id} 
-                        career={career} 
+                      <CareerCard
+                        key={career.id}
+                        career={career}
                         index={index}
                         savedCareerIds={savedCareerIds}
                         onSaveChange={handleSaveChange}
@@ -830,9 +835,9 @@ export default function RecommendationsPage() {
                 ) : interestRecs.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     {sortedInterestRecs.map((career, index) => (
-                      <CareerCard 
-                        key={career.id} 
-                        career={career} 
+                      <CareerCard
+                        key={career.id}
+                        career={career}
                         index={index}
                         savedCareerIds={savedCareerIds}
                         onSaveChange={handleSaveChange}
@@ -891,5 +896,3 @@ export default function RecommendationsPage() {
     </div>
   )
 }
-
-

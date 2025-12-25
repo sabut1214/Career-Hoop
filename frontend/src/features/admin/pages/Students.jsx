@@ -12,8 +12,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog"
-import { getStudents, deleteStudent, createStudent } from "@/shared/lib/api"
-import { Trash2, Plus } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog"
+import { getStudents, deleteStudent, createStudent, updateStudent } from "@/shared/lib/api"
+import { Trash2, Plus, Pencil } from "lucide-react"
 import { ProtectedRoute } from "@/shared/components/protected-route"
 import { toast } from "react-toastify"
 
@@ -22,14 +32,20 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [studentToDelete, setStudentToDelete] = useState(null)
+  const [editingStudent, setEditingStudent] = useState(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    grade: "",
     careerFields: "",
     activities: "",
     workEnvironments: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     fetchStudents()
@@ -38,7 +54,6 @@ export default function StudentsPage() {
   const fetchStudents = async () => {
     try {
       const response = await getStudents()
-      // Handle different response structures
       const studentsData = Array.isArray(response) ? response : (response.data || [])
       setStudents(studentsData)
     } catch (error) {
@@ -50,16 +65,25 @@ export default function StudentsPage() {
     }
   }
 
-  const handleDelete = async (id) => {
-    if (confirm("Are you sure you want to delete this student?")) {
-      try {
-        await deleteStudent(id)
-        setStudents(students.filter((s) => s.id !== id))
-        toast.success("Student deleted successfully.")
-      } catch (error) {
-        console.error("Failed to delete student:", error)
-        toast.error("Failed to delete student. Please try again.")
-      }
+  const handleDeleteClick = (student) => {
+    setStudentToDelete(student)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!studentToDelete || isDeleting) return
+    setIsDeleting(true)
+    try {
+      await deleteStudent(studentToDelete.id)
+      setStudents(students.filter((s) => s.id !== studentToDelete.id))
+      toast.success("Student deleted successfully.")
+    } catch (error) {
+      console.error("Failed to delete student:", error)
+      toast.error("Failed to delete student. Please try again.")
+    } finally {
+      setIsDeleting(false)
+      setDeleteDialogOpen(false)
+      setStudentToDelete(null)
     }
   }
 
@@ -70,6 +94,7 @@ export default function StudentsPage() {
       const studentData = {
         name: formData.name,
         email: formData.email,
+        grade: formData.grade || null,
         careerFields: formData.careerFields ? formData.careerFields.split(",").map(s => s.trim()).filter(s => s) : [],
         activities: formData.activities ? formData.activities.split(",").map(s => s.trim()).filter(s => s) : [],
         workEnvironments: formData.workEnvironments ? formData.workEnvironments.split(",").map(s => s.trim()).filter(s => s) : [],
@@ -77,13 +102,7 @@ export default function StudentsPage() {
       await createStudent(studentData)
       toast.success("Student created successfully.")
       setIsAddDialogOpen(false)
-      setFormData({
-        name: "",
-        email: "",
-        careerFields: "",
-        activities: "",
-        workEnvironments: "",
-      })
+      resetForm()
       fetchStudents()
     } catch (error) {
       console.error("Failed to create student:", error)
@@ -91,6 +110,57 @@ export default function StudentsPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleEditClick = (student) => {
+    setEditingStudent(student)
+    setFormData({
+      name: student.name || "",
+      email: student.email || "",
+      grade: student.grade || "",
+      careerFields: Array.isArray(student.careerFields) ? student.careerFields.join(", ") : "",
+      activities: Array.isArray(student.activities) ? student.activities.join(", ") : "",
+      workEnvironments: Array.isArray(student.workEnvironments) ? student.workEnvironments.join(", ") : "",
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditStudent = async (e) => {
+    e.preventDefault()
+    if (!editingStudent) return
+    setIsSubmitting(true)
+    try {
+      const studentData = {
+        name: formData.name,
+        email: formData.email,
+        grade: formData.grade || null,
+        careerFields: formData.careerFields ? formData.careerFields.split(",").map(s => s.trim()).filter(s => s) : [],
+        activities: formData.activities ? formData.activities.split(",").map(s => s.trim()).filter(s => s) : [],
+        workEnvironments: formData.workEnvironments ? formData.workEnvironments.split(",").map(s => s.trim()).filter(s => s) : [],
+      }
+      await updateStudent(editingStudent.id, studentData)
+      toast.success("Student updated successfully.")
+      setIsEditDialogOpen(false)
+      resetForm()
+      fetchStudents()
+    } catch (error) {
+      console.error("Failed to update student:", error)
+      toast.error(error.message || "Failed to update student. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      email: "",
+      grade: "",
+      careerFields: "",
+      activities: "",
+      workEnvironments: "",
+    })
+    setEditingStudent(null)
   }
 
   const filteredStudents = students.filter(
@@ -156,11 +226,19 @@ export default function StudentsPage() {
                             <td className="py-3 px-4">{student.name || "N/A"}</td>
                             <td className="py-3 px-4">{student.email || "N/A"}</td>
                             <td className="py-3 px-4">{student.grade || "N/A"}</td>
-                            <td className="py-3 px-4 text-right">
+                            <td className="py-3 px-4 text-right space-x-2">
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDelete(student.id)}
+                                onClick={() => handleEditClick(student)}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteClick(student)}
                                 className="text-destructive hover:text-destructive"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -175,7 +253,8 @@ export default function StudentsPage() {
               </CardContent>
             </Card>
 
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            {/* Add Student Dialog */}
+            <Dialog open={isAddDialogOpen} onOpenChange={(open) => { setIsAddDialogOpen(open); if (!open) resetForm(); }}>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Add New Student</DialogTitle>
@@ -184,25 +263,36 @@ export default function StudentsPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleAddStudent} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Name *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                      placeholder="Enter student name"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Name *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                        placeholder="Enter student name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        required
+                        placeholder="Enter student email"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
+                    <Label htmlFor="grade">Grade</Label>
                     <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      required
-                      placeholder="Enter student email"
+                      id="grade"
+                      value={formData.grade}
+                      onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
+                      placeholder="e.g., 10th, 12th, Freshman"
                     />
                   </div>
                   <div className="space-y-2">
@@ -248,10 +338,118 @@ export default function StudentsPage() {
                 </form>
               </DialogContent>
             </Dialog>
+
+            {/* Edit Student Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={(open) => { setIsEditDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Edit Student</DialogTitle>
+                  <DialogDescription>
+                    Update student account information.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleEditStudent} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">Name *</Label>
+                      <Input
+                        id="edit-name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                        placeholder="Enter student name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-email">Email *</Label>
+                      <Input
+                        id="edit-email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        required
+                        placeholder="Enter student email"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-grade">Grade</Label>
+                    <Input
+                      id="edit-grade"
+                      value={formData.grade}
+                      onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
+                      placeholder="e.g., 10th, 12th, Freshman"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-careerFields">Career Fields</Label>
+                    <Input
+                      id="edit-careerFields"
+                      value={formData.careerFields}
+                      onChange={(e) => setFormData({ ...formData, careerFields: e.target.value })}
+                      placeholder="Comma-separated (e.g., Engineering, Medicine)"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-activities">Activities</Label>
+                    <Input
+                      id="edit-activities"
+                      value={formData.activities}
+                      onChange={(e) => setFormData({ ...formData, activities: e.target.value })}
+                      placeholder="Comma-separated (e.g., Sports, Music, Debate)"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-workEnvironments">Work Environments</Label>
+                    <Input
+                      id="edit-workEnvironments"
+                      value={formData.workEnvironments}
+                      onChange={(e) => setFormData({ ...formData, workEnvironments: e.target.value })}
+                      placeholder="Comma-separated (e.g., Office, Remote, Field)"
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsEditDialogOpen(false)}
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Student</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete <strong>{studentToDelete?.name}</strong> ({studentToDelete?.email})?
+                    This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteConfirm}
+                    disabled={isDeleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeleting ? "Deleting..." : "Delete"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </main>
       </div>
     </ProtectedRoute>
   )
 }
-

@@ -22,7 +22,8 @@ import java.util.UUID;
 
 /**
  * Service to communicate with Python ML recommendation service.
- * Provides fallback to existing logic if Python service is unavailable.
+ * Returns {@code null} when the Python service is unavailable or returns an error;
+ * callers are responsible for implementing any fallback logic if needed.
  */
 @Service
 public class PythonRecommendationService {
@@ -226,6 +227,9 @@ public class PythonRecommendationService {
             Double grade12,
             String stream,
             List<String> subjects,
+            List<String> careerFields,
+            List<String> activities,
+            List<String> workEnvironments,
             List<com.careerhoop.entity.College> colleges,
             Integer limit) {
         if (!pythonServiceEnabled) {
@@ -239,7 +243,7 @@ public class PythonRecommendationService {
             // Build request body
             var requestBody = new java.util.HashMap<String, Object>();
             
-            // Grades section
+            // Grades section (academic profile)
             var gradesMap = new java.util.HashMap<String, Object>();
             gradesMap.put("grade12", grade12 != null ? grade12 : 70.0);
             if (grade10 != null) {
@@ -250,6 +254,21 @@ public class PythonRecommendationService {
                 gradesMap.put("subjects", subjects);
             }
             requestBody.put("grades", gradesMap);
+
+            // Interests section (optional)
+            var interestsMap = new java.util.HashMap<String, Object>();
+            if (careerFields != null && !careerFields.isEmpty()) {
+                interestsMap.put("careerFields", careerFields);
+            }
+            if (activities != null && !activities.isEmpty()) {
+                interestsMap.put("activities", activities);
+            }
+            if (workEnvironments != null && !workEnvironments.isEmpty()) {
+                interestsMap.put("workEnvironments", workEnvironments);
+            }
+            if (!interestsMap.isEmpty()) {
+                requestBody.put("interests", interestsMap);
+            }
             
             // Convert colleges to maps
             List<Map<String, Object>> collegesList = new ArrayList<>();

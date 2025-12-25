@@ -51,12 +51,34 @@ public class SecurityConfig {
                         
                         csrf.csrfTokenRepository(tokenRepository)
                              .csrfTokenRequestHandler(requestHandler)
-                             // Ignore CSRF for stateless auth endpoints (they use httpOnly cookies)
+                             // Ignore CSRF for stateless auth endpoints, public file upload endpoints, and public CRUD endpoints
                              .ignoringRequestMatchers(
-                                 "/api/login",
-                                 "/api/register",
-                                 "/api/refresh",
-                                 "/api/health"
+                                "/api/login",
+                                "/api/register",
+                                "/api/refresh",
+                                "/api/health",
+                                "/api/grades/ocr",
+                                "/api/students",
+                                "/api/students/**",
+                                "/api/careers",
+                                "/api/careers/**",
+                                "/api/colleges",
+                                "/api/colleges/**",
+                                "/api/trainings",
+                                "/api/trainings/**",
+                                "/api/scholarships",
+                                "/api/scholarships/**",
+                                "/api/mentors",
+                                "/api/mentors/**",
+                                "/api/programs",
+                                "/api/programs/**",
+                                "/api/universities",
+                                "/api/universities/**",
+                                "/api/recommendations",
+                                "/api/recommendations/**",
+                                // Saved items and profile endpoints use JWT auth and should not require CSRF
+                                "/api/users",
+                                "/api/users/**"
                              );
                     } else {
                         csrf.disable();

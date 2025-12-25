@@ -33,8 +33,6 @@ const AdminDashboard = lazy(() => import("@/features/admin/pages/AdminDashboard"
 const AdminStudents = lazy(() => import("@/features/admin/pages/Students"))
 const AdminCareers = lazy(() => import("@/features/admin/pages/Careers"))
 const AdminColleges = lazy(() => import("@/features/admin/pages/Colleges"))
-const AdminMentors = lazy(() => import("@/features/admin/pages/Mentors"))
-const AdminScholarships = lazy(() => import("@/features/admin/pages/Scholarships"))
 const AdminTrainings = lazy(() => import("@/features/admin/pages/Trainings"))
 const AcademicRecords = lazy(() => import("@/features/admin/pages/AcademicRecords"))
 const Login = lazy(() => import("@/features/auth/pages/Login"))
@@ -68,11 +66,11 @@ import "@/shared/styles/App.css"
 // Inner component to access useNavigate hook
 function AppContent() {
   const navigate = useNavigate()
-  
+
   useEffect(() => {
     setNavigateRef(navigate)
   }, [navigate])
-  
+
   return (
     <div className="app">
               {/* Skip to main content link for accessibility */}
@@ -121,14 +119,12 @@ function AppContent() {
                   <Route path="/quiz/analytics" element={<QuizAnalytics />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/recommendations" element={<Recommendations />} />
-                  
+
                   {/* Admin Routes - Show Admin Sidebar (handled in components) */}
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/admin/students" element={<AdminStudents />} />
                   <Route path="/admin/careers" element={<AdminCareers />} />
                   <Route path="/admin/colleges" element={<AdminColleges />} />
-                  <Route path="/admin/mentors" element={<AdminMentors />} />
-                  <Route path="/admin/scholarships" element={<AdminScholarships />} />
                   <Route path="/admin/trainings" element={<AdminTrainings />} />
                   <Route path="/admin/academic-records" element={<AcademicRecords />} />
 

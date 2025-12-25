@@ -32,9 +32,9 @@ const benefits = [
   },
   {
     icon: Users,
-    title: "Expert Mentorship",
+    title: "Community Support",
     description:
-      "Connect with 2,000+ verified professionals across industries who volunteer their time to guide the next generation.",
+      "Join a community of 50,000+ students sharing experiences, tips, and supporting each other on their career journeys.",
   },
   {
     icon: Zap,
@@ -47,8 +47,8 @@ const benefits = [
 const stats = [
   { value: "50K+", label: "Students Guided" },
   { value: "94%", label: "Satisfaction Rate" },
-  { value: "2000+", label: "Expert Mentors" },
   { value: "500+", label: "Career Paths" },
+  { value: "100+", label: "Colleges Listed" },
 ]
 
 const testimonials = [
@@ -72,7 +72,7 @@ const testimonials = [
     name: "Priya R.",
     role: "College Freshman, UC Berkeley",
     quote:
-      "The mentorship feature is incredible. I connected with a product manager at Google who gave me invaluable advice about breaking into tech. This platform is a game-changer.",
+      "The career matching feature is incredible. CareerHoop showed me paths I never considered that perfectly match my interests and skills. This platform is a game-changer.",
     avatar: "/young-indian-female-student-portrait-happy.jpg",
     rating: 5,
   },
@@ -105,11 +105,6 @@ const testimonials = [
 const comparisons = [
   {
     feature: "Personalized AI Recommendations",
-    careerhoop: true,
-    traditional: false,
-  },
-  {
-    feature: "Access to Industry Mentors",
     careerhoop: true,
     traditional: false,
   },

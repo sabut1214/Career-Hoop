@@ -85,6 +85,7 @@ class CollegeInput(BaseModel):
 class CollegeRecommendationRequest(BaseModel):
     grades: GradesInput
     colleges: List[CollegeInput] = Field(..., description="List of colleges to score")
+    interests: Optional[InterestsInput] = None
     limit: Optional[int] = Field(4, ge=1, le=20, description="Maximum number of recommendations")
 
 
@@ -255,7 +256,10 @@ async def get_college_recommendations_endpoint(request: CollegeRecommendationReq
             stream=request.grades.stream,
             subjects=request.grades.subjects or [],
             grade10=request.grades.grade10,
-            limit=request.limit or 20
+            career_fields=request.interests.careerFields if request.interests else None,
+            activities=request.interests.activities if request.interests else None,
+            work_environments=request.interests.workEnvironments if request.interests else None,
+            limit=request.limit or 20,
         )
         
         return CollegeRecommendationResponse(recommendations=recommendations)

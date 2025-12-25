@@ -69,12 +69,12 @@ export const checkHealth = async () => {
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 1000) // 1 second timeout - fail fast
-    
+
     const response = await fetch(`${API_BASE_URL}/health`, {
       method: "GET",
       signal: controller.signal,
     })
-    
+
     clearTimeout(timeoutId)
     return response.ok
   } catch (error) {
@@ -95,18 +95,18 @@ const BACKEND_CHECK_CACHE_DURATION_UNAVAILABLE = 300000 // 5 minutes when unavai
 const isBackendAvailable = async () => {
   const now = Date.now()
   const cacheAge = now - backendAvailableCache.timestamp
-  
+
   // Use cached result if still valid - check cache FIRST to avoid network calls
   if (backendAvailableCache.value !== null) {
-    const cacheDuration = backendAvailableCache.value 
-      ? BACKEND_CHECK_CACHE_DURATION_AVAILABLE 
+    const cacheDuration = backendAvailableCache.value
+      ? BACKEND_CHECK_CACHE_DURATION_AVAILABLE
       : BACKEND_CHECK_CACHE_DURATION_UNAVAILABLE
-    
+
     if (cacheAge < cacheDuration) {
       return backendAvailableCache.value
     }
   }
-  
+
   // Only check backend health if cache is expired
   // This minimizes network calls and console errors
   try {
@@ -161,27 +161,33 @@ export const createStudent = async (data) => {
 }
 
 export const updateStudent = async (id, data) => {
-  const response = await fetch(`${API_BASE_URL}/students/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/students/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   })
-  if (!response.ok) throw new Error("Failed to update student")
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || "Failed to update student")
+  }
   return response.json()
 }
 
 export const deleteStudent = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/students/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/students/${id}`, {
     method: "DELETE",
   })
-  if (!response.ok) throw new Error("Failed to delete student")
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || "Failed to delete student")
+  }
   return response.json()
 }
 
 // Careers
 export const getCareers = async () => {
   if (USE_MOCK_DATA) return { data: mockStats.careers }
-  
+
   const headers = buildAuthHeaders()
   const response = await fetch(`${API_BASE_URL}/careers`, {
     method: "GET",
@@ -190,12 +196,12 @@ export const getCareers = async () => {
       ...headers,
     },
   })
-  
+
   if (!response.ok) {
     const errorText = await response.text()
     throw new Error(`Failed to fetch careers: ${response.status} ${errorText}`)
   }
-  
+
   const data = await response.json()
   return { data }
 }
@@ -220,20 +226,26 @@ export const createCareer = async (data) => {
 }
 
 export const updateCareer = async (id, data) => {
-  const response = await fetch(`${API_BASE_URL}/careers/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/careers/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   })
-  if (!response.ok) throw new Error("Failed to update career")
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || "Failed to update career")
+  }
   return response.json()
 }
 
 export const deleteCareer = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/careers/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/careers/${id}`, {
     method: "DELETE",
   })
-  if (!response.ok) throw new Error("Failed to delete career")
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || "Failed to delete career")
+  }
   return response.json()
 }
 
@@ -306,20 +318,26 @@ export const createCollege = async (data) => {
 }
 
 export const updateCollege = async (id, data) => {
-  const response = await fetch(`${API_BASE_URL}/colleges/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/colleges/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   })
-  if (!response.ok) throw new Error("Failed to update college")
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || "Failed to update college")
+  }
   return response.json()
 }
 
 export const deleteCollege = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/colleges/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/colleges/${id}`, {
     method: "DELETE",
   })
-  if (!response.ok) throw new Error("Failed to delete college")
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || "Failed to delete college")
+  }
   return response.json()
 }
 
@@ -472,20 +490,26 @@ export const createTraining = async (data) => {
 }
 
 export const updateTraining = async (id, data) => {
-  const response = await fetch(`${API_BASE_URL}/trainings/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/trainings/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   })
-  if (!response.ok) throw new Error("Failed to update training")
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || "Failed to update training")
+  }
   return response.json()
 }
 
 export const deleteTraining = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/trainings/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/trainings/${id}`, {
     method: "DELETE",
   })
-  if (!response.ok) throw new Error("Failed to delete training")
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || "Failed to delete training")
+  }
   return response.json()
 }
 
@@ -939,7 +963,7 @@ export const analyzeGradeSheet = async (file) => {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       const errorMessage = errorData.message || `Grade analysis failed with status ${response.status}`
-      
+
       // Provide more specific error messages
       if (response.status === 403) {
         throw new Error("Access denied. Please ensure you're logged in or try refreshing the page.")
@@ -948,7 +972,7 @@ export const analyzeGradeSheet = async (file) => {
       } else if (response.status === 415) {
         throw new Error("Unsupported file type. Please upload a PNG or JPEG image.")
       }
-      
+
       throw new Error(errorMessage)
     }
 
@@ -990,16 +1014,16 @@ export const login = async (email, password) => {
 
     const data = await response.json()
     logger.log('Login successful, response data:', data)
-    
+
     // Check if cookies were set (httpOnly cookies won't show in document.cookie)
     // But we can check response headers
     const setCookieHeader = response.headers.get('Set-Cookie')
     logger.log('Set-Cookie header from login:', setCookieHeader ? 'present' : 'missing')
-    
+
     // Tokens are now stored in httpOnly cookies, not localStorage
     // Wait a brief moment to ensure cookies are set before returning
     await new Promise(resolve => setTimeout(resolve, 100))
-    
+
     return data
   } catch (error) {
     logger.error('Login error:', error)
@@ -1015,7 +1039,7 @@ export const register = async (data) => {
       credentials: "include", // Include cookies for cookie-based auth
       body: JSON.stringify(data),
     })
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       const errorMessage = errorData.message || `Registration failed with status ${response.status}`
@@ -1110,14 +1134,14 @@ export const refreshAccessToken = async (forceRefresh = false) => {
     if (backendAvailableCache.value === false) {
       return null
     }
-    
+
     // Check cached value - if backend is marked as unavailable, skip immediately
     const now = Date.now()
     const cacheAge = now - backendAvailableCache.timestamp
-    const cacheDuration = backendAvailableCache.value 
-      ? BACKEND_CHECK_CACHE_DURATION_AVAILABLE 
+    const cacheDuration = backendAvailableCache.value
+      ? BACKEND_CHECK_CACHE_DURATION_AVAILABLE
       : BACKEND_CHECK_CACHE_DURATION_UNAVAILABLE
-    
+
     // Only check backend availability if we think it might be available AND cache is expired
     let backendAvailable = false
     if (backendAvailableCache.value === true && cacheAge < cacheDuration) {
@@ -1130,7 +1154,7 @@ export const refreshAccessToken = async (forceRefresh = false) => {
       // Use cached value
       backendAvailable = backendAvailableCache.value || false
     }
-    
+
     // If backend is not available, return null immediately without making any API calls
     if (!backendAvailable) {
       return null
@@ -1173,8 +1197,8 @@ export const refreshAccessToken = async (forceRefresh = false) => {
     return data
   } catch (error) {
     // Handle connection errors gracefully (backend not running)
-    if (error.name === "AbortError" || 
-        error.message.includes("Failed to fetch") || 
+    if (error.name === "AbortError" ||
+        error.message.includes("Failed to fetch") ||
         error.message.includes("ERR_CONNECTION_REFUSED") ||
         error.message.includes("NetworkError")) {
       // Backend is not available - don't clear user data, just return null
@@ -1238,11 +1262,11 @@ const buildAuthHeaders = async () => {
 // Enhanced fetch with automatic token refresh - cookie-based
 export const fetchWithAuth = async (url, options = {}) => {
   const headers = await buildAuthHeaders()
-  
+
   // Ensure credentials are included for cookie-based auth
   options.credentials = options.credentials || "include"
   options.headers = { ...options.headers, ...headers }
-  
+
   logger.log(`[fetchWithAuth] Making ${options.method || 'GET'} request to: ${url}`, {
     hasUserHeaders: !!headers['X-User-Id'],
     credentials: options.credentials,
@@ -1254,13 +1278,13 @@ export const fetchWithAuth = async (url, options = {}) => {
     response = await fetch(url, options)
   } catch (error) {
     // Handle network errors (connection refused, timeout, etc.)
-    if (error.name === "AbortError" || 
-        error.message.includes("Failed to fetch") || 
+    if (error.name === "AbortError" ||
+        error.message.includes("Failed to fetch") ||
         error.message.includes("ERR_CONNECTION_REFUSED") ||
         error.message.includes("NetworkError") ||
         error.message.includes("Network request failed")) {
       logger.error(`[fetchWithAuth] Network error for ${url}:`, error.message)
-      
+
       // Create a mock Response object that represents a network error
       // This allows calling code to handle it consistently
       const networkError = new Error("Unable to connect to the server. Please check your internet connection or ensure the backend server is running.")
@@ -1273,7 +1297,7 @@ export const fetchWithAuth = async (url, options = {}) => {
     // Re-throw other errors
     throw error
   }
-  
+
   logger.log(`[fetchWithAuth] Response status: ${response.status} for ${url}`, {
     hasUserId: !!headers['X-User-Id']
   })
@@ -1282,7 +1306,7 @@ export const fetchWithAuth = async (url, options = {}) => {
   // 403 can occur when token is expired but Spring Security returns 403 instead of 401
   // BUT: Don't try to refresh if this is a login/register/refresh endpoint (would cause infinite loop)
   const isAuthEndpoint = url.includes('/login') || url.includes('/register') || url.includes('/refresh')
-  
+
   if ((response.status === 401 || response.status === 403) && !isAuthEndpoint) {
     // Check if we have user data (which means we should be authenticated)
     const user = localStorage.getItem("user")
@@ -1303,19 +1327,19 @@ export const fetchWithAuth = async (url, options = {}) => {
       logger.log(`Token may be expired (${response.status}), attempting refresh...`)
       // Force refresh since we got a response (403 means backend is available)
       const refreshResult = await refreshAccessToken(true)
-      
+
       if (!refreshResult) {
         // Refresh failed - check the original error to see if it's an auth issue
         logger.warn('Token refresh returned null or failed')
-        
+
         // Read the error response to determine if it's an auth error
         let isAuthError = false
         try {
           const errorText = await response.clone().text()
           const errorData = JSON.parse(errorText)
           const errorMessage = (errorData.message || errorData.error || '').toLowerCase()
-          isAuthError = errorMessage.includes('missing user context') || 
-                       errorMessage.includes('expired') || 
+          isAuthError = errorMessage.includes('missing user context') ||
+                       errorMessage.includes('expired') ||
                        errorMessage.includes('invalid') ||
                        errorMessage.includes('session') ||
                        errorMessage.includes('authentication')
@@ -1324,14 +1348,14 @@ export const fetchWithAuth = async (url, options = {}) => {
           logger.warn('Could not parse error response, assuming auth issue')
           isAuthError = true
         }
-        
+
         // Only clear user data and redirect if it's clearly an auth error
         if (isAuthError) {
           logger.warn('Auth error confirmed, will redirect to login')
           // Don't clear/redirect here - let the error propagate and handle in UI
           // The calling code can decide whether to redirect
         }
-        
+
         // Return the original error response
         return response
       }
@@ -1340,10 +1364,10 @@ export const fetchWithAuth = async (url, options = {}) => {
       if (refreshResult && typeof refreshResult === 'object' && refreshResult.user) {
         localStorage.setItem("user", JSON.stringify(refreshResult.user))
       }
-      
+
       // Mark as retry to prevent infinite loops
       options._retry = true
-      
+
       // Retry request with fresh cookies (automatically included)
       const newHeaders = await buildAuthHeaders()
       options.headers = { ...options.headers, ...newHeaders }
@@ -1351,8 +1375,8 @@ export const fetchWithAuth = async (url, options = {}) => {
         response = await fetch(url, options)
       } catch (error) {
         // Handle network errors on retry
-        if (error.name === "AbortError" || 
-            error.message.includes("Failed to fetch") || 
+        if (error.name === "AbortError" ||
+            error.message.includes("Failed to fetch") ||
             error.message.includes("ERR_CONNECTION_REFUSED") ||
             error.message.includes("NetworkError") ||
             error.message.includes("Network request failed")) {
@@ -1366,9 +1390,9 @@ export const fetchWithAuth = async (url, options = {}) => {
         }
         throw error
       }
-      
+
       logger.log(`Retry after refresh returned status: ${response.status}`)
-      
+
       // If retry still fails with 403, log but don't automatically redirect
       // Let the calling code handle the error appropriately
       if (response.status === 403 && options._retry) {
@@ -1456,10 +1480,10 @@ export const getSavedColleges = async (userId) => {
 
 export const saveCareer = async (userId, careerId, confidenceScore, matchReason, careerName) => {
   if (!userId) throw new Error("User ID is required to save career")
-  
+
   // Check if careerId is a valid UUID
   const isUUID = careerId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(careerId)
-  
+
   let url, body
   if (isUUID) {
     // Use UUID endpoint
@@ -1511,7 +1535,7 @@ export const unsaveCareer = async (userId, careerId) => {
 
   // Check if careerId is a valid UUID
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(careerId))
-  
+
   if (isUUID) {
     // Try to unsave by careerId (UUID) first
     try {
@@ -1526,7 +1550,7 @@ export const unsaveCareer = async (userId, careerId) => {
       if (response.status === 404) {
         // Career not found by careerId, try to find by saved career ID
         const savedCareers = await getSavedCareers(userId)
-        const savedCareer = savedCareers.find(sc => 
+        const savedCareer = savedCareers.find(sc =>
           String(sc.careerId) === String(careerId)
         )
         if (savedCareer && savedCareer.id) {
@@ -1549,15 +1573,15 @@ export const unsaveCareer = async (userId, careerId) => {
   try {
     const savedCareers = await getSavedCareers(userId)
     const careerIdStr = String(careerId).toLowerCase().trim()
-    
+
     // Try to find saved career by matching name or title (case-insensitive)
     const savedCareer = savedCareers.find(sc => {
       const title = (sc.careerTitle || "").toLowerCase().trim()
       const name = (sc.careerName || "").toLowerCase().trim()
-      return title === careerIdStr || name === careerIdStr || 
+      return title === careerIdStr || name === careerIdStr ||
              title.includes(careerIdStr) || name.includes(careerIdStr)
     })
-    
+
     if (savedCareer && savedCareer.id) {
       // Use the saved career's ID to unsave
       const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}/saved-careers/${savedCareer.id}`, {
@@ -1569,10 +1593,10 @@ export const unsaveCareer = async (userId, careerId) => {
       }
       return true
     }
-    
+
     // If not found by name, try to find by careerId if it's a UUID
     if (isUUID) {
-      const savedCareerByCareerId = savedCareers.find(sc => 
+      const savedCareerByCareerId = savedCareers.find(sc =>
         String(sc.careerId) === String(careerId)
       )
       if (savedCareerByCareerId && savedCareerByCareerId.id) {
@@ -1586,7 +1610,7 @@ export const unsaveCareer = async (userId, careerId) => {
         return true
       }
     }
-    
+
     throw new Error("Career not found in saved items")
   } catch (error) {
     if (error.message === "Career not found in saved items") {
@@ -1601,7 +1625,7 @@ export const saveCollege = async (userId, collegeId) => {
   if (!collegeId) throw new Error("College ID is required")
 
   logger.log(`Attempting to save college ${collegeId} for user ${userId}`)
-  
+
   const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}/saved-colleges`, {
     method: "POST",
     headers: {
@@ -1620,7 +1644,7 @@ export const saveCollege = async (userId, collegeId) => {
     if (response.status === 403 && !errorMessage) {
       errorMessage = "Failed to save college (403)."
     }
-    
+
     logger.error('Save college error:', errorMessage, errorData)
     throw new Error(errorMessage)
   }
