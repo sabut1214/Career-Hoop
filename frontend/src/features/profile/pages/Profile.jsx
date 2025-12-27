@@ -30,7 +30,6 @@ import {
   Camera,
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
-import { Sidebar } from "@/features/dashboard/components/sidebar"
 import { useAuth } from "@/shared/context/AuthContext"
 import { toast } from "react-toastify"
 import { getUserProfile, updateUserProfile, getSavedCareers, getSavedColleges } from "@/shared/lib/api"
@@ -76,7 +75,7 @@ const formatDateForInput = (value) => {
 }
 
 const formatDisplayDate = (value) => {
-  if (!value) return "—"
+  if (!value) return "N/A"
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) return value
   return parsed.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
@@ -520,11 +519,7 @@ export default function ProfilePage() {
   const displayEmail = profileInfo.email || user?.email || ""
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-
-      <main className="flex-1 p-4 sm:p-6 lg:ml-64">
-        <div className="max-w-6xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-8">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -616,11 +611,11 @@ export default function ProfilePage() {
                     <div className="text-center sm:text-left space-y-2">
                       <h2 className="text-3xl font-bold">{displayName}</h2>
                       <p className="text-muted-foreground">
-                        {profileInfo.school || "Add your school"} • Class of {profileInfo.graduationYear || "—"}
+                        {profileInfo.school || "Add your school"} | Class of {profileInfo.graduationYear || "N/A"}
                       </p>
                       <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-2">
                         <Badge variant="secondary" className="bg-primary/10 text-primary px-3 py-1">
-                          GPA: {profileInfo.gpa || "—"}
+                          GPA: {profileInfo.gpa || "N/A"}
                         </Badge>
                         <Badge variant="outline" className="px-3 py-1">
                           <Award className="h-3 w-3 mr-1" />
@@ -791,7 +786,7 @@ export default function ProfilePage() {
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {[
-                          { icon: Mail, label: "Email", value: displayEmail || "—" },
+                          { icon: Mail, label: "Email", value: displayEmail || "N/A" },
                           { icon: Phone, label: "Phone", value: profileInfo.phone || "Add your phone number" },
                           { icon: MapPin, label: "Location", value: profileInfo.location || "Add your location" },
                           {
@@ -942,7 +937,7 @@ export default function ProfilePage() {
                                     Saved {new Date(college.savedDate).toLocaleDateString()}
                                   </p>
                                   {college.website && (
-                                    <span className="text-xs text-primary">Visit Website →</span>
+                                    <span className="text-xs text-primary">Visit Website</span>
                                   )}
                                 </div>
                               </CardContent>
@@ -1003,8 +998,6 @@ export default function ProfilePage() {
 
             </Tabs>
           </motion.div>
-        </div>
-      </main>
     </div>
   )
 }

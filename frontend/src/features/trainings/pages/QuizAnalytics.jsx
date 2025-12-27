@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Sidebar } from "@/features/dashboard/components/sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Badge } from "@/shared/components/ui/badge"
 import { Alert, AlertDescription } from "@/shared/components/ui/alert"
@@ -73,9 +72,7 @@ export default function QuizAnalytics() {
   const trend = calculateTrend()
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      <main className="flex-1 p-4 sm:p-6 lg:ml-64 space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Activity className="h-6 w-6 text-primary" />
@@ -314,7 +311,7 @@ export default function QuizAnalytics() {
                   <div key={`${area.trainingId}-${index}`} className="rounded-md border p-3">
                     <p className="font-medium">{area.questionText}</p>
                     <p className="text-xs text-muted-foreground">
-                      {area.trainingTitle} • Incorrect {area.incorrectCount} times
+                      {area.trainingTitle} - Incorrect {area.incorrectCount} times
                     </p>
                   </div>
                 ))}
@@ -322,7 +319,6 @@ export default function QuizAnalytics() {
             </Card>
           </div>
         )}
-      </main>
     </div>
   )
 }

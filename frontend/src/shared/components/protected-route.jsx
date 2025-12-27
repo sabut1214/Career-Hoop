@@ -4,11 +4,13 @@ import { useAuth } from "@/shared/context/AuthContext"
 import { Navigate, useLocation } from "react-router-dom"
 import { getUserProfile } from "@/shared/lib/api"
 import { useState, useEffect } from "react"
+import { Spinner } from "@/shared/components/ui/spinner"
 
-export function ProtectedRoute({ children, requiredRole = null }) {
+export function ProtectedRoute({ children, requiredRole = null, fullScreen = true }) {
   const { user, loading, updateUser } = useAuth()
   const location = useLocation()
   const [isVerifying, setIsVerifying] = useState(false)
+  const [verificationFailed, setVerificationFailed] = useState(false)
 
   // Verify user role from backend for admin pages (security check)
   useEffect(() => {
@@ -25,8 +27,8 @@ export function ProtectedRoute({ children, requiredRole = null }) {
             }
           }
         } catch (error) {
-          // If verification fails, don't block - let the role check handle it
-          // Authentication is handled by cookies, backend will reject if invalid
+          // Fail closed for admin routes if verification fails
+          setVerificationFailed(true)
         } finally {
           setIsVerifying(false)
         }
@@ -34,16 +36,18 @@ export function ProtectedRoute({ children, requiredRole = null }) {
     }
 
     if (!loading && user && requiredRole === "admin") {
+      setVerificationFailed(false)
       verifyAdminRole()
     }
   }, [loading, user, requiredRole, updateUser])
 
   if (loading || isVerifying) {
+    const heightClass = fullScreen ? "min-h-screen" : "min-h-[60vh]"
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">
+      <div className={`flex items-center justify-center ${heightClass}`}>
+        <div className="text-center text-muted-foreground">
+          <Spinner className="mx-auto mb-3 h-6 w-6" />
+          <p className="text-sm">
             {isVerifying ? "Verifying permissions..." : "Loading..."}
           </p>
         </div>
@@ -53,6 +57,10 @@ export function ProtectedRoute({ children, requiredRole = null }) {
 
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location }} />
+  }
+
+  if (requiredRole === "admin" && verificationFailed) {
+    return <Navigate to="/login" replace state={{ from: location, reason: "verification_failed" }} />
   }
 
   // Role check - case-insensitive and strict

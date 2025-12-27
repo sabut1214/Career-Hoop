@@ -33,6 +33,25 @@
 - Career path tracking
 - Progress visualization
 
+## Phase 5.5: Student UX Fixes (1-2 weeks)
+- Step 1: Define scoped fixes + acceptance criteria per student flow
+  - Onboarding, dashboard, assessment, recommendations, careers, colleges, trainings, profile
+  - Map each issue to file locations and owner
+- Step 2: Navigation + entry points
+  - Add Saved Colleges and College Comparison to sidebar
+  - Add in-page CTAs to reach compare and saved flows
+  - Fix dead CTAs and misleading stats
+- Step 3: Assessment data consistency
+  - Remove unsafe student fallback lookup
+  - Unify assessment storage and resume state
+  - Persist assessment to backend profile
+- Step 4: Safety + feedback
+  - Add confirm/undo for destructive actions
+  - Improve empty/error/loading states and user-facing copy
+- Step 5: QA pass
+  - Verify end-to-end flows and edge cases
+  - Mobile/tablet layout review
+
 ## Phase 6: Testing & Refinement (1 week)
 - End-to-end testing
 - Performance optimization
@@ -42,4 +61,3 @@
 - Production environment setup
 - Monitoring and logging
 - Documentation finalization
-hvjhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh

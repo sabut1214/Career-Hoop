@@ -5,10 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Button } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
 import { Input } from "@/shared/components/ui/input"
-import { Sidebar } from "@/features/dashboard/components/sidebar"
 import { getAvailableTrainings } from "@/shared/lib/api"
 import { useAuth } from "@/shared/context/AuthContext"
-import { BookOpen, Clock, Users, Star, Search, Loader, ExternalLink } from "lucide-react"
+import { BookOpen, Clock, Users, Search, Loader, ExternalLink } from "lucide-react"
 
 export default function TrainingPage() {
   const [trainings, setTrainings] = useState([])
@@ -58,11 +57,7 @@ export default function TrainingPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-
-      <main className="flex-1 p-4 sm:p-6 lg:ml-64">
-        <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -124,12 +119,11 @@ export default function TrainingPage() {
                 >
                   <Card className="h-full hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/20">
                     <CardHeader>
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start">
                         <div className="space-y-2">
                           <CardTitle className="text-xl">{training.title || training.name}</CardTitle>
                           <CardDescription>{training.provider || training.organization}</CardDescription>
                         </div>
-                        <Star className="h-5 w-5 text-muted-foreground hover:text-accent cursor-pointer transition-colors" />
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -204,8 +198,6 @@ export default function TrainingPage() {
               </CardContent>
             </Card>
           )}
-        </div>
-      </main>
     </div>
   )
 }

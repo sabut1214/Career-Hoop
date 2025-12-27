@@ -6,6 +6,7 @@ import { Button } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
 import { Progress } from "@/shared/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog"
 import {
   BarChart3,
   TrendingUp,
@@ -26,8 +27,8 @@ import {
   Upload,
   AlertCircle,
   CheckCircle,
+  Loader2,
 } from "lucide-react"
-import { Sidebar } from "@/features/dashboard/components/sidebar"
 import api from "@/shared/services/api"
 import { useAuth } from "@/shared/context/AuthContext"
 import { getUserStorageKey } from "@/shared/utils/utils"
@@ -121,6 +122,7 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
   const { user } = useAuth()
   const [isSaving, setIsSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const category = career.category || "default"
   const Icon = categoryIconMap[category] || categoryIconMap.default
   const color = categoryColorMap[category] || categoryColorMap.default
@@ -210,55 +212,60 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
       whileHover={{ scale: 1.02 }}
       className="group"
     >
-      <Card className="h-full border-2 hover:border-primary/20 hover:shadow-lg transition-all duration-300">
-        <CardHeader className="space-y-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-3">
-              <div className={`w-12 h-12 rounded-lg ${color} flex items-center justify-center`}>
-                <Icon className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                  {career.title}
-                </CardTitle>
-                <div className="flex items-center space-x-2 mt-1">
-                  <Badge className={`${getConfidenceColor(career.confidenceLevel)} border-0`}>
-                    {career.confidenceLevel} Match
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">{career.confidence}%</span>
+      <>
+        <Card className="h-full border-2 hover:border-primary/20 hover:shadow-lg transition-all duration-300">
+          <CardHeader className="space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center space-x-3">
+                <div className={`w-12 h-12 rounded-lg ${color} flex items-center justify-center`}>
+                  <Icon className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                    {career.title}
+                  </CardTitle>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <Badge className={`${getConfidenceColor(career.confidenceLevel)} border-0`}>
+                      {career.confidenceLevel} Match
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">{career.confidence}%</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <button
-              onClick={handleStarClick}
-              disabled={isSaving}
-              className="transition-colors disabled:opacity-50 relative"
-              title={isSaved ? "Remove from saved" : "Save career"}
-            >
-              <motion.div
-                animate={showSuccess ? { scale: [1, 1.3, 1], rotate: [0, 180, 360] } : {}}
-                transition={{ duration: 0.6 }}
+              <button
+                onClick={handleStarClick}
+                disabled={isSaving}
+                className="transition-colors disabled:opacity-50 relative"
+                title={isSaved ? "Remove from saved" : "Save career"}
               >
-                <Star
-                  className={`h-5 w-5 transition-colors cursor-pointer ${
-                    isSaved
-                      ? "text-yellow-500 fill-yellow-500"
-                      : "text-muted-foreground group-hover:text-accent"
-                  }`}
-                />
-              </motion.div>
-              {showSuccess && (
-                <motion.div
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                  className="absolute -top-1 -right-1"
-                >
-                  <CheckCircle className="h-4 w-4 text-green-500 fill-green-500" />
-                </motion.div>
-              )}
-            </button>
-          </div>
+                {isSaving ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                ) : (
+                  <motion.div
+                    animate={showSuccess ? { scale: [1, 1.3, 1], rotate: [0, 180, 360] } : {}}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <Star
+                      className={`h-5 w-5 transition-colors cursor-pointer ${
+                        isSaved
+                          ? "text-yellow-500 fill-yellow-500"
+                          : "text-muted-foreground group-hover:text-accent"
+                      }`}
+                    />
+                  </motion.div>
+                )}
+                {showSuccess && (
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    className="absolute -top-1 -right-1"
+                  >
+                    <CheckCircle className="h-4 w-4 text-green-500 fill-green-500" />
+                  </motion.div>
+                )}
+              </button>
+            </div>
 
           <div className="space-y-2" title="Match confidence shows how well this career fits your profile based on your grades, interests, and activities. Higher scores = better fit for you.">
             <div className="flex justify-between text-sm">
@@ -274,8 +281,8 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-6">
-          <CardDescription className="text-base leading-relaxed">{career.description}</CardDescription>
+          <CardContent className="space-y-6">
+            <CardDescription className="text-base leading-relaxed">{career.description}</CardDescription>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
@@ -323,19 +330,66 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
             <p className="text-sm text-muted-foreground">{career.matchReason}</p>
           </div>
 
-          <div className="flex space-x-2">
-            <Button className="flex-1">Learn More</Button>
-            <Button
-              variant="outline"
-              className="flex-1 bg-transparent"
-              onClick={handleStarClick}
-              disabled={isSaving}
-            >
-              {isSaved ? "Saved" : "Save Career"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="flex space-x-2">
+              <Button className="flex-1" onClick={() => setDetailsOpen(true)}>
+                View Details
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 bg-transparent"
+                onClick={handleStarClick}
+                disabled={isSaving}
+                loading={isSaving}
+              >
+                {isSaved ? "Saved" : "Save Career"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{career.title}</DialogTitle>
+              <DialogDescription>{career.category || "Career details"}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">{career.description || "No description available."}</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {career.salary && (
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Salary Range</p>
+                    <p className="text-sm font-semibold">{career.salary}</p>
+                  </div>
+                )}
+                {career.growth && (
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Job Outlook</p>
+                    <p className="text-sm font-semibold">{career.growth}</p>
+                  </div>
+                )}
+              </div>
+              {career.skills && career.skills.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Key Skills</p>
+                  <div className="flex flex-wrap gap-2">
+                    {career.skills.map((skill, idx) => (
+                      <Badge key={`${skill}-${idx}`} variant="secondary" className="text-xs">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setDetailsOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
     </motion.div>
   )
 }
@@ -355,6 +409,7 @@ export default function RecommendationsPage() {
   const [analysisSummary, setAnalysisSummary] = useState(null)
   const [interestSummary, setInterestSummary] = useState(null)
   const [savedCareerIds, setSavedCareerIds] = useState(new Set())
+  const [savedCareersCount, setSavedCareersCount] = useState(0)
 
   // Fetch all careers on mount
   useEffect(() => {
@@ -384,6 +439,7 @@ export default function RecommendationsPage() {
 
     try {
       const savedCareers = await getSavedCareers(user.id)
+      setSavedCareersCount(savedCareers.length)
       // Convert IDs to strings for consistent comparison
       // Add both careerId (UUID) and careerName for matching
       const ids = new Set()
@@ -397,6 +453,7 @@ export default function RecommendationsPage() {
     } catch (error) {
       console.error("Failed to fetch saved careers:", error)
       setSavedCareerIds(new Set())
+      setSavedCareersCount(0)
     }
   }
 
@@ -527,9 +584,9 @@ export default function RecommendationsPage() {
     const total = allRecs.length
     const high = allRecs.filter((rec) => rec.confidenceLevel === "High").length
     const medium = allRecs.filter((rec) => rec.confidenceLevel === "Medium").length
-    const saved = savedCareerIds.size
+    const saved = savedCareersCount
     return { total, high, medium, saved }
-  }, [gradeRecs, interestRecs, savedCareerIds])
+  }, [gradeRecs, interestRecs, savedCareersCount])
 
   const fetchGradeRecommendations = async (analysis) => {
     setLoadingGrades(true)
@@ -656,11 +713,7 @@ export default function RecommendationsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-
-      <main className="flex-1 p-4 sm:p-6 lg:ml-64">
-        <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -891,8 +944,6 @@ export default function RecommendationsPage() {
               </CardContent>
             </Card>
           </motion.div>
-        </div>
-      </main>
     </div>
   )
 }

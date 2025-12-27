@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Sidebar } from "@/features/dashboard/components/sidebar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
@@ -453,10 +452,7 @@ export default function GradesPage() {
 
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      <main className="flex-1 p-4 sm:p-6 lg:ml-64">
-        <div className="max-w-6xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -590,7 +586,7 @@ export default function GradesPage() {
                         <div className="flex-1">
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Student Name</p>
                           <p className="text-xl font-bold break-words text-foreground">
-                            {analysis.studentName || "—"}
+                            {analysis.studentName || "N/A"}
                           </p>
                         </div>
                       </div>
@@ -609,7 +605,7 @@ export default function GradesPage() {
                         <div className="flex-1">
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">School / College</p>
                           <p className="text-xl font-bold break-words text-foreground">
-                            {analysis.schoolName || "—"}
+                            {analysis.schoolName || "N/A"}
                           </p>
                         </div>
                       </div>
@@ -628,7 +624,7 @@ export default function GradesPage() {
                         <div className="flex-1">
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Examination</p>
                           <p className="text-xl font-bold break-words text-foreground">
-                            {analysis.examName || "—"}
+                            {analysis.examName || "N/A"}
                           </p>
                         </div>
                       </div>
@@ -765,7 +761,7 @@ export default function GradesPage() {
                   <div className="flex flex-wrap gap-2">
                     {(academicProfile.topSubjects ?? []).map((subject) => (
                       <Badge key={subject.name} variant="secondary" className="bg-primary/10 text-primary">
-                        {subject.name} {subject.displayScore ? `• ${subject.displayScore}` : ""}
+                        {subject.name} {subject.displayScore ? `- ${subject.displayScore}` : ""}
                       </Badge>
                     ))}
                   </div>
@@ -835,6 +831,7 @@ export default function GradesPage() {
                       currentPage={currentPage}
                       totalPages={totalPages}
                       onPageChange={handlePageChange}
+                      isLoading={isLoading || isAnalyzing}
                     />
                   ) : (
                     <p className="text-center text-sm text-muted-foreground">
@@ -846,8 +843,6 @@ export default function GradesPage() {
             </motion.div>
           )}
 
-        </div>
-      </main>
     </div>
   )
 }

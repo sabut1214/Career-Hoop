@@ -1,10 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from "react"
-import { AdminSidebar } from "@/features/admin/components/sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Users, BookOpen, Building2, Zap, RefreshCw, TrendingUp, TrendingDown, Minus } from "lucide-react"
-import { getStudents, getCareers, getColleges, getTrainings, getGrowthMetrics } from "@/shared/lib/api"
-import { ProtectedRoute } from "@/shared/components/protected-route"
+import { getStudents, getCareers, getColleges, getTrainings, getGrowthMetrics, getAdminDashboardStats } from "@/shared/lib/api"
 import { cn } from "@/shared/lib/utils"
 import { RecentActivityFeed } from "@/features/admin/components/RecentActivityFeed"
 import { QuickActions } from "@/features/admin/components/QuickActions"
@@ -36,17 +34,19 @@ export default function AdminDashboard() {
         setLoading(true)
       }
 
-      const [studentsRes, careersRes, collegesRes, trainingsRes, growthRes] = await Promise.all([
-        getStudents(),
-        getCareers(),
-        getColleges(),
-        getTrainings(),
+      const [statsRes, growthRes] = await Promise.all([
+        getAdminDashboardStats().catch(() => null),
         getGrowthMetrics().catch(() => []), // Don't fail if growth metrics fail
       ])
 
       // Helper function to safely get array length
       const getCount = (response) => {
         if (!response) return 0
+        // Prefer explicit totals when provided
+        if (typeof response.totalElements === "number") return response.totalElements
+        if (typeof response.meta?.totalElements === "number") return response.meta.totalElements
+        if (typeof response.data?.totalElements === "number") return response.data.totalElements
+        if (typeof response.data?.meta?.totalElements === "number") return response.data.meta.totalElements
         // Handle direct array response
         if (Array.isArray(response)) return response.length
         // Handle { data: [...] } response
@@ -59,10 +59,28 @@ export default function AdminDashboard() {
         return 0
       }
 
-      const studentsCount = getCount(studentsRes)
-      const careersCount = getCount(careersRes)
-      const collegesCount = getCount(collegesRes)
-      const trainingsCount = getCount(trainingsRes)
+      let studentsCount = 0
+      let careersCount = 0
+      let collegesCount = 0
+      let trainingsCount = 0
+
+      if (statsRes) {
+        studentsCount = statsRes.students ?? 0
+        careersCount = statsRes.careers ?? 0
+        collegesCount = statsRes.colleges ?? 0
+        trainingsCount = statsRes.trainings ?? 0
+      } else {
+        const [studentsRes, careersRes, collegesRes, trainingsRes] = await Promise.all([
+          getStudents(),
+          getCareers(),
+          getColleges(),
+          getTrainings(),
+        ])
+        studentsCount = getCount(studentsRes)
+        careersCount = getCount(careersRes)
+        collegesCount = getCount(collegesRes)
+        trainingsCount = getCount(trainingsRes)
+      }
 
       // Log for debugging
       console.log("Admin Dashboard Stats:", {
@@ -70,7 +88,7 @@ export default function AdminDashboard() {
         careers: careersCount,
         colleges: collegesCount,
         trainings: trainingsCount,
-        raw: { studentsRes, careersRes, collegesRes, trainingsRes }
+        source: statsRes ? "admin_stats" : "entity_lists"
       })
 
       setStats({
@@ -211,12 +229,7 @@ export default function AdminDashboard() {
   ]
 
   return (
-    <ProtectedRoute requiredRole="admin">
-      <div className="flex min-h-screen bg-background">
-        <AdminSidebar />
-
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 lg:ml-64 admin-main">
-          <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-4xl font-bold">Admin Dashboard</h1>
@@ -286,9 +299,6 @@ export default function AdminDashboard() {
             <TrendCharts />
 
             <UserEngagement />
-          </div>
-        </main>
-      </div>
-    </ProtectedRoute>
+    </div>
   )
 }

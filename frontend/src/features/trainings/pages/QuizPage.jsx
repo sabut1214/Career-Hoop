@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
-import { Sidebar } from "@/features/dashboard/components/sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Alert, AlertDescription } from "@/shared/components/ui/alert"
@@ -109,14 +108,15 @@ export default function QuizPage() {
   }
 
   if (!currentQuestion) {
-    return null
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] text-sm text-muted-foreground">
+        Preparing your quiz...
+      </div>
+    )
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      <main className="flex-1 p-4 sm:p-6 lg:ml-64">
-        <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
           <Card className="border-2">
             <CardHeader className="space-y-2">
               <CardTitle className="text-2xl">Question {currentIndex + 1} of {questions.length}</CardTitle>
@@ -137,7 +137,7 @@ export default function QuizPage() {
                   return (
                     <button
                       key={optionKey}
-                      className={`w-full text-left p-3 border rounded-lg transition-colors ${
+                      className={`w-full text-left p-3 border rounded-lg transition-colors active:scale-[0.98] ${
                         isSelected ? "border-primary bg-primary/5" : "border-muted hover:border-primary"
                       }`}
                       onClick={() => handleSelect(currentQuestion.id, optionKey)}
@@ -175,8 +175,6 @@ export default function QuizPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
-      </main>
     </div>
   )
 }

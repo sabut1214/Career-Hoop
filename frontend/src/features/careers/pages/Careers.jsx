@@ -5,7 +5,7 @@ import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
 import { Badge } from "@/shared/components/ui/badge"
 import { Progress } from "@/shared/components/ui/progress"
-import { Sidebar } from "@/features/dashboard/components/sidebar"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog"
 import Pagination from "@/shared/components/common/pagination"
 import api from "@/shared/services/api"
 import { saveCareer, unsaveCareer, checkCareerSaved, getSavedCareers } from "@/shared/lib/api"
@@ -14,7 +14,6 @@ import { toast } from "react-toastify"
 import {
   Briefcase,
   ArrowRight,
-  Loader,
   Search,
   Star,
   DollarSign,
@@ -28,7 +27,9 @@ import {
   Users,
   BookOpen,
   BarChart3,
+  Loader2,
 } from "lucide-react"
+import { CareerCardSkeletonGrid } from "@/shared/components/common/CareerCardSkeleton"
 
 const categoryIconMap = {
   Technology: Code,
@@ -74,6 +75,7 @@ const getJobOutlookColor = (outlook) => {
 const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
   const { user } = useAuth()
   const [isSaving, setIsSaving] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const category = career.category || "default"
   const Icon = categoryIconMap[category] || categoryIconMap.default
   const color = categoryColorMap[category] || categoryColorMap.default
@@ -160,116 +162,174 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
       whileHover={{ scale: 1.02 }}
       className="group"
     >
-      <Card className="h-full border-2 hover:border-primary/20 hover:shadow-lg transition-all duration-300">
-        <CardHeader className="space-y-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-3">
-              <div className={`w-12 h-12 rounded-lg ${color} flex items-center justify-center`}>
-                <Icon className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                  {career.careerName || career.name || career.title}
-                </CardTitle>
-                {career.category && (
-                  <Badge variant="outline" className="mt-1">
-                    {career.category}
-                  </Badge>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={handleStarClick}
-              disabled={isSaving}
-              className="transition-colors disabled:opacity-50"
-              title={isSaved ? "Remove from saved" : "Save career"}
-            >
-              <Star
-                className={`h-5 w-5 transition-colors cursor-pointer ${
-                  isSaved
-                    ? "text-yellow-500 fill-yellow-500"
-                    : "text-muted-foreground group-hover:text-accent"
-                }`}
-              />
-            </button>
-          </div>
-
-          {career.jobOutlook && (
-            <div className="flex items-center space-x-2">
-              <Badge className={`${getJobOutlookColor(career.jobOutlook)} border-0`}>
-                {career.jobOutlook} Outlook
-              </Badge>
-            </div>
-          )}
-        </CardHeader>
-
-        <CardContent className="space-y-6">
-          <CardDescription className="text-base leading-relaxed">
-            {career.description}
-          </CardDescription>
-
-          <div className="space-y-4">
-            {(career.averageSalaryUSD || career.salaryRange) && (
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <DollarSign className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium">Salary Range</span>
+      <>
+        <Card className="h-full border-2 hover:border-primary/20 hover:shadow-lg transition-all duration-300">
+          <CardHeader className="space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center space-x-3">
+                <div className={`w-12 h-12 rounded-lg ${color} flex items-center justify-center`}>
+                  <Icon className="h-6 w-6 text-white" />
                 </div>
-                <span className="text-sm font-semibold">
-                  {career.averageSalaryUSD || career.salaryRange}
-                </span>
-              </div>
-            )}
-
-            {career.requiredEducation && (
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <BookOpen className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium">Education</span>
-                </div>
-                <span className="text-sm font-semibold text-right max-w-[60%]">
-                  {career.requiredEducation}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {(career.skills || career.requiredSkills) && (
-            <div className="space-y-3">
-              <div>
-                <h4 className="text-sm font-medium mb-2 flex items-center">
-                  <Target className="h-4 w-4 mr-1" />
-                  Key Skills
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {(career.skills || career.requiredSkills || []).slice(0, 5).map((skill, idx) => (
-                    <Badge key={idx} variant="secondary" className="text-xs">
-                      {skill}
-                    </Badge>
-                  ))}
-                  {((career.skills || career.requiredSkills || []).length > 5) && (
-                    <Badge variant="outline" className="text-xs">
-                      +{(career.skills || career.requiredSkills || []).length - 5} more
+                <div>
+                  <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                    {career.careerName || career.name || career.title}
+                  </CardTitle>
+                  {career.category && (
+                    <Badge variant="outline" className="mt-1">
+                      {career.category}
                     </Badge>
                   )}
                 </div>
               </div>
+              <button
+                onClick={handleStarClick}
+                disabled={isSaving}
+                className="transition-colors disabled:opacity-50"
+                title={isSaved ? "Remove from saved" : "Save career"}
+              >
+                {isSaving ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                ) : (
+                  <Star
+                    className={`h-5 w-5 transition-colors cursor-pointer ${
+                      isSaved
+                        ? "text-yellow-500 fill-yellow-500"
+                        : "text-muted-foreground group-hover:text-accent"
+                    }`}
+                  />
+                )}
+              </button>
             </div>
-          )}
 
-          <div className="flex space-x-2">
-            <Button className="flex-1">Learn More</Button>
-            <Button 
-              variant="outline" 
-              className="flex-1 bg-transparent"
-              onClick={handleStarClick}
-              disabled={isSaving}
-            >
-              {isSaved ? "Saved" : "Save Career"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+            {career.jobOutlook && (
+              <div className="flex items-center space-x-2">
+                <Badge className={`${getJobOutlookColor(career.jobOutlook)} border-0`}>
+                  {career.jobOutlook} Outlook
+                </Badge>
+              </div>
+            )}
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            <CardDescription className="text-base leading-relaxed">
+              {career.description}
+            </CardDescription>
+
+            <div className="space-y-4">
+              {(career.averageSalaryUSD || career.salaryRange) && (
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <DollarSign className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium">Salary Range</span>
+                  </div>
+                  <span className="text-sm font-semibold">
+                    {career.averageSalaryUSD || career.salaryRange}
+                  </span>
+                </div>
+              )}
+
+              {career.requiredEducation && (
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <BookOpen className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium">Education</span>
+                  </div>
+                  <span className="text-sm font-semibold text-right max-w-[60%]">
+                    {career.requiredEducation}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {(career.skills || career.requiredSkills) && (
+              <div className="space-y-3">
+                <div>
+                  <h4 className="text-sm font-medium mb-2 flex items-center">
+                    <Target className="h-4 w-4 mr-1" />
+                    Key Skills
+                  </h4>
+                  <div className="flex flex-wrap gap-1">
+                    {(career.skills || career.requiredSkills || []).slice(0, 5).map((skill, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-xs">
+                        {skill}
+                      </Badge>
+                    ))}
+                    {((career.skills || career.requiredSkills || []).length > 5) && (
+                      <Badge variant="outline" className="text-xs">
+                        +{(career.skills || career.requiredSkills || []).length - 5} more
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex space-x-2">
+              <Button className="flex-1" onClick={() => setDetailsOpen(true)}>
+                View Details
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex-1 bg-transparent"
+                onClick={handleStarClick}
+                disabled={isSaving}
+                loading={isSaving}
+              >
+                {isSaved ? "Saved" : "Save Career"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{career.careerName || career.name || career.title}</DialogTitle>
+              <DialogDescription>{career.category || "Career details"}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">{career.description || "No description available."}</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {(career.averageSalaryUSD || career.salaryRange) && (
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Salary Range</p>
+                    <p className="text-sm font-semibold">{career.averageSalaryUSD || career.salaryRange}</p>
+                  </div>
+                )}
+                {career.requiredEducation && (
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Education</p>
+                    <p className="text-sm font-semibold">{career.requiredEducation}</p>
+                  </div>
+                )}
+                {career.jobOutlook && (
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Job Outlook</p>
+                    <p className="text-sm font-semibold">{career.jobOutlook}</p>
+                  </div>
+                )}
+              </div>
+              {(career.skills || career.requiredSkills) && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Key Skills</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(career.skills || career.requiredSkills || []).map((skill, idx) => (
+                      <Badge key={`${skill}-${idx}`} variant="secondary" className="text-xs">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setDetailsOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
     </motion.div>
   )
 }
@@ -496,11 +556,7 @@ export default function CareersPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-
-      <main className="flex-1 p-4 sm:p-6 lg:ml-64">
-        <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -541,7 +597,7 @@ export default function CareersPage() {
                 { label: "Total Careers", value: allCareers.length, icon: Briefcase, color: "text-primary" },
                 {
                   label: searchTerm ? "Search Results" : "Available",
-                  value: careers.length,
+                  value: combinedCareers.length,
                   icon: Target,
                   color: "text-blue-600",
                 },
@@ -551,7 +607,7 @@ export default function CareersPage() {
                   icon: BarChart3,
                   color: "text-purple-600",
                 },
-                { label: "Saved", value: "0", icon: Star, color: "text-accent" },
+                { label: "Saved", value: savedCareersFullData.length, icon: Star, color: "text-accent" },
               ].map((stat) => (
                 <Card key={stat.label} className="border-2">
                   <CardContent className="p-4">
@@ -569,11 +625,7 @@ export default function CareersPage() {
           )}
 
           {/* Loading State */}
-          {loading && (
-            <div className="flex items-center justify-center py-12">
-              <Loader className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          )}
+          {loading && <CareerCardSkeletonGrid count={9} />}
 
           {/* Error State */}
           {error && (
@@ -634,10 +686,10 @@ export default function CareersPage() {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={handlePageChange}
+              isLoading={loading}
             />
           )}
         </div>
-      </main>
     </div>
   )
 }

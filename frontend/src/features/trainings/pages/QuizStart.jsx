@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { Sidebar } from "@/features/dashboard/components/sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Alert, AlertDescription } from "@/shared/components/ui/alert"
@@ -39,10 +38,8 @@ export default function QuizStart() {
   }, [trainingId])
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      <main className="flex-1 p-4 sm:p-6 lg:ml-64 flex items-center justify-center">
-        <Card className="w-full max-w-md border-2">
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <Card className="w-full max-w-md border-2">
           <CardHeader className="space-y-2">
             <CardTitle className="flex items-center space-x-2 text-2xl">
               <Sparkles className="h-5 w-5 text-primary" />
@@ -68,14 +65,13 @@ export default function QuizStart() {
             )}
 
             <Button className="w-full" onClick={beginQuiz} disabled={loading}>
-              {loading ? "Starting..." : "Try Again"}
+              {loading ? "Starting..." : error ? "Try Again" : "Start Quiz"}
             </Button>
             <Button variant="outline" className="w-full" onClick={() => navigate("/trainings")} disabled={loading}>
               Back to Trainings
             </Button>
           </CardContent>
         </Card>
-      </main>
     </div>
   )
 }

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
-import { Sidebar } from "@/features/dashboard/components/sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
@@ -29,7 +28,11 @@ export default function QuizResult() {
   }, [resolvedResult, navigate])
 
   if (!result) {
-    return null
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] text-sm text-muted-foreground">
+        Preparing quiz results...
+      </div>
+    )
   }
 
   const accuracy = result.correctCount && result.incorrectCount !== undefined
@@ -37,10 +40,7 @@ export default function QuizResult() {
     : 0
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      <main className="flex-1 p-4 sm:p-6 lg:ml-64">
-        <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
           <Card className="border-2">
             <CardHeader className="space-y-3">
               <CardTitle className="flex items-center space-x-2 text-3xl">
@@ -129,10 +129,10 @@ export default function QuizResult() {
                               <span className="font-semibold mr-2">{optionKey}.</span>
                               {optionLabel}
                               {isCorrect && (
-                                <span className="ml-2 text-green-700 font-semibold">✓ Correct Answer</span>
+                                <span className="ml-2 text-green-700 font-semibold">Correct Answer</span>
                               )}
                               {isSelected && !isCorrect && (
-                                <span className="ml-2 text-red-700 font-semibold">✗ Your Answer</span>
+                                <span className="ml-2 text-red-700 font-semibold">Your Answer</span>
                               )}
                             </div>
                           )
@@ -177,8 +177,6 @@ export default function QuizResult() {
               Retake Quiz
             </Button>
           </div>
-        </div>
-      </main>
     </div>
   )
 }

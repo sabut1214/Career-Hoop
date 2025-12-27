@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
 import { Building2, X, Plus, Trash2, Share2, Download } from "lucide-react"
-import { Sidebar } from "@/features/dashboard/components/sidebar"
 import { useAuth } from "@/shared/context/AuthContext"
 import { toast } from "react-toastify"
 import { useNavigate, useSearchParams } from "react-router-dom"
@@ -142,11 +141,7 @@ export default function CollegeComparisonPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-
-      <main className="flex-1 p-4 sm:p-6 lg:ml-64">
-        <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -247,8 +242,6 @@ export default function CollegeComparisonPage() {
               </CardContent>
             </Card>
           )}
-        </div>
-      </main>
     </div>
   )
 }

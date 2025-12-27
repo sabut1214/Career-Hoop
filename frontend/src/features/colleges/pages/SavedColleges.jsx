@@ -19,7 +19,6 @@ import {
   SortAsc,
   SortDesc,
 } from "lucide-react"
-import { Sidebar } from "@/features/dashboard/components/sidebar"
 import { getSavedColleges, unsaveCollege } from "@/shared/lib/api"
 import { useAuth } from "@/shared/context/AuthContext"
 import { toast } from "react-toastify"
@@ -240,6 +239,20 @@ export default function SavedCollegesPage() {
     }
   }
 
+  const handleCompareSelected = () => {
+    if (selectedColleges.size < 2) {
+      toast.info("Select at least 2 colleges to compare.")
+      return
+    }
+    if (selectedColleges.size > 5) {
+      toast.info("Select up to 5 colleges to compare.")
+      return
+    }
+
+    const collegeIds = Array.from(selectedColleges).join(",")
+    navigate(`/college-comparison?collegeIds=${collegeIds}`)
+  }
+
   const handleSelectAll = () => {
     if (selectedColleges.size === filteredColleges.length) {
       setSelectedColleges(new Set())
@@ -301,11 +314,7 @@ export default function SavedCollegesPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-
-      <main className="flex-1 p-4 sm:p-6 lg:ml-64">
-        <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -382,6 +391,20 @@ export default function SavedCollegesPage() {
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleSelectAll}>
                   {selectedColleges.size === filteredColleges.length ? "Deselect All" : "Select All"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleCompareSelected}
+                  disabled={selectedColleges.size < 2 || selectedColleges.size > 5}
+                  title={
+                    selectedColleges.size < 2
+                      ? "Select at least 2 colleges to compare."
+                      : selectedColleges.size > 5
+                        ? "Select up to 5 colleges to compare."
+                        : ""
+                  }
+                >
+                  Compare Selected
                 </Button>
                 <Button variant="destructive" onClick={handleBulkUnsave}>
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -462,8 +485,6 @@ export default function SavedCollegesPage() {
               </CardContent>
             </Card>
           )}
-        </div>
-      </main>
     </div>
   )
 }

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react"
-import { AdminSidebar } from "@/features/admin/components/sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
@@ -24,14 +23,17 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog"
 import { getScholarships, deleteScholarship, createScholarship, updateScholarship } from "@/shared/lib/api"
-import { Trash2, Plus, Pencil } from "lucide-react"
-import { ProtectedRoute } from "@/shared/components/protected-route"
+import { Trash2, Plus, Pencil, Loader2 } from "lucide-react"
 import { toast } from "react-toastify"
+import { TableRowSkeleton } from "@/shared/components/common/LoadingSkeleton"
+import Pagination from "@/shared/components/common/pagination"
 
 export default function AdminScholarshipsPage() {
   const [scholarships, setScholarships] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -46,12 +48,14 @@ export default function AdminScholarshipsPage() {
     provider: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     fetchScholarships()
   }, [])
 
   const fetchScholarships = async () => {
+    setLoading(true)
     try {
       const response = await getScholarships()
       const scholarshipsData = Array.isArray(response) ? response : (response.data || [])
@@ -71,15 +75,17 @@ export default function AdminScholarshipsPage() {
   }
 
   const handleDeleteConfirm = async () => {
-    if (!scholarshipToDelete) return
+    if (!scholarshipToDelete || isDeleting) return
+    setIsDeleting(true)
     try {
       await deleteScholarship(scholarshipToDelete.id)
-      setScholarships(scholarships.filter((s) => s.id !== scholarshipToDelete.id))
+      await fetchScholarships()
       toast.success("Scholarship deleted successfully.")
     } catch (error) {
       console.error("Failed to delete scholarship:", error)
       toast.error("Failed to delete scholarship. Please try again.")
     } finally {
+      setIsDeleting(false)
       setDeleteDialogOpen(false)
       setScholarshipToDelete(null)
     }
@@ -169,14 +175,22 @@ export default function AdminScholarshipsPage() {
   const filteredScholarships = scholarships.filter((scholarship) =>
     (scholarship.title || scholarship.name)?.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+  const totalPages = Math.max(1, Math.ceil(filteredScholarships.length / pageSize))
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
+  const paginatedScholarships = filteredScholarships.slice(startIndex, endIndex)
+  const deletingId = isDeleting ? scholarshipToDelete?.id : null
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm])
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages))
+  }, [totalPages])
 
   return (
-    <ProtectedRoute requiredRole="admin">
-      <div className="flex min-h-screen bg-background">
-        <AdminSidebar />
-
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 lg:ml-64 admin-main">
-          <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold">Scholarships</h1>
@@ -206,50 +220,78 @@ export default function AdminScholarshipsPage() {
                 <CardTitle>All Scholarships ({filteredScholarships.length})</CardTitle>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <p className="text-muted-foreground">Loading...</p>
-                ) : filteredScholarships.length === 0 ? (
-                  <p className="text-muted-foreground">No scholarships found</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="border-b">
+                {!loading && filteredScholarships.length > 0 && (
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Showing {startIndex + 1}-{Math.min(endIndex, filteredScholarships.length)} of {filteredScholarships.length}
+                  </p>
+                )}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm" aria-busy={loading}>
+                    <thead className="border-b">
+                      <tr>
+                        <th className="text-left py-3 px-4 font-semibold">Title</th>
+                        <th className="text-left py-3 px-4 font-semibold">Amount</th>
+                        <th className="text-left py-3 px-4 font-semibold">Deadline</th>
+                        <th className="text-right py-3 px-4 font-semibold">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loading ? (
+                        Array.from({ length: 6 }).map((_, index) => (
+                          <TableRowSkeleton key={`scholarship-skeleton-${index}`} columns={4} />
+                        ))
+                      ) : filteredScholarships.length === 0 ? (
                         <tr>
-                          <th className="text-left py-3 px-4 font-semibold">Title</th>
-                          <th className="text-left py-3 px-4 font-semibold">Amount</th>
-                          <th className="text-left py-3 px-4 font-semibold">Deadline</th>
-                          <th className="text-right py-3 px-4 font-semibold">Actions</th>
+                          <td colSpan={4} className="py-6 text-center text-muted-foreground">
+                            No scholarships found
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {filteredScholarships.map((scholarship) => (
-                          <tr key={scholarship.id} className="border-b hover:bg-muted/50">
-                            <td className="py-3 px-4 font-medium">{scholarship.title || scholarship.name || "N/A"}</td>
-                            <td className="py-3 px-4">{formatAmount(scholarship.amount)}</td>
-                            <td className="py-3 px-4">{scholarship.deadline || "N/A"}</td>
-                            <td className="py-3 px-4 text-right space-x-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditClick(scholarship)}
-                                className="text-muted-foreground hover:text-foreground"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteClick(scholarship)}
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ) : (
+                        paginatedScholarships.map((scholarship) => {
+                          const isRowDeleting = deletingId === scholarship.id
+                          return (
+                            <tr
+                              key={scholarship.id}
+                              className={`border-b transition-opacity ${isRowDeleting ? "opacity-60" : "hover:bg-muted/50"}`}
+                              aria-busy={isRowDeleting}
+                            >
+                              <td className="py-3 px-4 font-medium">{scholarship.title || scholarship.name || "N/A"}</td>
+                              <td className="py-3 px-4">{formatAmount(scholarship.amount)}</td>
+                              <td className="py-3 px-4">{scholarship.deadline || "N/A"}</td>
+                              <td className="py-3 px-4 text-right space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditClick(scholarship)}
+                                  className="text-muted-foreground hover:text-foreground"
+                                  disabled={isDeleting}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteClick(scholarship)}
+                                  className="text-destructive hover:text-destructive"
+                                  disabled={isDeleting}
+                                >
+                                  {isRowDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                </Button>
+                              </td>
+                            </tr>
+                          )
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {!loading && totalPages > 1 && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    isLoading={loading}
+                  />
                 )}
               </CardContent>
             </Card>
@@ -441,19 +483,17 @@ export default function AdminScholarshipsPage() {
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDeleteConfirm}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    disabled={isDeleting}
                   >
-                    Delete
+                    {isDeleting ? "Deleting..." : "Delete"}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          </div>
-        </main>
-      </div>
-    </ProtectedRoute>
+    </div>
   )
 }

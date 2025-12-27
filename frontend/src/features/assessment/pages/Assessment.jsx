@@ -11,8 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Progress } from "@/shared/components/ui/progress";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { toast } from "react-toastify";
-import { Sidebar } from "@/features/dashboard/components/sidebar";
-import { ProtectedRoute } from "@/shared/components/protected-route";
 import {
   ArrowLeft,
   ArrowRight,
@@ -368,7 +366,7 @@ export default function Assessment() {
               />
               {formData.full_name && user?.name && formData.full_name === user.name && (
                 <p className="text-xs text-muted-foreground">
-                  ✓ Pre-filled from your account
+                  Note: Pre-filled from your account
                 </p>
               )}
             </div>
@@ -498,7 +496,7 @@ export default function Assessment() {
           >
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-foreground mb-2">Choose Your Top Interests</h2>
-              <p className="text-muted-foreground">Select 1–2 career areas that genuinely excite you</p>
+              <p className="text-muted-foreground">Select 1-2 career areas that genuinely excite you</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
@@ -534,7 +532,7 @@ export default function Assessment() {
 
             <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 mt-6">
               <p className="text-primary text-sm">
-                <strong>💡 Tip:</strong> Your interests will be used for personalized career recommendations
+                <strong>Tip:</strong> Your interests will be used for personalized career recommendations
                 separate from your academic analysis. Select all areas that genuinely interest you!
               </p>
             </div>
@@ -569,14 +567,14 @@ export default function Assessment() {
             <div className="bg-green-50 border border-green-200 rounded-xl p-6 mt-8">
               <h3 className="font-semibold text-green-800 mb-2 flex items-center gap-2">
                 <CheckCircle className="w-5 h-5" />
-                Ready for AI Analysis! 🎉
+                Ready for AI Analysis!
               </h3>
               <p className="text-green-700 text-sm mb-3">
                 You'll get two types of personalized recommendations:
               </p>
               <ul className="text-green-700 text-sm space-y-1 ml-4">
-                <li>• <strong>Academic-Based:</strong> Careers recommended by AI analysis of your marksheet</li>
-                <li>• <strong>Interest-Based:</strong> Careers aligned with your selected interests</li>
+                <li><strong>Academic-Based:</strong> Careers recommended by AI analysis of your marksheet</li>
+                <li><strong>Interest-Based:</strong> Careers aligned with your selected interests</li>
               </ul>
             </div>
           </motion.div>
@@ -588,84 +586,77 @@ export default function Assessment() {
   };
 
   return (
-    <ProtectedRoute>
-      <div className="flex min-h-screen bg-background">
-        <Sidebar />
-        <main className="flex-1 p-4 sm:p-6 lg:ml-64">
-          <div className="max-w-2xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-8"
-            >
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm text-muted-foreground">Step {currentStep} of {totalSteps}</span>
-            </div>
-            <h1 className="text-3xl font-bold text-foreground">Career Assessment</h1>
-            <p className="text-muted-foreground mt-1">Complete your profile to get personalized recommendations</p>
+    <div className="max-w-2xl mx-auto">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8"
+      >
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-sm text-muted-foreground">Step {currentStep} of {totalSteps}</span>
           </div>
+          <h1 className="text-3xl font-bold text-foreground">Career Assessment</h1>
+          <p className="text-muted-foreground mt-1">Complete your profile to get personalized recommendations</p>
+        </div>
 
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Progress</span>
-              <span>{Math.round(progress)}% Complete</span>
-            </div>
-              <Progress value={progress} className="h-2" />
-            </div>
-            </motion.div>
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>Progress</span>
+            <span>{Math.round(progress)}% Complete</span>
+          </div>
+          <Progress value={progress} className="h-2" />
+        </div>
+      </motion.div>
 
-            <Card className="shadow-lg border-2">
-          <CardContent className="p-8">
-            <AnimatePresence mode="wait">
-              {renderStep()}
-            </AnimatePresence>
+      <Card className="shadow-lg border-2">
+        <CardContent className="p-8">
+          <AnimatePresence mode="wait">
+            {renderStep()}
+          </AnimatePresence>
 
-            <div className="flex justify-between items-center mt-8 pt-6 border-t">
+          <div className="flex justify-between items-center mt-8 pt-6 border-t">
+            <Button
+              variant="outline"
+              onClick={handlePrev}
+              disabled={currentStep === 1}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Previous
+            </Button>
+
+            {currentStep === totalSteps ? (
               <Button
-                variant="outline"
-                onClick={handlePrev}
-                disabled={currentStep === 1}
+                onClick={handleSubmit}
+                disabled={!canProceed() || isLoading}
                 className="flex items-center gap-2"
               >
-                <ArrowLeft className="w-4 h-4" />
-                Previous
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    Complete Assessment
+                    <CheckCircle className="w-4 h-4" />
+                  </>
+                )}
               </Button>
-
-              {currentStep === totalSteps ? (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!canProceed() || isLoading}
-                  className="flex items-center gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      Complete Assessment
-                      <CheckCircle className="w-4 h-4" />
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleNext}
-                  disabled={!canProceed() || isAnalyzing}
-                  className="flex items-center gap-2"
-                >
-                  Next
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            ) : (
+              <Button
+                onClick={handleNext}
+                disabled={!canProceed() || isAnalyzing}
+                className="flex items-center gap-2"
+              >
+                Next
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            )}
           </div>
-        </main>
-      </div>
-    </ProtectedRoute>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

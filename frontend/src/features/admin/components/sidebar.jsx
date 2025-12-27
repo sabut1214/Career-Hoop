@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import { LayoutDashboard, Users, BookOpen, Building2, Zap, FileText, LogOut, ChevronLeft, ChevronRight, Menu, X, Sun, Moon } from "lucide-react"
+import { LayoutDashboard, Users, BookOpen, Building2, Zap, FileText, LogOut, ChevronLeft, ChevronRight, Menu, X, Sun, Moon, UserCheck, Award } from "lucide-react"
 import { Button } from "@/shared/components/ui/button"
 import { Switch } from "@/shared/components/ui/switch"
 import { useAuth } from "@/shared/context/AuthContext"
@@ -29,7 +29,9 @@ const menuItems = [
   { href: "/admin/careers", label: "Careers", icon: BookOpen },
   { href: "/admin/colleges", label: "Colleges", icon: Building2 },
   { href: "/admin/trainings", label: "Trainings", icon: Zap },
-  { href: "/admin/academic-records", label: "Academic Records", icon: FileText },
+  { href: "/admin/mentors", label: "Mentors", icon: UserCheck },
+  { href: "/admin/scholarships", label: "Scholarships", icon: Award },
+  { href: "/admin/assessments", label: "Assessments", icon: FileText },
 ]
 
 export function AdminSidebar() {

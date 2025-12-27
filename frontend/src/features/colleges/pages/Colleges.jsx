@@ -14,13 +14,13 @@ import {
   Search,
   Filter,
   GraduationCap,
+  Sparkles,
   DollarSign,
   Clock,
   ExternalLink,
   Loader2,
   CheckCircle,
 } from "lucide-react"
-import { Sidebar } from "@/features/dashboard/components/sidebar"
 import { getColleges, saveCollege, unsaveCollege, checkCollegeSaved, getSavedColleges, getCollegeRecommendations } from "@/shared/lib/api"
 import Pagination from "@/shared/components/common/pagination"
 import { useAuth } from "@/shared/context/AuthContext"
@@ -156,6 +156,7 @@ const CollegeCard = memo(({ college, index, savedCollegeIds, onSaveChange }) => 
   const navigate = useNavigate()
   const [isSaving, setIsSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const hasDetailUrl = Boolean(college.detailUrl)
   
   // Check if college is saved based on the savedCollegeIds set
   // Convert to string for consistent comparison
@@ -415,12 +416,18 @@ const CollegeCard = memo(({ college, index, savedCollegeIds, onSaveChange }) => 
             onClick={handleStarClick}
             disabled={isSaving || !user?.id || !college?.id}
             title={!user?.id ? "Please log in to save colleges" : !college?.id ? "College data incomplete" : ""}
+            loading={isSaving}
           >
             {!user?.id ? "Login to Save" : isSaved ? "Saved" : "Save"}
           </Button>
-          <Button className="w-full" onClick={() => college.detailUrl && window.open(college.detailUrl, '_blank')}>
+          <Button
+            className="w-full"
+            onClick={() => hasDetailUrl && window.open(college.detailUrl, "_blank", "noopener,noreferrer")}
+            disabled={!hasDetailUrl}
+            title={!hasDetailUrl ? "Website not available" : ""}
+          >
             <ExternalLink className="mr-2 h-4 w-4" />
-            {college.detailUrl ? "View Details" : "Visit Website"}
+            {hasDetailUrl ? "View Details" : "Website Unavailable"}
           </Button>
         </div>
       </CardContent>
@@ -480,6 +487,7 @@ export default function CollegesPage() {
     sortOrder: "asc"
   })
   const { user } = useAuth()
+  const navigate = useNavigate()
 
   // AI college recommendations (grades + interests)
   const [aiColleges, setAiColleges] = useState([])
@@ -823,11 +831,7 @@ export default function CollegesPage() {
       }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-
-      <main className="flex-1 p-4 sm:p-6 lg:ml-64">
-        <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -835,14 +839,22 @@ export default function CollegesPage() {
             transition={{ duration: 0.6 }}
             className="space-y-2"
           >
-            <div className="flex items-center space-x-2">
-              <Building2 className="h-8 w-8 text-primary" />
-              <h1 className="text-4xl font-bold">Recommended Colleges</h1>
-            </div>
-            <p className="text-xl text-muted-foreground">
-              Discover colleges and universities that align with your career goals and academic profile
-            </p>
-          </motion.div>
+          <div className="flex items-center space-x-2">
+            <Building2 className="h-8 w-8 text-primary" />
+            <h1 className="text-4xl font-bold">Recommended Colleges</h1>
+          </div>
+          <p className="text-xl text-muted-foreground">
+            Discover colleges and universities that align with your career goals and academic profile
+          </p>
+          <div className="flex flex-wrap gap-2 pt-2">
+            <Button variant="outline" onClick={() => navigate("/saved-colleges")}>
+              Saved Colleges
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/saved-colleges")}>
+              Compare Saved
+            </Button>
+          </div>
+        </motion.div>
 
           {/* Search and Filters */}
           <motion.div
@@ -1000,10 +1012,13 @@ export default function CollegesPage() {
 
           {/* Pagination */}
           {!loading && (displayMeta.totalPages || 1) > 1 && (
-            <Pagination currentPage={currentPage} totalPages={displayMeta.totalPages || 1} onPageChange={handlePageChange} />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={displayMeta.totalPages || 1}
+              onPageChange={handlePageChange}
+              isLoading={loading}
+            />
           )}
-        </div>
-      </main>
     </div>
   )
 }

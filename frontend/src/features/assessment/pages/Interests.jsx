@@ -20,7 +20,6 @@ import {
   CheckCircle,
   Edit,
 } from "lucide-react"
-import { Sidebar } from "@/features/dashboard/components/sidebar"
 import { useAuth } from "@/shared/context/AuthContext"
 import { studentService } from "@/shared/services/studentService"
 import { getUserStorageKey } from "@/shared/utils/utils"
@@ -499,11 +498,7 @@ export default function InterestsPage() {
   // Show summary view if interests are completed and not editing
   if (hasCompletedInterests && !isEditing) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar />
-
-        <main className="flex-1 p-4 sm:p-6 lg:ml-64">
-          <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-6xl mx-auto space-y-8">
             {/* Header */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -574,18 +569,12 @@ export default function InterestsPage() {
                 </CardContent>
               </Card>
             </motion.div>
-          </div>
-        </main>
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-
-      <main className="flex-1 p-4 sm:p-6 lg:ml-64">
-        <div className="max-w-6xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-8">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -692,9 +681,6 @@ export default function InterestsPage() {
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </motion.div>
-        </div>
-      </main>
     </div>
   )
 }
-

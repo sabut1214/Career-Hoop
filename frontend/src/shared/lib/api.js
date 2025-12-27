@@ -188,13 +188,9 @@ export const deleteStudent = async (id) => {
 export const getCareers = async () => {
   if (USE_MOCK_DATA) return { data: mockStats.careers }
 
-  const headers = buildAuthHeaders()
-  const response = await fetch(`${API_BASE_URL}/careers`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/careers`, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
+    headers: { "Content-Type": "application/json" },
   })
 
   if (!response.ok) {
@@ -344,7 +340,10 @@ export const deleteCollege = async (id) => {
 // Mentors
 export const getMentors = async () => {
   if (USE_MOCK_DATA) return { data: mockStats.mentors }
-  const response = await fetch(`${API_BASE_URL}/mentors`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/mentors`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  })
   if (!response.ok) throw new Error("Failed to fetch mentors")
   const data = await response.json()
   return { data }
@@ -359,13 +358,16 @@ export const getAvailableMentors = async () => {
 }
 
 export const getMentor = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/mentors/${id}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/mentors/${id}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  })
   if (!response.ok) throw new Error("Failed to fetch mentor")
   return response.json()
 }
 
 export const createMentor = async (data) => {
-  const response = await fetch(`${API_BASE_URL}/mentors`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/mentors`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -375,7 +377,7 @@ export const createMentor = async (data) => {
 }
 
 export const updateMentor = async (id, data) => {
-  const response = await fetch(`${API_BASE_URL}/mentors/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/mentors/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -385,7 +387,7 @@ export const updateMentor = async (id, data) => {
 }
 
 export const deleteMentor = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/mentors/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/mentors/${id}`, {
     method: "DELETE",
   })
   if (!response.ok) throw new Error("Failed to delete mentor")
@@ -395,7 +397,10 @@ export const deleteMentor = async (id) => {
 // Scholarships
 export const getScholarships = async () => {
   if (USE_MOCK_DATA) return { data: mockStats.scholarships }
-  const response = await fetch(`${API_BASE_URL}/scholarships`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/scholarships`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  })
   if (!response.ok) throw new Error("Failed to fetch scholarships")
   const data = await response.json()
   return { data }
@@ -410,13 +415,16 @@ export const getActiveScholarships = async () => {
 }
 
 export const getScholarship = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/scholarships/${id}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/scholarships/${id}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  })
   if (!response.ok) throw new Error("Failed to fetch scholarship")
   return response.json()
 }
 
 export const createScholarship = async (data) => {
-  const response = await fetch(`${API_BASE_URL}/scholarships`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/scholarships`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -426,7 +434,7 @@ export const createScholarship = async (data) => {
 }
 
 export const updateScholarship = async (id, data) => {
-  const response = await fetch(`${API_BASE_URL}/scholarships/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/scholarships/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -436,7 +444,7 @@ export const updateScholarship = async (id, data) => {
 }
 
 export const deleteScholarship = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/scholarships/${id}`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/scholarships/${id}`, {
     method: "DELETE",
   })
   if (!response.ok) throw new Error("Failed to delete scholarship")
@@ -446,13 +454,9 @@ export const deleteScholarship = async (id) => {
 // Trainings
 export const getTrainings = async () => {
   if (USE_MOCK_DATA) return { data: mockStats.trainings }
-  const headers = buildAuthHeaders()
-  const response = await fetch(`${API_BASE_URL}/trainings`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/trainings`, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
+    headers: { "Content-Type": "application/json" },
   })
   if (!response.ok) {
     const errorText = await response.text()
@@ -909,7 +913,7 @@ export const deleteSyllabus = async (id) => {
 
 // Data Import
 export const importColleges = async () => {
-  const response = await fetch(`${API_BASE_URL}/data-import/colleges`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/data-import/colleges`, {
     method: "POST",
   })
   if (!response.ok) throw new Error("Failed to import colleges")
@@ -917,7 +921,7 @@ export const importColleges = async () => {
 }
 
 export const importPrograms = async () => {
-  const response = await fetch(`${API_BASE_URL}/data-import/programs`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/data-import/programs`, {
     method: "POST",
   })
   if (!response.ok) throw new Error("Failed to import programs")
@@ -925,7 +929,7 @@ export const importPrograms = async () => {
 }
 
 export const importUniversities = async () => {
-  const response = await fetch(`${API_BASE_URL}/data-import/universities`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/data-import/universities`, {
     method: "POST",
   })
   if (!response.ok) throw new Error("Failed to import universities")
@@ -933,7 +937,7 @@ export const importUniversities = async () => {
 }
 
 export const importSyllabus = async () => {
-  const response = await fetch(`${API_BASE_URL}/data-import/syllabus`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/data-import/syllabus`, {
     method: "POST",
   })
   if (!response.ok) throw new Error("Failed to import syllabus")
@@ -941,7 +945,7 @@ export const importSyllabus = async () => {
 }
 
 export const importAllData = async () => {
-  const response = await fetch(`${API_BASE_URL}/data-import/all`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/data-import/all`, {
     method: "POST",
   })
   if (!response.ok) throw new Error("Failed to import all data")
