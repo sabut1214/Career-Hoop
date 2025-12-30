@@ -19,17 +19,15 @@ import {
   Clock,
   ExternalLink,
   Loader2,
-  CheckCircle,
 } from "lucide-react"
-import { getColleges, saveCollege, unsaveCollege, checkCollegeSaved, getSavedColleges, getCollegeRecommendations } from "@/shared/lib/api"
+import { getCollegeRecommendations, getSavedColleges, saveCollege, unsaveCollege } from "@/shared/lib/api"
 import Pagination from "@/shared/components/common/pagination"
 import { useAuth } from "@/shared/context/AuthContext"
 import { toast } from "react-toastify"
 import { collegeService } from "../services/collegeService"
-import { useNavigate } from "react-router-dom"
 import { logger } from "@/shared/lib/utils/logger"
 import { CollegeCardListSkeleton } from "@/shared/components/common/LoadingSkeleton"
-import { extractErrorMessage, isAuthError } from "@/shared/utils/errorMessages"
+import { extractErrorMessage } from "@/shared/utils/errorMessages"
 import { EmptySearchState, EmptyErrorState } from "@/shared/components/common/EmptyState"
 import { getUserStorageKey } from "@/shared/utils/utils"
 
@@ -151,103 +149,23 @@ const dedupeColleges = (colleges) => {
   })
 }
 
-const CollegeCard = memo(({ college, index, savedCollegeIds, onSaveChange }) => {
+const CollegeCard = memo(({ college, index, isSaved, onToggleSaved }) => {
   const { user } = useAuth()
-  const navigate = useNavigate()
-  const [isSaving, setIsSaving] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
   const hasDetailUrl = Boolean(college.detailUrl)
-  
-  // Check if college is saved based on the savedCollegeIds set
-  // Convert to string for consistent comparison
-  const collegeIdString = String(college?.id || '')
-  const isSaved = savedCollegeIds.has(collegeIdString)
-  
-  // Log user and college data for debugging
-  useEffect(() => {
-    if (!user?.id) {
-      logger.warn('CollegeCard: User not available', { user })
-    }
-    if (!college?.id) {
-      logger.warn('CollegeCard: College ID not available', { college })
-    }
-  }, [user, college])
+  const [isSaving, setIsSaving] = useState(false)
 
-  const handleStarClick = async (e) => {
+  const handleSaveClick = async (e) => {
     e.stopPropagation()
-    
-    // Detailed logging to debug the issue
-    const hasUserId = !!user?.id
-    const hasCollegeId = !!college.id
-    const isCurrentlySaving = isSaving
-    
-    logger.log('Save college check:', {
-      hasUserId,
-      userId: user?.id,
-      user: user,
-      hasCollegeId,
-      collegeId: college.id,
-      college: college,
-      isSaving: isCurrentlySaving
-    })
-    
-    if (!hasUserId || !hasCollegeId || isCurrentlySaving) {
-      logger.warn('Cannot save college - missing requirements:', {
-        missingUserId: !hasUserId,
-        missingCollegeId: !hasCollegeId,
-        isSaving: isCurrentlySaving,
-        userId: user?.id,
-        collegeId: college.id
-      })
+    if (!college?.id) return
+    if (!user?.id) {
+      toast.error("Please log in to save colleges")
       return
     }
+    if (!onToggleSaved || isSaving) return
 
-    logger.log('Starting save/unsave operation:', { userId: user.id, collegeId: college.id, isSaved })
     setIsSaving(true)
     try {
-      if (isSaved) {
-        logger.log('Unsave college:', college.id)
-        await unsaveCollege(user.id, college.id)
-        // Update the saved colleges list
-        if (onSaveChange) {
-          onSaveChange(college.id, false)
-        }
-        toast.success("College removed from saved")
-      } else {
-        logger.log('Save college:', college.id)
-        const result = await saveCollege(user.id, college.id)
-        logger.log('Save college result:', result)
-        // Update the saved colleges list
-        if (onSaveChange) {
-          onSaveChange(college.id, true)
-        }
-        // Show success animation
-        setShowSuccess(true)
-        setTimeout(() => setShowSuccess(false), 2000)
-        toast.success("College saved successfully")
-      }
-    } catch (error) {
-      logger.error("Error saving/unsaving college:", error)
-      const errorMessage = extractErrorMessage(error)
-      logger.error("Error message:", errorMessage)
-      
-      // Check if it's an authentication error
-      if (isAuthError(error)) {
-        toast.error("Your session has expired. Please log in again.", {
-          autoClose: 3000,
-          onClose: () => {
-            // Only redirect after showing the toast
-            if (!window.location.pathname.includes('/login')) {
-              localStorage.removeItem("user")
-              import('@/shared/lib/navigation').then(({ navigate }) => {
-                navigate('/login')
-              })
-            }
-          }
-        })
-      } else {
-        toast.error(errorMessage)
-      }
+      await onToggleSaved(college.id)
     } finally {
       setIsSaving(false)
     }
@@ -292,56 +210,26 @@ const CollegeCard = memo(({ college, index, savedCollegeIds, onSaveChange }) => 
                   )}
                 </div>
                 <button
-                  onClick={handleStarClick}
-                  disabled={isSaving || !user?.id || !college?.id}
-                  className="transition-colors disabled:opacity-50 relative"
-                  aria-label={
-                    !user?.id 
-                      ? "Please log in to save colleges" 
-                      : !college?.id 
-                        ? "College data incomplete" 
-                        : isSaved 
-                          ? "Remove from saved" 
-                          : "Save college"
-                  }
+                  type="button"
+                  onClick={handleSaveClick}
+                  disabled={!user?.id || !college?.id || isSaving}
+                  className="transition-colors disabled:opacity-50"
+                  title={!user?.id ? "Log in to save colleges" : isSaved ? "Remove from saved" : "Save college"}
+                  aria-label={!user?.id ? "Log in to save colleges" : isSaved ? "Remove from saved" : "Save college"}
                   aria-pressed={isSaved}
-                  title={
-                    !user?.id 
-                      ? "Please log in to save colleges" 
-                      : !college?.id 
-                        ? "College data incomplete" 
-                        : isSaved 
-                          ? "Remove from saved" 
-                          : "Save college"
-                  }
                 >
                   {isSaving ? (
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   ) : (
-                    <motion.div
-                      animate={showSuccess ? { scale: [1, 1.3, 1], rotate: [0, 180, 360] } : {}}
-                      transition={{ duration: 0.6 }}
-                    >
-                      <Star
-                        className={`h-5 w-5 transition-colors ${
-                          !user?.id || !college?.id
-                            ? "text-muted-foreground cursor-not-allowed"
-                            : isSaved
-                              ? "text-yellow-500 fill-yellow-500 cursor-pointer"
-                              : "text-muted-foreground group-hover:text-accent cursor-pointer"
-                        }`}
-                      />
-                    </motion.div>
-                  )}
-                  {showSuccess && (
-                    <motion.div
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      className="absolute -top-1 -right-1"
-                    >
-                      <CheckCircle className="h-4 w-4 text-green-500 fill-green-500" />
-                    </motion.div>
+                    <Star
+                      className={`h-5 w-5 transition-colors ${
+                        !user?.id || !college?.id
+                          ? "text-muted-foreground cursor-not-allowed"
+                          : isSaved
+                            ? "text-yellow-500 fill-yellow-500 cursor-pointer"
+                            : "text-muted-foreground group-hover:text-accent cursor-pointer"
+                      }`}
+                    />
                   )}
                 </button>
               </div>
@@ -410,16 +298,6 @@ const CollegeCard = memo(({ college, index, savedCollegeIds, onSaveChange }) => 
         )}
 
         <div className="flex flex-col space-y-2 mt-auto">
-          <Button 
-            variant="outline" 
-            className="w-full bg-transparent"
-            onClick={handleStarClick}
-            disabled={isSaving || !user?.id || !college?.id}
-            title={!user?.id ? "Please log in to save colleges" : !college?.id ? "College data incomplete" : ""}
-            loading={isSaving}
-          >
-            {!user?.id ? "Login to Save" : isSaved ? "Saved" : "Save"}
-          </Button>
           <Button
             className="w-full"
             onClick={() => hasDetailUrl && window.open(college.detailUrl, "_blank", "noopener,noreferrer")}
@@ -436,18 +314,17 @@ const CollegeCard = memo(({ college, index, savedCollegeIds, onSaveChange }) => 
   )
 }, (prevProps, nextProps) => {
   // Custom comparison function for memo
-  // Only re-render if college data or saved status changes
+  // Only re-render if college data or index changes
   const prevCollegeId = String(prevProps.college?.id || '')
   const nextCollegeId = String(nextProps.college?.id || '')
-  const prevIsSaved = prevProps.savedCollegeIds?.has(prevCollegeId)
-  const nextIsSaved = nextProps.savedCollegeIds?.has(nextCollegeId)
+  const prevIsSaved = !!prevProps.isSaved
+  const nextIsSaved = !!nextProps.isSaved
   
   // Re-render if college ID changed
   if (prevCollegeId !== nextCollegeId) {
     return false
   }
-  
-  // Re-render if saved status changed
+
   if (prevIsSaved !== nextIsSaved) {
     return false
   }
@@ -474,8 +351,8 @@ export default function CollegesPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
   const [pageMeta, setPageMeta] = useState({ totalPages: 1, totalElements: 0 })
-  const [savedCollegeIds, setSavedCollegeIds] = useState(new Set())
-  const [savedCollegesFullData, setSavedCollegesFullData] = useState([]) // Store full saved college objects
+  const [savedCollegeIds, setSavedCollegeIds] = useState(() => new Set())
+  const [savedCollegesFullData, setSavedCollegesFullData] = useState([])
   const [filters, setFilters] = useState({
     location: null,
     affiliation: null,
@@ -487,15 +364,8 @@ export default function CollegesPage() {
     sortOrder: "asc"
   })
   const { user } = useAuth()
-  const navigate = useNavigate()
 
-  // AI college recommendations (grades + interests)
-  const [aiColleges, setAiColleges] = useState([])
-  const [loadingAiColleges, setLoadingAiColleges] = useState(false)
-  const [aiCollegesError, setAiCollegesError] = useState(null)
-
-  // Function to fetch saved college IDs and full data
-  const fetchSavedColleges = async () => {
+  const refreshSavedColleges = async (signal) => {
     if (!user?.id) {
       setSavedCollegeIds(new Set())
       setSavedCollegesFullData([])
@@ -503,52 +373,89 @@ export default function CollegesPage() {
     }
 
     try {
-      const savedColleges = await getSavedColleges(user.id)
-      // Convert IDs to strings for consistent comparison
-      const ids = new Set(savedColleges.map(sc => String(sc.collegeId || sc.id)))
+      const saved = await getSavedColleges(user.id).catch(() => [])
+      const ids = new Set(saved.map((item) => String(item.collegeId || item.id)))
       setSavedCollegeIds(ids)
-      
-      // Fetch full college data for all saved colleges
-      if (savedColleges.length > 0) {
-        try {
-          // Fetch only the saved colleges by ID using the backend batch endpoint
-          const uniqueIds = Array.from(ids)
-          const rawApiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"
-          const apiBase = rawApiUrl.endsWith("/api") ? rawApiUrl : `${rawApiUrl}/api`
-          const response = await fetch(`${apiBase}/colleges/batch`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify(uniqueIds),
-          })
 
-          if (!response.ok) {
-            throw new Error(`Failed to fetch saved colleges full data (${response.status})`)
-          }
-
-          const data = await response.json()
-          const fullColleges = (Array.isArray(data) ? data : []).map(transformCollege)
-          setSavedCollegesFullData(fullColleges)
-        } catch (err) {
-          logger.error("Failed to fetch saved colleges full data:", err)
-          setSavedCollegesFullData([])
-        }
-      } else {
+      const uniqueIds = Array.from(ids)
+      if (uniqueIds.length === 0) {
         setSavedCollegesFullData([])
+        return
       }
+
+      const rawApiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"
+      const apiBase = rawApiUrl.endsWith("/api") ? rawApiUrl : `${rawApiUrl}/api`
+      const response = await fetch(`${apiBase}/colleges/batch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(uniqueIds),
+        signal,
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch saved colleges (${response.status})`)
+      }
+
+      const data = await response.json()
+      const fullColleges = (Array.isArray(data) ? data : []).map(transformCollege)
+      setSavedCollegesFullData(fullColleges)
     } catch (error) {
-        logger.error("Failed to fetch saved colleges:", error)
-        const errorMessage = extractErrorMessage(error)
-        toast.error(errorMessage)
+      if (error?.name === "AbortError") return
+      logger.error("Failed to refresh saved colleges:", error)
       setSavedCollegeIds(new Set())
       setSavedCollegesFullData([])
     }
   }
 
-  // Fetch saved college IDs when user is available
   useEffect(() => {
-    fetchSavedColleges()
+    const controller = new AbortController()
+    refreshSavedColleges(controller.signal)
+    return () => controller.abort()
   }, [user?.id])
+
+  const handleToggleSaved = async (collegeId) => {
+    if (!user?.id || !collegeId) return
+    const idString = String(collegeId)
+    const wasSaved = savedCollegeIds.has(idString)
+
+    setSavedCollegeIds((prev) => {
+      const next = new Set(prev)
+      if (wasSaved) next.delete(idString)
+      else next.add(idString)
+      return next
+    })
+
+    try {
+      if (wasSaved) {
+        await unsaveCollege(user.id, collegeId)
+        toast.success("College removed from saved")
+      } else {
+        await saveCollege(user.id, collegeId)
+        toast.success("College saved")
+        setCurrentPage(1)
+        window.scrollTo({ top: 0, behavior: "smooth" })
+      }
+
+      await refreshSavedColleges()
+    } catch (error) {
+      logger.error("Failed to toggle saved college:", error)
+      const message = extractErrorMessage(error)
+      toast.error(message)
+      // revert optimistic update
+      setSavedCollegeIds((prev) => {
+        const next = new Set(prev)
+        if (wasSaved) next.add(idString)
+        else next.delete(idString)
+        return next
+      })
+    }
+  }
+
+  // AI college recommendations (grades + interests)
+  const [aiColleges, setAiColleges] = useState([])
+  const [loadingAiColleges, setLoadingAiColleges] = useState(false)
+  const [aiCollegesError, setAiCollegesError] = useState(null)
 
   // Fetch AI-powered college recommendations based on grades + interests
   useEffect(() => {
@@ -629,26 +536,6 @@ export default function CollegesPage() {
 
     fetchAiColleges()
   }, [user?.id])
-
-  // Callback to update saved college IDs when a college is saved/unsaved
-  const handleSaveChange = async (collegeId, isSaved) => {
-    // Optimistically update the UI immediately
-    setSavedCollegeIds(prev => {
-      const newSet = new Set(prev)
-      const idString = String(collegeId)
-      if (isSaved) {
-        newSet.add(idString)
-      } else {
-        newSet.delete(idString)
-      }
-      return newSet
-    })
-    
-    // Refetch to ensure consistency with backend after a short delay
-    setTimeout(() => {
-      fetchSavedColleges()
-    }, 300)
-  }
 
   // Reset to page 1 when search term or filter changes
   useEffect(() => {
@@ -772,45 +659,34 @@ export default function CollegesPage() {
       return matchesSearch && matchesType
     })
 
-  // Filter saved colleges
-  const filteredSavedColleges = savedCollegesFullData.filter((college) => {
-    const matchesSearch = searchTerm.trim()
-      ? (college.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-         college.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-         (college.programs && college.programs.some((program) => program.toLowerCase().includes(searchTerm.toLowerCase()))))
-      : true
+  const filteredSavedColleges = savedCollegesFullData
+    .filter((college) => {
+      const matchesSearch = debouncedSearchTerm.trim()
+        ? (college.name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+           college.location?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+           (college.programs && college.programs.some((program) => program.toLowerCase().includes(debouncedSearchTerm.toLowerCase()))))
+        : true
 
-    const matchesType = filterType === "all" || (college.type && college.type.toLowerCase() === filterType)
+      const matchesType = filterType === "all" || (college.type && college.type.toLowerCase() === filterType)
 
-    return matchesSearch && matchesType
-  }).sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+      return matchesSearch && matchesType
+    })
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
 
-  // Remove saved colleges from regular colleges to avoid duplicates
-  const regularColleges = filteredColleges.filter(college => 
-    !savedCollegeIds.has(String(college.id))
-  ).sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+  const regularColleges = filteredColleges
+    .filter((college) => !savedCollegeIds.has(String(college.id)))
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
 
-  // Combine: saved colleges first, then regular colleges
   const combinedColleges = [...filteredSavedColleges, ...regularColleges]
 
-  // Paginate combined results
   let paginatedColleges
   if (debouncedSearchTerm.trim()) {
-    // When searching, paginate the combined list normally
     paginatedColleges = combinedColleges.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  } else if (currentPage === 1) {
+    const remainingSlots = Math.max(0, pageSize - filteredSavedColleges.length)
+    paginatedColleges = [...filteredSavedColleges, ...regularColleges.slice(0, remainingSlots)]
   } else {
-    // When not searching (using pagination), show saved colleges on page 1, then regular colleges from API
-    if (currentPage === 1) {
-      // Page 1: Show saved colleges first, then fill with regular colleges from the current page
-      const remainingSlots = Math.max(0, pageSize - filteredSavedColleges.length)
-      // Filter out saved colleges from the current page's colleges
-      const regularCollegesFromPage = regularColleges.slice(0, remainingSlots)
-      paginatedColleges = [...filteredSavedColleges, ...regularCollegesFromPage]
-    } else {
-      // Other pages: Show regular colleges from API (excluding saved ones since they're on page 1)
-      // Just show the colleges from the current page, but filter out any that are saved
-      paginatedColleges = regularColleges
-    }
+    paginatedColleges = regularColleges
   }
 
   // Update pagination metadata
@@ -822,12 +698,7 @@ export default function CollegesPage() {
         size: pageSize,
       }
     : {
-        // When paginating, use the original pageMeta from API
         ...pageMeta,
-        // Total elements includes saved colleges
-        totalElements: pageMeta.totalElements + filteredSavedColleges.length,
-        // Total pages might need adjustment if saved colleges take up a full page
-        totalPages: Math.max(pageMeta.totalPages, Math.ceil((pageMeta.totalElements + filteredSavedColleges.length) / pageSize)),
       }
 
   return (
@@ -841,19 +712,11 @@ export default function CollegesPage() {
           >
           <div className="flex items-center space-x-2">
             <Building2 className="h-8 w-8 text-primary" />
-            <h1 className="text-4xl font-bold">Recommended Colleges</h1>
+            <h1 className="text-4xl font-bold">Explore Colleges</h1>
           </div>
           <p className="text-xl text-muted-foreground">
             Discover colleges and universities that align with your career goals and academic profile
           </p>
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Button variant="outline" onClick={() => navigate("/saved-colleges")}>
-              Saved Colleges
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/saved-colleges")}>
-              Compare Saved
-            </Button>
-          </div>
         </motion.div>
 
           {/* Search and Filters */}
@@ -959,8 +822,8 @@ export default function CollegesPage() {
                       key={`ai-${college.id || index}`}
                       college={college}
                       index={index}
-                      savedCollegeIds={savedCollegeIds}
-                      onSaveChange={handleSaveChange}
+                      isSaved={savedCollegeIds.has(String(college.id))}
+                      onToggleSaved={handleToggleSaved}
                     />
                   ))}
                 </div>
@@ -991,8 +854,8 @@ export default function CollegesPage() {
                   key={college.id || index} 
                   college={college} 
                   index={index}
-                  savedCollegeIds={savedCollegeIds}
-                  onSaveChange={handleSaveChange}
+                  isSaved={savedCollegeIds.has(String(college.id))}
+                  onToggleSaved={handleToggleSaved}
                 />
               ))}
             </div>

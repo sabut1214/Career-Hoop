@@ -7,10 +7,12 @@ import com.careerhoop.dto.SavedCareerResponse;
 import com.careerhoop.dto.SavedCollegeResponse;
 import com.careerhoop.dto.UpdateUserProfileRequest;
 import com.careerhoop.dto.UserResponse;
+import com.careerhoop.dto.MeResponse;
 import com.careerhoop.service.AuthService;
 import com.careerhoop.service.DataExportService;
 import com.careerhoop.service.SavedItemsService;
 import com.careerhoop.service.UserProfileService;
+import com.careerhoop.repository.UserRepository;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +45,29 @@ public class UserController {
     @Autowired
     private DataExportService dataExportService;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @GetMapping("/me")
+    public ResponseEntity<MeResponse> me() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof UUID userId)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        int gradeEntryCount = user.getGradeEntryCount() != null ? user.getGradeEntryCount() : 0;
+
+        return ResponseEntity.ok(new MeResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getName(),
+                user.getRole(),
+                gradeEntryCount
+        ));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUserProfile(
             @PathVariable UUID id,
@@ -58,10 +83,11 @@ public class UserController {
             @PathVariable UUID id,
             @RequestHeader(value = "X-User-Id", required = false) UUID requesterId,
             @RequestHeader(value = "X-User-Role", required = false) String requesterRole,
+            @RequestParam(value = "source", required = false) String source,
             @RequestBody UpdateUserProfileRequest request
     ) {
         enforceAccess(id, requesterId, requesterRole);
-        UserResponse response = userProfileService.updateUserProfile(id, request);
+        UserResponse response = userProfileService.updateUserProfile(id, request, source);
         return ResponseEntity.ok(response);
     }
 
@@ -272,5 +298,22 @@ public class UserController {
     }
 
     private void enforceAccess(UUID targetUserId, UUID requesterId, String requesterRole) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_ADMIN"::equals);
+        if (isAdmin) {
+            return;
+        }
+
+        if (authentication.getPrincipal() instanceof UUID authUserId && authUserId.equals(targetUserId)) {
+            return;
+        }
+
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
     }
 }

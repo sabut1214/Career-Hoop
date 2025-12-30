@@ -57,6 +57,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    @ExceptionHandler({PremiumRequiredException.class, FreeLimitReachedException.class})
+    public ResponseEntity<Map<String, Object>> handleForbidden(RuntimeException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", "Forbidden");
+        response.put("message", ex.getMessage());
+        response.put("status", HttpStatus.FORBIDDEN.value());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
     /**
      * Handles all other exceptions with generic error message.
      * Prevents information leakage about internal system details.

@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -29,6 +30,7 @@ public class SecurityConfig {
 
     @Autowired
     private RateLimitingFilter rateLimitingFilter;
+
 
     @Value("${app.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}")
     private String corsAllowedOrigins;
@@ -78,7 +80,10 @@ public class SecurityConfig {
                                 "/api/recommendations/**",
                                 // Saved items and profile endpoints use JWT auth and should not require CSRF
                                 "/api/users",
-                                "/api/users/**"
+                                "/api/users/**",
+                                // Payment callbacks are redirected from eSewa and should not require CSRF
+                                "/api/payments",
+                                "/api/payments/**"
                              );
                     } else {
                         csrf.disable();
@@ -99,6 +104,15 @@ public class SecurityConfig {
                         .referrerPolicy(referrer -> referrer.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // Public read-only endpoints (GET only)
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/careers",
+                                "/api/careers/**",
+                                "/api/colleges",
+                                "/api/colleges/**",
+                                "/api/trainings",
+                                "/api/trainings/**"
+                        ).permitAll()
                         .requestMatchers(
                                 "/api/login",
                                 "/api/register",
@@ -110,12 +124,6 @@ public class SecurityConfig {
                                 "/api/reset-password",
                                 "/api/students",
                                 "/api/students/**",
-                                "/api/careers",
-                                "/api/careers/**",
-                                "/api/colleges",
-                                "/api/colleges/**",
-                                "/api/trainings",
-                                "/api/trainings/**",
                                 "/api/scholarships",
                                 "/api/scholarships/**",
                                 "/api/mentors",
@@ -124,14 +132,18 @@ public class SecurityConfig {
                                 "/api/programs/**",
                                 "/api/universities",
                                 "/api/universities/**",
-                                "/api/recommendations",
-                                "/api/recommendations/**"
+                                // Free users can still request college recommendations (names are masked)
+                                "/api/recommendations/colleges",
+                                // Payment gateway callbacks
+                                "/api/payments/esewa/success",
+                                "/api/payments/esewa/failure"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
                 // Add rate limiting filter before authentication
                 .addFilterBefore(rateLimitingFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                ;
         return http.build();
     }
 

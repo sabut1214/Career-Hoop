@@ -5,6 +5,7 @@ import { Button } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
 import { Alert, AlertDescription } from "@/shared/components/ui/alert"
 import { getColleges, analyzeGradeSheet, updateUserProfile, getUserProfile, getCollegeRecommendations } from "@/shared/lib/api"
+import { useNavigate } from "react-router-dom"
 import {
   UploadCloud,
   Loader2,
@@ -26,6 +27,7 @@ import { getUserStorageKey } from "@/shared/utils/utils"
 import { toast } from "react-toastify"
 import { logger } from "@/shared/lib/utils/logger"
 import { extractErrorMessage, isNetworkError } from "@/shared/utils/errorMessages"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 
 const parsePrograms = (programs) => {
   if (!programs) return []
@@ -184,8 +186,11 @@ const buildMatchHighlight = (college, profile) => {
 
 export default function GradesPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [uploadedFileName, setUploadedFileName] = useState("")
   const [analysis, setAnalysis] = useState(null)
+  const [savedMarksheets, setSavedMarksheets] = useState([])
+  const [selectedMarksheetId, setSelectedMarksheetId] = useState("")
   const [recommendations, setRecommendations] = useState([])
   const [academicProfile, setAcademicProfile] = useState(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -243,7 +248,7 @@ export default function GradesPage() {
         stream: profile.stream || null,
         subjects: subjectNames.length > 0 ? subjectNames : null,
         gpa: gpa,
-      })
+      }, { source: "ocr" })
     } catch (err) {
       logger.error("Failed to save grades to profile:", err)
       // Don't show error toast for auto-save, just log it
@@ -279,6 +284,35 @@ export default function GradesPage() {
 
     setIsLoading(true)
     try {
+      // 1) Prefer loading from localStorage marksheet history (multiple uploads)
+      const historyKey = getUserStorageKey("aiGradesAnalyses", user.id)
+      const currentIdKey = getUserStorageKey("aiGradesCurrentId", user.id)
+      const storedHistory = localStorage.getItem(historyKey)
+      if (storedHistory) {
+        try {
+          const parsed = JSON.parse(storedHistory)
+          const list = Array.isArray(parsed) ? parsed : []
+          const currentId = localStorage.getItem(currentIdKey) || ""
+          setSavedMarksheets(list)
+
+          const selected = (currentId && list.find((m) => m?.id === currentId)) || list[0]
+          if (selected?.analysis) {
+            setSelectedMarksheetId(selected.id || "")
+            setUploadedFileName(selected.fileName || "")
+            setAnalysis(selected.analysis)
+            const profile = deriveAcademicProfile(selected.analysis)
+            setAcademicProfile(profile)
+            const recs = await fetchRecommendedColleges(selected.analysis, profile)
+            setRecommendations(recs)
+            setCurrentPage(1)
+            return
+          }
+        } catch (e) {
+          // ignore storage parsing errors and fall back to profile
+        }
+      }
+
+      // 2) Fall back to user profile (single persisted state)
       const userProfile = await getUserProfile(user.id)
 
       if (userProfile && (userProfile.subjects?.length > 0 || userProfile.schoolName)) {
@@ -335,9 +369,25 @@ export default function GradesPage() {
       const profile = deriveAcademicProfile(result)
       setAcademicProfile(profile)
 
-      // Save to localStorage for backward compatibility
+      // Save to localStorage (latest) for backward compatibility
       const storageKey = getUserStorageKey("aiGradesAnalysis", user.id)
       localStorage.setItem(storageKey, JSON.stringify(result))
+
+      // Save to localStorage history (multiple marksheets)
+      const historyKey = getUserStorageKey("aiGradesAnalyses", user.id)
+      const currentIdKey = getUserStorageKey("aiGradesCurrentId", user.id)
+      const entry = {
+        id: crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+        fileName: file.name,
+        uploadedAt: new Date().toISOString(),
+        analysis: result,
+      }
+      const existing = JSON.parse(localStorage.getItem(historyKey) || "[]")
+      const nextHistory = [entry, ...(Array.isArray(existing) ? existing : [])].slice(0, 10)
+      localStorage.setItem(historyKey, JSON.stringify(nextHistory))
+      localStorage.setItem(currentIdKey, entry.id)
+      setSavedMarksheets(nextHistory)
+      setSelectedMarksheetId(entry.id)
 
       // Automatically save to user profile
       await saveGradesToProfile(result, profile)
@@ -428,13 +478,25 @@ export default function GradesPage() {
     setRecommendations([])
     setAcademicProfile(null)
     setError(null)
+    setSelectedMarksheetId("")
     setCurrentPage(1) // Reset to first page
-    if (user?.id) {
-      const storageKey = getUserStorageKey("aiGradesAnalysis", user.id)
-      localStorage.removeItem(storageKey)
-    }
-    // Also remove old generic key for backward compatibility
-    localStorage.removeItem("aiGradesAnalysis")
+  }
+
+  const handleSelectMarksheet = async (id) => {
+    if (!user?.id) return
+    setSelectedMarksheetId(id)
+    localStorage.setItem(getUserStorageKey("aiGradesCurrentId", user.id), id)
+
+    const selected = savedMarksheets.find((m) => m?.id === id)
+    if (!selected?.analysis) return
+
+    setAnalysis(selected.analysis)
+    setUploadedFileName(selected.fileName || "")
+    const profile = deriveAcademicProfile(selected.analysis)
+    setAcademicProfile(profile)
+    const recs = await fetchRecommendedColleges(selected.analysis, profile)
+    setRecommendations(recs)
+    setCurrentPage(1)
   }
 
   // Calculate pagination
@@ -565,10 +627,28 @@ export default function GradesPage() {
                         <CardDescription className="text-base mt-1">Complete academic performance analysis</CardDescription>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={resetAnalysis} className="gap-2">
-                      <RefreshCw className="h-4 w-4" />
-                      Upload New File
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {savedMarksheets.length > 0 && (
+                        <div className="hidden md:block min-w-56">
+                          <Select value={selectedMarksheetId || savedMarksheets[0]?.id || ""} onValueChange={handleSelectMarksheet}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select marksheet" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {savedMarksheets.map((m) => (
+                                <SelectItem key={m.id} value={m.id}>
+                                  {m.fileName || "Marksheet"}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      <Button variant="outline" size="sm" onClick={resetAnalysis} className="gap-2">
+                        <RefreshCw className="h-4 w-4" />
+                        Upload Another
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-8 p-6">
@@ -773,7 +853,9 @@ export default function GradesPage() {
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div>
-                          <CardTitle>{college.name}</CardTitle>
+                          <div className="relative">
+                            <CardTitle>{college.name}</CardTitle>
+                          </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                             <MapPin className="h-4 w-4" />
                             <span>{college.location}</span>

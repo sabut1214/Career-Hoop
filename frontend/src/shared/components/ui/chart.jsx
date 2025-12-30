@@ -50,23 +50,28 @@ function sanitizeCssColor(color) {
   if (!color || typeof color !== "string") {
     return ""
   }
-  
-  // Remove any potentially dangerous characters
+
   const sanitized = color.trim()
-  
-  // Allow only safe CSS color formats:
-  // - Hex colors: #rgb, #rrggbb, #rrggbbaa
-  // - RGB/RGBA: rgb(...), rgba(...)
-  // - HSL/HSLA: hsl(...), hsla(...)
-  // - Named colors: basic CSS color names
-  // - CSS variables: var(--...)
-  const safeColorPattern = /^(#[0-9a-fA-F]{3,8}|rgb\([^)]+\)|rgba\([^)]+\)|hsl\([^)]+\)|hsla\([^)]+\)|var\(--[^)]+\)|[a-zA-Z]+)$/
-  
+
+  // Block characters that can break out of `--color-x: <value>;` and inject extra rules.
+  if (/[;\n\r{}<>]/.test(sanitized)) {
+    console.warn(`Unsafe CSS color value detected and filtered: ${color}`)
+    return ""
+  }
+
+  // Prefer runtime validation when available (covers `var(...)`, `oklch(...)`, `color-mix(...)`, etc).
+  if (globalThis.CSS?.supports?.("color", sanitized)) {
+    return sanitized
+  }
+
+  // Fallback: allow basic named/hex colors and function-style colors (with a limited safe charset).
+  const safeColorPattern =
+    /^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|[a-zA-Z-]+\([#a-zA-Z0-9\s.,%/()+-]*\))$/
+
   if (safeColorPattern.test(sanitized)) {
     return sanitized
   }
-  
-  // If color doesn't match safe pattern, return empty string
+
   console.warn(`Unsafe CSS color value detected and filtered: ${color}`)
   return ""
 }

@@ -14,6 +14,7 @@ import {
   Clock,
   MapPin,
   Star,
+  Building2,
   BookOpen,
   Target,
   Briefcase,
@@ -28,11 +29,12 @@ import {
   AlertCircle,
   CheckCircle,
   Loader2,
+  ExternalLink,
 } from "lucide-react"
 import api from "@/shared/services/api"
 import { useAuth } from "@/shared/context/AuthContext"
 import { getUserStorageKey } from "@/shared/utils/utils"
-import { saveCareer, unsaveCareer, getSavedCareers, getUserProfile } from "@/shared/lib/api"
+import { getCollegeRecommendations, getSavedColleges, saveCollege, unsaveCollege, saveCareer, unsaveCareer, getSavedCareers, getUserProfile } from "@/shared/lib/api"
 import recommendationService from "@/features/recommendations/services/recommendationService"
 import { toast } from "react-toastify"
 import { EmptyState } from "@/shared/components/common/EmptyState"
@@ -410,6 +412,11 @@ export default function RecommendationsPage() {
   const [interestSummary, setInterestSummary] = useState(null)
   const [savedCareerIds, setSavedCareerIds] = useState(new Set())
   const [savedCareersCount, setSavedCareersCount] = useState(0)
+  const [savedCollegeIds, setSavedCollegeIds] = useState(new Set())
+  const [collegeRecs, setCollegeRecs] = useState([])
+  const [loadingColleges, setLoadingColleges] = useState(false)
+  const [collegeError, setCollegeError] = useState(null)
+  const [savingCollegeId, setSavingCollegeId] = useState(null)
 
   // Fetch all careers on mount
   useEffect(() => {
@@ -460,6 +467,25 @@ export default function RecommendationsPage() {
   // Fetch saved careers on mount
   useEffect(() => {
     fetchSavedCareers()
+  }, [user?.id])
+
+  const fetchSavedColleges = async () => {
+    if (!user?.id) {
+      setSavedCollegeIds(new Set())
+      return
+    }
+
+    try {
+      const savedColleges = await getSavedColleges(user.id).catch(() => [])
+      setSavedCollegeIds(new Set(savedColleges.map((item) => String(item.collegeId || item.id))))
+    } catch (error) {
+      console.error("Failed to fetch saved colleges:", error)
+      setSavedCollegeIds(new Set())
+    }
+  }
+
+  useEffect(() => {
+    fetchSavedColleges()
   }, [user?.id])
 
   // Handle save/unsave changes
@@ -712,6 +738,96 @@ export default function RecommendationsPage() {
     }
   }
 
+  const fetchCollegeRecommendations = async (analysis, interests) => {
+    if (!user?.id) return
+    if (!analysis || !interests) return
+
+    setLoadingColleges(true)
+    setCollegeError(null)
+    try {
+      const grade10 = analysis.grade10 ?? null
+      const grade12 = analysis.grade12 ?? null
+      const stream = (analysis.stream || "general").toLowerCase()
+      const subjects = Array.isArray(analysis.subjects)
+        ? analysis.subjects
+            .map((s) => (typeof s === "string" ? s : s?.name || ""))
+            .filter(Boolean)
+        : []
+
+      const request = {
+        grade10,
+        grade12,
+        stream,
+        subjects,
+        careerFields: interests.careerFields || [],
+        activities: interests.activities || [],
+        workEnvironments: interests.workEnvironments || [],
+      }
+
+      if (!request.grade12 || !request.stream || request.subjects.length === 0) {
+        setCollegeRecs([])
+        setCollegeError(null)
+        return
+      }
+
+      const response = await getCollegeRecommendations(request, 12)
+      setCollegeRecs(Array.isArray(response) ? response : response?.data || [])
+    } catch (error) {
+      console.error("Failed to fetch college recommendations:", error)
+      setCollegeRecs([])
+      setCollegeError(getRecommendationError(error))
+    } finally {
+      setLoadingColleges(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!user?.id) return
+    if (!analysisSummary || !interestSummary) return
+    fetchCollegeRecommendations(analysisSummary, interestSummary)
+  }, [user?.id, analysisSummary, interestSummary])
+
+  const toggleCollegeSaved = async (college) => {
+    if (!user?.id) {
+      navigate("/login")
+      return
+    }
+    const id = college?.id || college?.collegeId
+    if (!id) return
+    const idString = String(id)
+    const wasSaved = savedCollegeIds.has(idString)
+
+    setSavingCollegeId(idString)
+    setSavedCollegeIds((prev) => {
+      const next = new Set(prev)
+      if (wasSaved) next.delete(idString)
+      else next.add(idString)
+      return next
+    })
+
+    try {
+      if (wasSaved) {
+        await unsaveCollege(user.id, id)
+        toast.success("College removed from saved")
+      } else {
+        await saveCollege(user.id, id)
+        toast.success("College saved")
+      }
+    } catch (error) {
+      const message = getRecommendationError(error)
+      toast.error(message)
+      setSavedCollegeIds((prev) => {
+        const next = new Set(prev)
+        if (wasSaved) next.add(idString)
+        else next.delete(idString)
+        return next
+      })
+    } finally {
+      setSavingCollegeId(null)
+      fetchSavedColleges()
+    }
+  }
+
   return (
     <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
@@ -764,7 +880,7 @@ export default function RecommendationsPage() {
             transition={{ duration: 0.6, delay: 0.2 }}
           >
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-2 h-12">
+              <TabsList className="grid w-full grid-cols-3 h-12">
                 <TabsTrigger value="grades" className="flex items-center space-x-2 text-base">
                   <BookOpen className="h-4 w-4" />
                   <span>Based on Grades</span>
@@ -772,6 +888,10 @@ export default function RecommendationsPage() {
                 <TabsTrigger value="interests" className="flex items-center space-x-2 text-base">
                   <Target className="h-4 w-4" />
                   <span>Based on Interests</span>
+                </TabsTrigger>
+                <TabsTrigger value="colleges" className="flex items-center space-x-2 text-base">
+                  <Building2 className="h-4 w-4" />
+                  <span>Colleges</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -906,6 +1026,134 @@ export default function RecommendationsPage() {
                       label: "Select Interests",
                       onClick: () => navigate("/assessment"),
                       variant: "default"
+                    }}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="colleges" className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold">Recommended Colleges</h2>
+                    <Badge variant="secondary" className="bg-primary/10 text-primary">
+                      {collegeRecs.length} matches found
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground">
+                    These colleges are recommended from your grades + interests.
+                  </p>
+                  {(!analysisSummary || !interestSummary) && (
+                    <EmptyState
+                      icon={Sparkles}
+                      title="Complete your assessment"
+                      description="Upload your marksheet and select your interests to get college recommendations."
+                      action={{
+                        label: "Go to Assessment",
+                        onClick: () => navigate("/assessment"),
+                        variant: "default",
+                      }}
+                    />
+                  )}
+                </div>
+
+                {loadingColleges ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading colleges...
+                  </div>
+                ) : collegeError ? (
+                  <EmptyState
+                    icon={AlertCircle}
+                    title="Unable to Load Colleges"
+                    description={collegeError}
+                    action={{
+                      label: "Try Again",
+                      onClick: () => fetchCollegeRecommendations(analysisSummary, interestSummary),
+                      variant: "secondary",
+                    }}
+                  />
+                ) : collegeRecs.length > 0 ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {collegeRecs.map((college, index) => {
+                      const id = college?.id || college?.collegeId || index
+                      const idString = String(college?.id || college?.collegeId || "")
+                      const isSaved = idString ? savedCollegeIds.has(idString) : false
+
+                      const name = college.collegeName || college.name || "College"
+                      const location = college.collegeLocation || college.location || "Location not available"
+                      const overview = college.overview || college.description || ""
+                      const detailUrl = college.detailUrl || college.collegeDetailUrl || college.website || null
+                      const matchScore =
+                        typeof college.matchScore === "number"
+                          ? Math.round(college.matchScore)
+                          : typeof college.score === "number"
+                            ? Math.round(college.score)
+                            : null
+
+                      return (
+                        <motion.div
+                          key={id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.4, delay: index * 0.05 }}
+                        >
+                          <Card className="border hover:border-primary/20 hover:shadow-md transition-all duration-300">
+                            <CardHeader>
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="space-y-1">
+                                  <CardTitle className="text-lg">{name}</CardTitle>
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <MapPin className="h-4 w-4" />
+                                    <span>{location}</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {matchScore != null && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {matchScore}% match
+                                    </Badge>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => toggleCollegeSaved(college)}
+                                    disabled={!idString || savingCollegeId === idString}
+                                    title={isSaved ? "Remove from saved" : "Save college"}
+                                  >
+                                    {savingCollegeId === idString ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Star className={`h-4 w-4 ${isSaved ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground"}`} />
+                                    )}
+                                  </Button>
+                                </div>
+                              </div>
+                              {overview && <CardDescription className="line-clamp-3">{overview}</CardDescription>}
+                            </CardHeader>
+                            <CardContent>
+                              <Button
+                                variant="outline"
+                                disabled={!detailUrl}
+                                onClick={() => detailUrl && window.open(detailUrl, "_blank", "noopener,noreferrer")}
+                              >
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                View Details
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={Building2}
+                    title="No Colleges Yet"
+                    description="Complete your assessment to generate college recommendations."
+                    action={{
+                      label: "Go to Assessment",
+                      onClick: () => navigate("/assessment"),
+                      variant: "default",
                     }}
                   />
                 )}

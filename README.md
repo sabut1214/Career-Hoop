@@ -32,3 +32,9 @@ Two helper functions are available in `@/lib/api` on both React builds:
 - `submitQuiz(quizSessionId, userId, answers)`
 
 Each function talks to the backend endpoints above and throws descriptive errors if anything fails.
+
+## Payments (eSewa)
+
+- Frontend: `http://localhost:5173/payments/esewa`
+- Backend endpoints: `/api/payments/esewa/initiate`, `/api/payments/esewa/success`, `/api/payments/esewa/failure`
+- Set eSewa env vars in `backend/env.template` (callbacks must be publicly reachable for live).

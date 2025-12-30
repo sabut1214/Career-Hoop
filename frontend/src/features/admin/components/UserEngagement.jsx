@@ -75,11 +75,11 @@ export function UserEngagement() {
   const chartConfig = {
     users: {
       label: "Active Users",
-      color: "hsl(var(--chart-1))",
+      color: "var(--chart-1)",
     },
     count: {
       label: "Count",
-      color: "hsl(var(--chart-2))",
+      color: "var(--chart-2)",
     },
   }
 
@@ -150,7 +150,7 @@ export function UserEngagement() {
               <XAxis dataKey="period" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
               <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="users" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="users" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ChartContainer>
         </CardContent>
@@ -168,7 +168,7 @@ export function UserEngagement() {
                 <XAxis type="number" tick={{ fontSize: 12 }} />
                 <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={120} />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="count" fill="hsl(var(--chart-2))" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="count" fill="var(--chart-2)" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ChartContainer>
           </CardContent>

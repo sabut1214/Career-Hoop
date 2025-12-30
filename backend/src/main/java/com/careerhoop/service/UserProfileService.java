@@ -3,8 +3,10 @@ package com.careerhoop.service;
 import com.careerhoop.dto.UpdateUserProfileRequest;
 import com.careerhoop.dto.UserResponse;
 import com.careerhoop.entity.User;
+import com.careerhoop.exception.FreeLimitReachedException;
 import com.careerhoop.repository.UserRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,9 +58,11 @@ public class UserProfileService {
     }
 
     @Transactional
-    public UserResponse updateUserProfile(UUID userId, UpdateUserProfileRequest request) {
+    public UserResponse updateUserProfile(UUID userId, UpdateUserProfileRequest request, String source) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        enforceGradeEntryLimitIfNeeded(user, request, source);
 
         if (request.name() != null) {
             if (!hasText(request.name())) {
@@ -216,6 +220,26 @@ public class UserProfileService {
         return response;
     }
 
+    private void enforceGradeEntryLimitIfNeeded(User user, UpdateUserProfileRequest request, String source) {
+        // Premium/free limits removed.
+        return;
+    }
+
+    private static boolean safeEquals(String a, String b) {
+        if (a == null) return b == null;
+        return a.equals(b);
+    }
+
+    private static boolean safeEqualsList(List<String> a, List<String> b) {
+        if (a == null || a.isEmpty()) {
+            return b == null || b.isEmpty();
+        }
+        if (b == null || b.isEmpty()) {
+            return false;
+        }
+        return a.equals(b);
+    }
+
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
     }
@@ -328,5 +352,3 @@ public class UserProfileService {
         }
     }
 }
-
-

@@ -1271,7 +1271,7 @@ export const fetchWithAuth = async (url, options = {}) => {
   options.credentials = options.credentials || "include"
   options.headers = { ...options.headers, ...headers }
 
-  logger.log(`[fetchWithAuth] Making ${options.method || 'GET'} request to: ${url}`, {
+  logger.debug(`[fetchWithAuth] Making ${options.method || 'GET'} request to: ${url}`, {
     hasUserHeaders: !!headers['X-User-Id'],
     credentials: options.credentials,
     method: options.method || 'GET'
@@ -1302,7 +1302,7 @@ export const fetchWithAuth = async (url, options = {}) => {
     throw error
   }
 
-  logger.log(`[fetchWithAuth] Response status: ${response.status} for ${url}`, {
+  logger.debug(`[fetchWithAuth] Response status: ${response.status} for ${url}`, {
     hasUserId: !!headers['X-User-Id']
   })
 
@@ -1429,10 +1429,24 @@ export const getUserProfile = async (userId) => {
   return response.json()
 }
 
-export const updateUserProfile = async (userId, data) => {
+export const getMe = async () => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/user/me`, {
+    method: "GET",
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.message || "Failed to fetch user info")
+  }
+
+  return response.json()
+}
+
+export const updateUserProfile = async (userId, data, options = {}) => {
   if (!userId) throw new Error("User ID is required to update profile")
 
-  const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}`, {
+  const query = options?.source ? `?source=${encodeURIComponent(options.source)}` : ""
+  const response = await fetchWithAuth(`${API_BASE_URL}/users/${userId}${query}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -1837,4 +1851,29 @@ export const getPendingCounts = async () => {
   } catch (error) {
     throw error
   }
+}
+
+export const initiateEsewaPayment = async (payload) => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/payments/esewa/initiate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Failed to initiate eSewa payment: ${response.status} ${errorText}`)
+  }
+  return await response.json()
+}
+
+export const getEsewaPaymentStatus = async (pid) => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/payments/esewa/status?pid=${encodeURIComponent(pid)}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  })
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Failed to fetch payment status: ${response.status} ${errorText}`)
+  }
+  return await response.json()
 }

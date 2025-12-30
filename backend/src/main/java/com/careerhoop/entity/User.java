@@ -81,6 +81,15 @@ public class User {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "is_premium")
+    private Boolean isPremium = false;
+
+    @Column(name = "grade_entry_count")
+    private Integer gradeEntryCount = 0;
+
+    @Column(name = "premium_expires_at")
+    private LocalDateTime premiumExpiresAt;
+
     /**
      * @deprecated Legacy password reset token fields.
      * Password reset now uses OtpResetToken entity.
@@ -99,5 +108,4 @@ public class User {
     @Column(name = "password_reset_token_expiry")
     private LocalDateTime passwordResetTokenExpiry;
 }
-
 

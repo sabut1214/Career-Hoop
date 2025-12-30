@@ -82,7 +82,7 @@ export default function Dashboard() {
         try {
           const [careersData, collegesData] = await Promise.all([
             getSavedCareers(user.id).catch(() => []),
-            getSavedColleges(user.id).catch(() => [])
+            getSavedColleges(user.id).catch(() => []),
           ])
           setSavedCareersCount(careersData.length)
           setSavedCollegesCount(collegesData.length)
@@ -104,7 +104,7 @@ export default function Dashboard() {
 
           // Add most recent saved college
           if (collegesData.length > 0) {
-            const latestCollege = collegesData.sort((a, b) => 
+            const latestCollege = collegesData.sort((a, b) =>
               new Date(b.savedAt) - new Date(a.savedAt)
             )[0]
             activities.push({

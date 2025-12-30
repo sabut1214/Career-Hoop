@@ -689,7 +689,6 @@ export default function CareersPage() {
               isLoading={loading}
             />
           )}
-        </div>
     </div>
   )
 }

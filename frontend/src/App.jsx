@@ -23,8 +23,6 @@ const Grades = lazy(() => import("@/features/assessment/pages/Grades"))
 const Interests = lazy(() => import("@/features/assessment/pages/Interests"))
 const Careers = lazy(() => import("@/features/careers/pages/Careers"))
 const Colleges = lazy(() => import("@/features/colleges/pages/Colleges"))
-const SavedColleges = lazy(() => import("@/features/colleges/pages/SavedColleges"))
-const CollegeComparison = lazy(() => import("@/features/colleges/pages/CollegeComparison"))
 const Trainings = lazy(() => import("@/features/trainings/pages/Trainings"))
 const QuizStart = lazy(() => import("@/features/trainings/pages/QuizStart"))
 const QuizPage = lazy(() => import("@/features/trainings/pages/QuizPage"))
@@ -114,8 +112,6 @@ function AppContent() {
                   <Route path="/interests" element={<Interests />} />
                   <Route path="/careers" element={<Careers />} />
                   <Route path="/colleges" element={<Colleges />} />
-                  <Route path="/saved-colleges" element={<SavedColleges />} />
-                  <Route path="/college-comparison" element={<CollegeComparison />} />
                   <Route path="/trainings" element={<Trainings />} />
                   <Route path="/quiz/start/:trainingId" element={<QuizStart />} />
                   <Route path="/quiz/session/:quizSessionId" element={<QuizPage />} />

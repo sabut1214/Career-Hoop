@@ -108,6 +108,7 @@ export default function ProfilePage() {
   const [pictureRemoved, setPictureRemoved] = useState(false)
   const [savedCareers, setSavedCareers] = useState([])
   const [savedColleges, setSavedColleges] = useState([])
+
   const [achievements, setAchievements] = useState([])
   const [loadingSavedItems, setLoadingSavedItems] = useState(false)
 
@@ -194,7 +195,7 @@ export default function ProfilePage() {
       try {
         const [careersData, collegesData] = await Promise.all([
           getSavedCareers(user.id).catch(() => []),
-          getSavedColleges(user.id).catch(() => [])
+          getSavedColleges(user.id).catch(() => []),
         ])
 
         if (!active) return
@@ -216,9 +217,9 @@ export default function ProfilePage() {
             id: college.id,
             name: college.collegeName,
             location: college.collegeLocation || college.location || "Location not available",
-            website: website,
+            website,
             logo: "/placeholder.svg",
-            savedDate: college.savedAt ? new Date(college.savedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            savedDate: college.savedAt ? new Date(college.savedAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
           }
         })
 
@@ -904,17 +905,16 @@ export default function ProfilePage() {
                             transition={{ duration: 0.4, delay: index * 0.1 }}
                             whileHover={{ scale: 1.02 }}
                           >
-                            <Card 
+                            <Card
                               className="border hover:border-primary/20 hover:shadow-md transition-all duration-300 h-full flex flex-col cursor-pointer"
                               onClick={() => {
                                 const website = college.website
-                                if (website) {
-                                  let url = website.trim()
-                                  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                                    url = `https://${url}`
-                                  }
-                                  window.open(url, '_blank', 'noopener,noreferrer')
+                                if (!website) return
+                                let url = website.trim()
+                                if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                                  url = `https://${url}`
                                 }
+                                window.open(url, "_blank", "noopener,noreferrer")
                               }}
                             >
                               <CardContent className="p-4 space-y-3 flex-1 flex flex-col">
@@ -924,7 +924,7 @@ export default function ProfilePage() {
                                     alt={`${college.name} logo`}
                                     className="w-10 h-10 rounded object-cover flex-shrink-0"
                                     onError={(e) => {
-                                      e.target.style.display = 'none'
+                                      e.target.style.display = "none"
                                     }}
                                   />
                                   <div className="flex-1 min-w-0">
@@ -936,9 +936,7 @@ export default function ProfilePage() {
                                   <p className="text-xs text-muted-foreground">
                                     Saved {new Date(college.savedDate).toLocaleDateString()}
                                   </p>
-                                  {college.website && (
-                                    <span className="text-xs text-primary">Visit Website</span>
-                                  )}
+                                  {college.website && <span className="text-xs text-primary">Visit Website</span>}
                                 </div>
                               </CardContent>
                             </Card>

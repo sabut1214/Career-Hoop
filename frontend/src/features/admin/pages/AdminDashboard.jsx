@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Button } from "@/shared/components/ui/button"
 import { Users, BookOpen, Building2, Zap, RefreshCw, TrendingUp, TrendingDown, Minus } from "lucide-react"
 import { getStudents, getCareers, getColleges, getTrainings, getGrowthMetrics, getAdminDashboardStats } from "@/shared/lib/api"
+import { logger } from "@/shared/lib/utils/logger"
 import { cn } from "@/shared/lib/utils"
 import { RecentActivityFeed } from "@/features/admin/components/RecentActivityFeed"
 import { QuickActions } from "@/features/admin/components/QuickActions"
@@ -82,8 +83,7 @@ export default function AdminDashboard() {
         trainingsCount = getCount(trainingsRes)
       }
 
-      // Log for debugging
-      console.log("Admin Dashboard Stats:", {
+      logger.debug("Admin Dashboard Stats:", {
         students: studentsCount,
         careers: careersCount,
         colleges: collegesCount,

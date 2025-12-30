@@ -117,7 +117,8 @@ export function AcademicDetailsForm({ userProfile, onUpdate }) {
         onUpdate()
       }
     } catch (error) {
-      toast.error(error.message || "Failed to update academic details")
+      const message = error?.message || "Failed to update academic details"
+      toast.error(message)
     } finally {
       setIsSaving(false)
     }

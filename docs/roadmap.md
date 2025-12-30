@@ -52,6 +52,16 @@
   - Verify end-to-end flows and edge cases
   - Mobile/tablet layout review
 
+## Phase 5.6: Payments (eSewa) (3-5 days)
+- Add eSewa payment flow (initiate + callbacks + verification)
+- Payment records + admin visibility
+- Production configuration + testing (UAT → live)
+
+## Phase 5.7: Freemium → Premium Gating (3-6 days)
+- Add premium fields to users (is_premium, grade_entry_count, premium_expires_at)
+- Enforce premium-only API access (trainings/careers/colleges/quizzes/recommendations)
+- Free-tier limits (2 manual academic updates) + upgrade UX
+
 ## Phase 6: Testing & Refinement (1 week)
 - End-to-end testing
 - Performance optimization

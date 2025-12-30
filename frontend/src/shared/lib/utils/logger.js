@@ -5,6 +5,10 @@
 
 const isDev = import.meta.env.DEV
 const isProduction = import.meta.env.PROD
+const debugEnabled =
+  isDev &&
+  (import.meta.env.VITE_DEBUG_LOGS === "true" ||
+    (typeof window !== "undefined" && window?.localStorage?.getItem("DEBUG_LOGS") === "true"))
 
 /**
  * Logger object that conditionally logs based on environment.
@@ -50,7 +54,7 @@ export const logger = {
    * Logs debug messages (development only).
    * @param {...any} args - Arguments to log
    */
-  debug: isDev ? (...args) => {
+  debug: debugEnabled ? (...args) => {
     const sanitizedArgs = args.map(arg => sanitizeLogData(arg))
     console.debug(...sanitizedArgs)
   } : () => {},

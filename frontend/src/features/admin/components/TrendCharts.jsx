@@ -44,23 +44,23 @@ export function TrendCharts() {
   const chartConfig = {
     userRegistrations: {
       label: "User Registrations",
-      color: "hsl(var(--chart-1))",
+      color: "var(--chart-1)",
     },
     careerCreations: {
       label: "Career Creations",
-      color: "hsl(var(--chart-2))",
+      color: "var(--chart-2)",
     },
     collegeCreations: {
       label: "College Creations",
-      color: "hsl(var(--chart-3))",
+      color: "var(--chart-3)",
     },
     trainingCreations: {
       label: "Training Creations",
-      color: "hsl(var(--chart-4))",
+      color: "var(--chart-4)",
     },
     quizCompletions: {
       label: "Quiz Completions",
-      color: "hsl(var(--chart-5))",
+      color: "var(--chart-5)",
     },
   }
 
@@ -135,40 +135,40 @@ export function TrendCharts() {
                 type="monotone" 
                 dataKey="User Registrations" 
                 stackId="1"
-                stroke="hsl(var(--chart-1))"
-                fill="hsl(var(--chart-1))"
+                stroke="var(--chart-1)"
+                fill="var(--chart-1)"
                 fillOpacity={0.6}
               />
               <Area 
                 type="monotone" 
                 dataKey="Career Creations" 
                 stackId="1"
-                stroke="hsl(var(--chart-2))"
-                fill="hsl(var(--chart-2))"
+                stroke="var(--chart-2)"
+                fill="var(--chart-2)"
                 fillOpacity={0.6}
               />
               <Area 
                 type="monotone" 
                 dataKey="College Creations" 
                 stackId="1"
-                stroke="hsl(var(--chart-3))"
-                fill="hsl(var(--chart-3))"
+                stroke="var(--chart-3)"
+                fill="var(--chart-3)"
                 fillOpacity={0.6}
               />
               <Area 
                 type="monotone" 
                 dataKey="Training Creations" 
                 stackId="1"
-                stroke="hsl(var(--chart-4))"
-                fill="hsl(var(--chart-4))"
+                stroke="var(--chart-4)"
+                fill="var(--chart-4)"
                 fillOpacity={0.6}
               />
               <Area 
                 type="monotone" 
                 dataKey="Quiz Completions" 
                 stackId="1"
-                stroke="hsl(var(--chart-5))"
-                fill="hsl(var(--chart-5))"
+                stroke="var(--chart-5)"
+                fill="var(--chart-5)"
                 fillOpacity={0.6}
               />
               <ChartLegend content={<ChartLegendContent />} />
@@ -197,7 +197,7 @@ export function TrendCharts() {
               <Line 
                 type="monotone" 
                 dataKey="User Registrations" 
-                stroke="hsl(var(--chart-1))"
+                stroke="var(--chart-1)"
                 strokeWidth={2}
                 dot={{ r: 4 }}
               />

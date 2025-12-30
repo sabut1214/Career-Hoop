@@ -102,6 +102,33 @@ export default function InterestsPage() {
     const loadExistingInterests = async () => {
       if (!user?.email) return
 
+      const loadFromLocalStorage = () => {
+        try {
+          const userKey = user?.id ? getUserStorageKey("userInterests", user.id) : null
+          const raw = (userKey && localStorage.getItem(userKey)) || localStorage.getItem("userInterests")
+          if (!raw) return false
+
+          const parsed = JSON.parse(raw)
+          if (!parsed || typeof parsed !== "object") return false
+
+          const careerFields = Array.isArray(parsed.careerFields) ? parsed.careerFields.slice(0, 2) : []
+          const activities = Array.isArray(parsed.activities) ? parsed.activities.slice(0, 3) : []
+          const workEnvironments = Array.isArray(parsed.workEnvironments) ? parsed.workEnvironments.slice(0, 1) : []
+
+          const hasInterests = careerFields.length > 0 || activities.length > 0 || workEnvironments.length > 0
+          if (!hasInterests) return false
+
+          setHasCompletedInterests(true)
+          setSelectedFields(careerFields)
+          setSelectedActivities(activities)
+          setSelectedEnvironments(workEnvironments)
+          return true
+        } catch {
+          return false
+        }
+      }
+
+      let loaded = false
       try {
         const response = await studentService.getByEmail(user.email)
         const student = response.data
@@ -114,6 +141,7 @@ export default function InterestsPage() {
             (student.workEnvironments && student.workEnvironments.length > 0)
           
           if (hasInterests) {
+            loaded = true
             setHasCompletedInterests(true)
             // Limit to 2 career fields if more than 2 are stored
             const careerFields = (student.careerFields || []).slice(0, 2)
@@ -132,6 +160,10 @@ export default function InterestsPage() {
         if (err.response?.status !== 404) {
           console.error("Failed to load interests:", err)
         }
+      }
+
+      if (!loaded) {
+        loadFromLocalStorage()
       }
     }
 
@@ -301,14 +333,39 @@ export default function InterestsPage() {
           const careerFields = (student.careerFields || []).slice(0, 2)
           const activities = (student.activities || []).slice(0, 3)
           const workEnvironments = (student.workEnvironments || []).slice(0, 1)
-          setSelectedFields(careerFields)
-          setSelectedActivities(activities)
-          setSelectedEnvironments(workEnvironments)
+          const hasInterests = careerFields.length > 0 || activities.length > 0 || workEnvironments.length > 0
+          if (hasInterests) {
+            setSelectedFields(careerFields)
+            setSelectedActivities(activities)
+            setSelectedEnvironments(workEnvironments)
+            return
+          }
         }
       } catch (err) {
         if (err.response?.status !== 404) {
           console.error("Failed to load interests:", err)
         }
+      }
+
+      try {
+        const userKey = user?.id ? getUserStorageKey("userInterests", user.id) : null
+        const raw = (userKey && localStorage.getItem(userKey)) || localStorage.getItem("userInterests")
+        if (!raw) return
+        const parsed = JSON.parse(raw)
+        if (!parsed || typeof parsed !== "object") return
+
+        const careerFields = Array.isArray(parsed.careerFields) ? parsed.careerFields.slice(0, 2) : []
+        const activities = Array.isArray(parsed.activities) ? parsed.activities.slice(0, 3) : []
+        const workEnvironments = Array.isArray(parsed.workEnvironments) ? parsed.workEnvironments.slice(0, 1) : []
+
+        const hasInterests = careerFields.length > 0 || activities.length > 0 || workEnvironments.length > 0
+        if (!hasInterests) return
+
+        setSelectedFields(careerFields)
+        setSelectedActivities(activities)
+        setSelectedEnvironments(workEnvironments)
+      } catch {
+        // ignore
       }
     }
     loadExistingInterests()
