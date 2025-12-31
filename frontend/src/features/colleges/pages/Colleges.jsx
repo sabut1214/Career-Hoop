@@ -1,24 +1,15 @@
-import { useEffect, useState, memo } from "react"
+import { useEffect, useState } from "react"
 import { useDebounce } from "@/shared/hooks/useDebounce"
 import { motion } from "framer-motion"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card"
-import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
 import { Badge } from "@/shared/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import {
   Building2,
-  MapPin,
-  Users,
-  Star,
   Search,
   Filter,
   GraduationCap,
   Sparkles,
-  DollarSign,
-  Clock,
-  ExternalLink,
-  Loader2,
 } from "lucide-react"
 import { getCollegeRecommendations, getSavedColleges, saveCollege, unsaveCollege } from "@/shared/lib/api"
 import Pagination from "@/shared/components/common/pagination"
@@ -30,6 +21,7 @@ import { CollegeCardListSkeleton } from "@/shared/components/common/LoadingSkele
 import { extractErrorMessage } from "@/shared/utils/errorMessages"
 import { EmptySearchState, EmptyErrorState } from "@/shared/components/common/EmptyState"
 import { getUserStorageKey } from "@/shared/utils/utils"
+import CollegeCard from "@/shared/components/common/CollegeCard"
 
 const PUBLIC_KEYWORDS = ["campus", "public", "government", "constituent", "state", "community"]
 const PRIVATE_KEYWORDS = ["college", "academy", "institute", "school", "private"]
@@ -148,197 +140,6 @@ const dedupeColleges = (colleges) => {
     return true
   })
 }
-
-const CollegeCard = memo(({ college, index, isSaved, onToggleSaved }) => {
-  const { user } = useAuth()
-  const hasDetailUrl = Boolean(college.detailUrl)
-  const [isSaving, setIsSaving] = useState(false)
-
-  const handleSaveClick = async (e) => {
-    e.stopPropagation()
-    if (!college?.id) return
-    if (!user?.id) {
-      toast.error("Please log in to save colleges")
-      return
-    }
-    if (!onToggleSaved || isSaving) return
-
-    setIsSaving(true)
-    try {
-      await onToggleSaved(college.id)
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: index * 0.1 }}
-      whileHover={{ scale: 1.02 }}
-      className="group"
-    >
-      <Card className="h-full min-h-[460px] flex flex-col border-2 hover:border-primary/20 hover:shadow-lg transition-all duration-300">
-        <CardHeader className="space-y-4 pb-0">
-          <div className="flex items-start space-x-4">
-            <img
-              src={college.logo || "/placeholder.svg"}
-              alt={`${college.name} logo`}
-              className="w-16 h-16 rounded-lg object-cover border border-border"
-              loading="lazy"
-              decoding="async"
-              width={64}
-              height={64}
-              onError={(e) => {
-                e.target.style.display = 'none'
-              }}
-            />
-            <div className="flex-1 space-y-2">
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-xl group-hover:text-primary transition-colors">{college.name}</CardTitle>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">{college.location || "Location not available"}</span>
-                  </div>
-                  {college.affiliation && (
-                    <div className="flex items-center space-x-2 mt-1">
-                      <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">{college.affiliation}</span>
-                    </div>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={handleSaveClick}
-                  disabled={!user?.id || !college?.id || isSaving}
-                  className="transition-colors disabled:opacity-50"
-                  title={!user?.id ? "Log in to save colleges" : isSaved ? "Remove from saved" : "Save college"}
-                  aria-label={!user?.id ? "Log in to save colleges" : isSaved ? "Remove from saved" : "Save college"}
-                  aria-pressed={isSaved}
-                >
-                  {isSaving ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                  ) : (
-                    <Star
-                      className={`h-5 w-5 transition-colors ${
-                        !user?.id || !college?.id
-                          ? "text-muted-foreground cursor-not-allowed"
-                          : isSaved
-                            ? "text-yellow-500 fill-yellow-500 cursor-pointer"
-                            : "text-muted-foreground group-hover:text-accent cursor-pointer"
-                      }`}
-                    />
-                  )}
-                </button>
-              </div>
-            <div className="flex items-center space-x-4 text-sm">
-              <Badge variant="secondary" className="text-xs">
-                {college.displayType || "Unknown"}
-              </Badge>
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="flex-1 flex flex-col space-y-6 pt-6">
-        <CardDescription className="text-base leading-relaxed line-clamp-4">
-          {college.description || college.overview || "No description available"}
-        </CardDescription>
-
-        <div className="grid grid-cols-2 gap-4 flex-shrink-0">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
-              <div className="flex items-center space-x-1">
-                <Users className="h-4 w-4 text-blue-600" />
-                <span className="text-xs">Students</span>
-              </div>
-              <span className="text-xs font-medium">{college.students || "N/A"}</span>
-            </div>
-            <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
-              <div className="flex items-center space-x-1">
-                <DollarSign className="h-4 w-4 text-green-600" />
-                <span className="text-xs">Tuition</span>
-              </div>
-              <span className="text-xs font-medium">{college.tuition || "N/A"}</span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
-              <div className="flex items-center space-x-1">
-                <GraduationCap className="h-4 w-4 text-purple-600" />
-                <span className="text-xs">Acceptance</span>
-              </div>
-              <span className="text-xs font-medium">{college.acceptanceRate || college.acceptance || "N/A"}</span>
-            </div>
-            <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
-              <div className="flex items-center space-x-1">
-                <Clock className="h-4 w-4 text-orange-600" />
-                <span className="text-xs">Founded</span>
-              </div>
-              <span className="text-xs font-medium">{college.establishedYear || college.established || "N/A"}</span>
-            </div>
-          </div>
-        </div>
-
-        {college.programs && Array.isArray(college.programs) && college.programs.length > 0 && (
-          <div className="space-y-3">
-            <div>
-              <h4 className="text-sm font-medium mb-2">Popular Programs</h4>
-              <div className="flex flex-wrap gap-1">
-                {college.programs.slice(0, 4).map((program, idx) => (
-                  <Badge key={`${college.id || idx}-${program}`} variant="secondary" className="text-xs">
-                    {typeof program === "string" ? program : program.name || program.title || program}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex flex-col space-y-2 mt-auto">
-          <Button
-            className="w-full"
-            onClick={() => hasDetailUrl && window.open(college.detailUrl, "_blank", "noopener,noreferrer")}
-            disabled={!hasDetailUrl}
-            title={!hasDetailUrl ? "Website not available" : ""}
-          >
-            <ExternalLink className="mr-2 h-4 w-4" />
-            {hasDetailUrl ? "View Details" : "Website Unavailable"}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-    </motion.div>
-  )
-}, (prevProps, nextProps) => {
-  // Custom comparison function for memo
-  // Only re-render if college data or index changes
-  const prevCollegeId = String(prevProps.college?.id || '')
-  const nextCollegeId = String(nextProps.college?.id || '')
-  const prevIsSaved = !!prevProps.isSaved
-  const nextIsSaved = !!nextProps.isSaved
-  
-  // Re-render if college ID changed
-  if (prevCollegeId !== nextCollegeId) {
-    return false
-  }
-
-  if (prevIsSaved !== nextIsSaved) {
-    return false
-  }
-  
-  // Re-render if index changed (for animation)
-  if (prevProps.index !== nextProps.index) {
-    return false
-  }
-  
-  // Don't re-render if nothing relevant changed
-  return true
-})
-
-CollegeCard.displayName = 'CollegeCard'
 
 export default function CollegesPage() {
   const [allColleges, setAllColleges] = useState([])

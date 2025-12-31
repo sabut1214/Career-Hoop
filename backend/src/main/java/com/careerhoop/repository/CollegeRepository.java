@@ -7,10 +7,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface CollegeRepository extends JpaRepository<College, UUID> {
+
+    Optional<College> findFirstByNameIgnoreCase(String name);
     
     @Query("SELECT DISTINCT c.location FROM College c WHERE c.location IS NOT NULL AND c.location != '' ORDER BY c.location")
     List<String> findDistinctLocations();

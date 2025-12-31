@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/recommendations")
@@ -81,6 +83,51 @@ public class RecommendationController {
         );
 
         if (pythonResponse != null && !pythonResponse.isEmpty()) {
+            // Enrich recommendation results with full DB fields so the frontend can show
+            // overview/programs/detailUrl consistently.
+            for (Map<String, Object> rec : pythonResponse) {
+                if (rec == null) continue;
+
+                Optional<College> collegeOpt = Optional.empty();
+
+                Object idRaw = rec.get("id");
+                if (idRaw != null) {
+                    try {
+                        UUID id = UUID.fromString(String.valueOf(idRaw));
+                        collegeOpt = collegeRepository.findById(id);
+                    } catch (IllegalArgumentException ignored) {
+                        // Non-UUID id (masked or name), fall back to name lookup below.
+                    }
+                }
+
+                if (collegeOpt.isEmpty()) {
+                    Object nameRaw = rec.get("name");
+                    if (nameRaw != null) {
+                        String name = String.valueOf(nameRaw).trim();
+                        if (!name.isBlank()) {
+                            collegeOpt = collegeRepository.findFirstByNameIgnoreCase(name);
+                        }
+                    }
+                }
+
+                if (collegeOpt.isEmpty()) continue;
+                College c = collegeOpt.get();
+
+                // Only fill missing fields; keep recommender-provided values (e.g. matchScore).
+                rec.putIfAbsent("name", c.getName());
+                rec.putIfAbsent("location", c.getLocation());
+                rec.putIfAbsent("affiliation", c.getAffiliation());
+                rec.putIfAbsent("type", c.getType());
+                rec.putIfAbsent("overview", c.getOverview());
+                rec.putIfAbsent("programs", c.getPrograms());
+                rec.putIfAbsent("detailUrl", c.getDetailUrl());
+                rec.putIfAbsent("website", c.getWebsite());
+                rec.putIfAbsent("students", c.getStudents());
+                rec.putIfAbsent("tuition", c.getTuition());
+                rec.putIfAbsent("acceptanceRate", c.getAcceptanceRate());
+                rec.putIfAbsent("establishedYear", c.getEstablishedYear());
+            }
+
             return ResponseEntity.ok(pythonResponse);
         }
 

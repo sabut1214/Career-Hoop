@@ -29,7 +29,6 @@ import {
   AlertCircle,
   CheckCircle,
   Loader2,
-  ExternalLink,
 } from "lucide-react"
 import api from "@/shared/services/api"
 import { useAuth } from "@/shared/context/AuthContext"
@@ -39,6 +38,7 @@ import recommendationService from "@/features/recommendations/services/recommend
 import { toast } from "react-toastify"
 import { EmptyState } from "@/shared/components/common/EmptyState"
 import { CareerCardSkeletonGrid } from "@/shared/components/common/CareerCardSkeleton"
+import CollegeCard from "@/shared/components/common/CollegeCard"
 import { getRecommendationError } from "@/shared/utils/userFriendlyErrors"
 
 const categoryIconMap = {
@@ -416,7 +416,137 @@ export default function RecommendationsPage() {
   const [collegeRecs, setCollegeRecs] = useState([])
   const [loadingColleges, setLoadingColleges] = useState(false)
   const [collegeError, setCollegeError] = useState(null)
-  const [savingCollegeId, setSavingCollegeId] = useState(null)
+
+  const uuidRegex = useMemo(() => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, [])
+
+  const normalizedCollegeRecs = useMemo(() => {
+    return (Array.isArray(collegeRecs) ? collegeRecs : []).map((college) => {
+      const id = college?.id || college?.collegeId || null
+      const matchScore =
+        typeof college?.matchScore === "number"
+          ? Math.round(college.matchScore)
+          : typeof college?.score === "number"
+            ? Math.round(college.score)
+            : null
+
+      return {
+        ...college,
+        id,
+        name: college?.collegeName || college?.name || "College",
+        location: college?.collegeLocation || college?.location || "Location not available",
+        logo: college?.logo || college?.collegeLogo || null,
+        affiliation: college?.affiliation || college?.collegeAffiliation || null,
+        type: college?.type || null,
+        description: college?.overview || college?.description || "",
+        overview: college?.overview || "",
+        detailUrl:
+          college?.detailUrl ||
+          college?.detail_url ||
+          college?.collegeDetailUrl ||
+          college?.college_detail_url ||
+          college?.website ||
+          null,
+        establishedYear: college?.establishedYear ?? college?.established_year ?? college?.founded ?? null,
+        students: college?.students ?? null,
+        tuition: college?.tuition ?? null,
+        acceptanceRate: college?.acceptanceRate ?? college?.acceptance_rate ?? null,
+        programs: college?.programs ?? null,
+        matchScore,
+      }
+    })
+  }, [collegeRecs])
+
+  useEffect(() => {
+    const idsToFetch = Array.from(
+      new Set(
+        normalizedCollegeRecs
+          .filter((college) => {
+            const id = college?.id ? String(college.id).trim() : ""
+            if (!id || !uuidRegex.test(id)) return false
+
+            const hasText = (value) => typeof value === "string" && value.trim().length > 0
+            const missingCore =
+              !(hasText(college.overview) || hasText(college.description)) ||
+              !hasText(college.detailUrl)
+
+            const programsValue = college.programs
+            const missingPrograms =
+              programsValue == null ||
+              (typeof programsValue === "string" && ["", "[]", "null"].includes(programsValue.trim().toLowerCase())) ||
+              (Array.isArray(programsValue) && programsValue.length === 0)
+
+            return missingCore || missingPrograms
+          })
+          .map((college) => String(college.id))
+      )
+    )
+
+    if (idsToFetch.length === 0) return
+
+    let cancelled = false
+    const hydrate = async () => {
+      try {
+        const response = await api.post("/api/colleges/batch", idsToFetch)
+        const fullColleges = Array.isArray(response?.data) ? response.data : []
+        const byId = new Map(fullColleges.map((c) => [String(c.id), c]))
+
+        if (cancelled) return
+        setCollegeRecs((prev) =>
+          (Array.isArray(prev) ? prev : []).map((rec) => {
+            const recId = rec?.id || rec?.collegeId
+            const idString = recId ? String(recId) : ""
+            const full = idString ? byId.get(idString) : null
+            if (!full) return rec
+            const recMatchScore =
+              typeof rec?.matchScore === "number"
+                ? rec.matchScore
+                : typeof rec?.score === "number"
+                  ? rec.score
+                  : null
+            return { ...full, matchScore: recMatchScore }
+          })
+        )
+      } catch (error) {
+        const status = error?.response?.status
+        if (status !== 401 && status !== 403) return
+
+        try {
+          const results = await Promise.allSettled(
+            idsToFetch.map((id) => api.get(`/api/colleges/${id}`))
+          )
+          const fullColleges = results
+            .filter((r) => r.status === "fulfilled")
+            .map((r) => r.value?.data)
+            .filter(Boolean)
+          const byId = new Map(fullColleges.map((c) => [String(c.id), c]))
+
+          if (cancelled) return
+          setCollegeRecs((prev) =>
+            (Array.isArray(prev) ? prev : []).map((rec) => {
+              const recId = rec?.id || rec?.collegeId
+              const idString = recId ? String(recId) : ""
+              const full = idString ? byId.get(idString) : null
+              if (!full) return rec
+              const recMatchScore =
+                typeof rec?.matchScore === "number"
+                  ? rec.matchScore
+                  : typeof rec?.score === "number"
+                    ? rec.score
+                    : null
+              return { ...full, matchScore: recMatchScore }
+            })
+          )
+        } catch {
+          // Fall back to minimal fields from recommendations.
+        }
+      }
+    }
+
+    hydrate()
+    return () => {
+      cancelled = true
+    }
+  }, [normalizedCollegeRecs, uuidRegex])
 
   // Fetch all careers on mount
   useEffect(() => {
@@ -787,17 +917,15 @@ export default function RecommendationsPage() {
     fetchCollegeRecommendations(analysisSummary, interestSummary)
   }, [user?.id, analysisSummary, interestSummary])
 
-  const toggleCollegeSaved = async (college) => {
+  const toggleCollegeSaved = async (collegeId) => {
     if (!user?.id) {
       navigate("/login")
       return
     }
-    const id = college?.id || college?.collegeId
-    if (!id) return
-    const idString = String(id)
+    if (!collegeId) return
+    const idString = String(collegeId)
     const wasSaved = savedCollegeIds.has(idString)
 
-    setSavingCollegeId(idString)
     setSavedCollegeIds((prev) => {
       const next = new Set(prev)
       if (wasSaved) next.delete(idString)
@@ -807,10 +935,10 @@ export default function RecommendationsPage() {
 
     try {
       if (wasSaved) {
-        await unsaveCollege(user.id, id)
+        await unsaveCollege(user.id, collegeId)
         toast.success("College removed from saved")
       } else {
-        await saveCollege(user.id, id)
+        await saveCollege(user.id, collegeId)
         toast.success("College saved")
       }
     } catch (error) {
@@ -823,7 +951,6 @@ export default function RecommendationsPage() {
         return next
       })
     } finally {
-      setSavingCollegeId(null)
       fetchSavedColleges()
     }
   }
@@ -1072,76 +1199,19 @@ export default function RecommendationsPage() {
                       variant: "secondary",
                     }}
                   />
-                ) : collegeRecs.length > 0 ? (
+                ) : normalizedCollegeRecs.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {collegeRecs.map((college, index) => {
-                      const id = college?.id || college?.collegeId || index
-                      const idString = String(college?.id || college?.collegeId || "")
-                      const isSaved = idString ? savedCollegeIds.has(idString) : false
-
-                      const name = college.collegeName || college.name || "College"
-                      const location = college.collegeLocation || college.location || "Location not available"
-                      const overview = college.overview || college.description || ""
-                      const detailUrl = college.detailUrl || college.collegeDetailUrl || college.website || null
-                      const matchScore =
-                        typeof college.matchScore === "number"
-                          ? Math.round(college.matchScore)
-                          : typeof college.score === "number"
-                            ? Math.round(college.score)
-                            : null
-
+                    {normalizedCollegeRecs.map((college, index) => {
+                      const idString = college?.id ? String(college.id) : ""
                       return (
-                        <motion.div
-                          key={id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.4, delay: index * 0.05 }}
-                        >
-                          <Card className="border hover:border-primary/20 hover:shadow-md transition-all duration-300">
-                            <CardHeader>
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="space-y-1">
-                                  <CardTitle className="text-lg">{name}</CardTitle>
-                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <MapPin className="h-4 w-4" />
-                                    <span>{location}</span>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {matchScore != null && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      {matchScore}% match
-                                    </Badge>
-                                  )}
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => toggleCollegeSaved(college)}
-                                    disabled={!idString || savingCollegeId === idString}
-                                    title={isSaved ? "Remove from saved" : "Save college"}
-                                  >
-                                    {savingCollegeId === idString ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <Star className={`h-4 w-4 ${isSaved ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground"}`} />
-                                    )}
-                                  </Button>
-                                </div>
-                              </div>
-                              {overview && <CardDescription className="line-clamp-3">{overview}</CardDescription>}
-                            </CardHeader>
-                            <CardContent>
-                              <Button
-                                variant="outline"
-                                disabled={!detailUrl}
-                                onClick={() => detailUrl && window.open(detailUrl, "_blank", "noopener,noreferrer")}
-                              >
-                                <ExternalLink className="mr-2 h-4 w-4" />
-                                View Details
-                              </Button>
-                            </CardContent>
-                          </Card>
-                        </motion.div>
+                        <CollegeCard
+                          key={college?.id ? `rec-college-${college.id}` : `rec-college-${index}`}
+                          college={college}
+                          index={index}
+                          isSaved={idString ? savedCollegeIds.has(idString) : false}
+                          onToggleSaved={toggleCollegeSaved}
+                          matchScore={college.matchScore}
+                        />
                       )
                     })}
                   </div>

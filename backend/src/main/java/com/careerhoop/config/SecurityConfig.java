@@ -113,6 +113,10 @@ public class SecurityConfig {
                                 "/api/trainings",
                                 "/api/trainings/**"
                         ).permitAll()
+                        // Public read-only batch fetch (needed for recommendations hydration)
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/colleges/batch"
+                        ).permitAll()
                         .requestMatchers(
                                 "/api/login",
                                 "/api/register",
