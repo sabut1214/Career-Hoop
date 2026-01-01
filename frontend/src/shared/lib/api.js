@@ -681,7 +681,7 @@ export const getAIFeedback = async (userId) => {
 }
 
 // College Recommendations
-export const getCollegeRecommendations = async (request, limit = 4) => {
+export const getCollegeRecommendations = async (request, limit = 5) => {
   if (USE_MOCK_DATA) {
     return []
   }

@@ -21,6 +21,7 @@ import {
   PanelLeft,
   Sun,
   Moon,
+  CreditCard,
 } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@/shared/context/AuthContext"
@@ -51,6 +52,7 @@ const navigationItems = [
   { icon: Briefcase, label: "Careers", href: "/careers", tooltip: "Browse career options" },
   { icon: BookOpen, label: "Training", href: "/trainings", tooltip: "Access skill training programs" },
   { icon: Activity, label: "My Quizzes", href: "/quiz/analytics", tooltip: "View your quiz results and analytics" },
+  { icon: CreditCard, label: "Billing", href: "/billing", tooltip: "Manage plans and payments" },
 ]
 
 export function Sidebar() {

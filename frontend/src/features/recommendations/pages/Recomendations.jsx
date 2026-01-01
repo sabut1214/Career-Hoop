@@ -103,6 +103,44 @@ const getConfidenceFromOutlook = (outlook) => {
   return { confidence: 60, level: "Medium" }
 }
 
+const parseCollegePrograms = (programs) => {
+  if (!programs) return []
+
+  if (Array.isArray(programs)) {
+    return programs
+      .map((program) => {
+        if (typeof program === "string") return program
+        if (typeof program === "object" && program !== null) {
+          return program.name || program.title || program.program || ""
+        }
+        return ""
+      })
+      .filter(Boolean)
+  }
+
+  if (typeof programs === "string") {
+    const trimmed = programs.trim()
+    if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(programs)
+        return parseCollegePrograms(parsed)
+      } catch {
+        return programs
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      }
+    }
+
+    return programs
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean)
+  }
+
+  return []
+}
+
 const transformCareerToRecommendation = (career, matchReason = "") => {
   const outlookData = getConfidenceFromOutlook(career.jobOutlook)
   return {
@@ -429,6 +467,18 @@ export default function RecommendationsPage() {
             ? Math.round(college.score)
             : null
 
+      const overviewText = (college?.overview || "").trim()
+      const descriptionText = (college?.description || "").trim()
+      const description = (overviewText || descriptionText).trim()
+
+      const rawPrograms =
+        college?.programs ??
+        college?.collegePrograms ??
+        college?.popularPrograms ??
+        college?.courses ??
+        college?.degrees ??
+        null
+
       return {
         ...college,
         id,
@@ -437,8 +487,8 @@ export default function RecommendationsPage() {
         logo: college?.logo || college?.collegeLogo || null,
         affiliation: college?.affiliation || college?.collegeAffiliation || null,
         type: college?.type || null,
-        description: college?.overview || college?.description || "",
-        overview: college?.overview || "",
+        description,
+        overview: overviewText,
         detailUrl:
           college?.detailUrl ||
           college?.detail_url ||
@@ -450,7 +500,7 @@ export default function RecommendationsPage() {
         students: college?.students ?? null,
         tuition: college?.tuition ?? null,
         acceptanceRate: college?.acceptanceRate ?? college?.acceptance_rate ?? null,
-        programs: college?.programs ?? null,
+        programs: parseCollegePrograms(rawPrograms),
         matchScore,
       }
     })
@@ -900,7 +950,7 @@ export default function RecommendationsPage() {
         return
       }
 
-      const response = await getCollegeRecommendations(request, 12)
+      const response = await getCollegeRecommendations(request, 5)
       setCollegeRecs(Array.isArray(response) ? response : response?.data || [])
     } catch (error) {
       console.error("Failed to fetch college recommendations:", error)

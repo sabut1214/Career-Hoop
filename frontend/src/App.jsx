@@ -49,6 +49,8 @@ const Features = lazy(() => import("@/features/landing-page/pages/Features"))
 const WhyChooseUs = lazy(() => import("@/features/landing-page/pages/WhyChooseUs"))
 const Contact = lazy(() => import("@/features/landing-page/pages/Contact"))
 const NotFound = lazy(() => import("@/shared/components/views/NotFound"))
+const BillingPage = lazy(() => import("@/features/payment/pages/billing"))
+const EsewaReturnPage = lazy(() => import("@/features/payment/pages/EsewaReturn"))
 
 // Inner component to access useNavigate hook
 function AppContent() {
@@ -81,6 +83,7 @@ function AppContent() {
                 <Route path="/why-choose-us" element={<WhyChooseUs />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/payment/esewa/return" element={<EsewaReturnPage />} />
                 <Route
                   path="/health"
                   element={
@@ -113,6 +116,7 @@ function AppContent() {
                   <Route path="/careers" element={<Careers />} />
                   <Route path="/colleges" element={<Colleges />} />
                   <Route path="/trainings" element={<Trainings />} />
+                  <Route path="/billing" element={<BillingPage />} />
                   <Route path="/quiz/start/:trainingId" element={<QuizStart />} />
                   <Route path="/quiz/session/:quizSessionId" element={<QuizPage />} />
                   <Route path="/quiz/result/:quizSessionId" element={<QuizResult />} />
