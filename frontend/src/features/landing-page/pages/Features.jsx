@@ -3,6 +3,8 @@ import { Navbar } from "@/shared/components/layout/navbar"
 import { Footer } from "@/shared/components/layout/footer"
 import { Card, CardContent } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
+import { Badge } from "@/shared/components/ui/badge"
+import { SectionContainer } from "@/shared/components/layout/section-container"
 import {
   LayoutDashboard,
   FileText,
@@ -43,7 +45,7 @@ const features = [
       "Understand skill gaps",
       "Receive improvement tips",
     ],
-    color: "bg-secondary/20",
+    color: "bg-secondary/10",
     iconColor: "text-secondary-foreground",
     image: "/features/grade-analysis.jpg",
   },
@@ -58,7 +60,7 @@ const features = [
       "Match interests to careers",
       "Explore related fields",
     ],
-    color: "bg-accent",
+    color: "bg-accent/20",
     iconColor: "text-accent-foreground",
     image: "/features/interest-mapping.jpg",
   },
@@ -88,7 +90,7 @@ const features = [
       "See admission requirements",
       "Explore scholarship options",
     ],
-    color: "bg-secondary/20",
+    color: "bg-secondary/10",
     iconColor: "text-secondary-foreground",
     image: "/features/college-finder.jpg",
   },
@@ -102,7 +104,7 @@ const features = [
       "Watch professional interviews",
       "Compare multiple careers",
     ],
-    color: "bg-accent",
+    color: "bg-accent/20",
     iconColor: "text-accent-foreground",
     image: "/features/career-explorer.jpg",
   },
@@ -112,17 +114,7 @@ const features = [
     description:
       "Access curated courses and resources to develop the skills employers are looking for in your target career.",
     benefits: ["Personalized learning paths", "Track skill progress", "Earn certificates", "Practice with projects"],
-    color: "bg-secondary/20",
-    iconColor: "text-secondary-foreground",
-    image: "/features/skill-builder.jpg",
-  },
-  {
-    icon: Zap,
-    title: "Skill Builder",
-    description:
-      "Access curated courses and resources to develop the skills employers are looking for in your target career.",
-    benefits: ["Personalized learning paths", "Track skill progress", "Earn certificates", "Practice with projects"],
-    color: "bg-secondary/20",
+    color: "bg-secondary/10",
     iconColor: "text-secondary-foreground",
     image: "/features/skill-builder.jpg",
   },
@@ -131,7 +123,7 @@ const features = [
     title: "Portfolio Builder",
     description: "Create a professional profile that showcases your achievements, skills, and career journey.",
     benefits: ["Highlight achievements", "Share with mentors", "Track your growth", "Export for applications"],
-    color: "bg-accent",
+    color: "bg-accent/20",
     iconColor: "text-accent-foreground",
     image: "/features/portfolio-builder.jpg",
   },
@@ -143,11 +135,11 @@ export default function Features() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="px-4 py-20 md:py-28">
-        <div className="container mx-auto max-w-4xl text-center">
-          <div className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
+      <SectionContainer>
+        <div className="max-w-4xl mx-auto text-center">
+          <Badge variant="default" className="mb-4">
             Features
-          </div>
+          </Badge>
           <h1 className="mb-6 font-sans text-4xl font-bold leading-tight text-foreground md:text-5xl text-balance">
             Powerful Tools for Your <span className="text-primary">Career Journey</span>
           </h1>
@@ -156,11 +148,11 @@ export default function Features() {
             you every step of the way.
           </p>
         </div>
-      </section>
+      </SectionContainer>
 
       {/* Features Grid */}
-      <section className="bg-muted/50 px-4 py-20">
-        <div className="container mx-auto max-w-6xl">
+      <section className="bg-muted/50">
+        <SectionContainer>
           <div className="space-y-16">
             {features.map((feature, index) => (
               <div
@@ -169,7 +161,7 @@ export default function Features() {
               >
                 <div className={index % 2 === 1 ? "lg:order-2" : ""}>
                   <div
-                    className={`mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl ${feature.color}`}
+                    className={`mb-4 inline-flex h-14 w-14 items-center justify-center rounded-xl ${feature.color}`}
                   >
                     <feature.icon className={`h-7 w-7 ${feature.iconColor}`} />
                   </div>
@@ -184,7 +176,7 @@ export default function Features() {
                     ))}
                   </ul>
                 </div>
-                <Card className={`border-border/50 bg-card overflow-hidden ${index % 2 === 1 ? "lg:order-1" : ""}`}>
+                <Card className={`border-border/50 bg-card overflow-hidden transition-all duration-300 hover:shadow-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ${index % 2 === 1 ? "lg:order-1" : ""}`}>
                   <CardContent className="p-0">
                     <img
                       src={feature.image || "/placeholder.svg"}
@@ -196,26 +188,26 @@ export default function Features() {
               </div>
             ))}
           </div>
-        </div>
+        </SectionContainer>
       </section>
 
       {/* CTA */}
-      <section className="px-4 py-20">
-        <div className="container mx-auto max-w-4xl text-center">
+      <SectionContainer>
+        <div className="max-w-4xl mx-auto text-center">
           <h2 className="mb-4 font-sans text-3xl font-bold text-foreground md:text-4xl">
             Ready to Explore All Features?
           </h2>
           <p className="mb-8 text-lg text-muted-foreground">
             Join thousands of students who are already using CareerHoop to shape their future.
           </p>
-          <Button size="lg" className="rounded-full bg-primary px-8 text-primary-foreground hover:bg-primary/90" asChild>
+          <Button size="lg" className="rounded-full bg-primary px-8 text-primary-foreground hover:bg-primary-hover transition-all duration-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" asChild>
             <Link to="/signup">
               Get Started Free
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
         </div>
-      </section>
+      </SectionContainer>
 
       <Footer />
     </div>

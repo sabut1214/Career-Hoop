@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
@@ -35,6 +35,7 @@ import { useAuth } from "@/shared/context/AuthContext"
 import { getUserStorageKey } from "@/shared/utils/utils"
 import { getCollegeRecommendations, getSavedColleges, saveCollege, unsaveCollege, saveCareer, unsaveCareer, getSavedCareers, getUserProfile } from "@/shared/lib/api"
 import recommendationService from "@/features/recommendations/services/recommendationService"
+import { studentService } from "@/shared/services/studentService"
 import { toast } from "react-toastify"
 import { EmptyState } from "@/shared/components/common/EmptyState"
 import { CareerCardSkeletonGrid } from "@/shared/components/common/CareerCardSkeleton"
@@ -61,7 +62,7 @@ const categoryIconMap = {
 }
 
 const categoryColorMap = {
-  Technology: "bg-info",
+  Technology: "bg-primary",
   "Data Science": "bg-success",
   Healthcare: "bg-destructive",
   Medical: "bg-destructive",
@@ -74,20 +75,20 @@ const categoryColorMap = {
   Marketing: "bg-secondary",
   Gaming: "bg-accent",
   "History & Research": "bg-warning",
-  "Social Science": "bg-info",
+  "Social Science": "bg-primary",
   "Space & Aeronautics": "bg-accent",
-  default: "bg-muted",
+  default: "bg-muted-foreground",
 }
 
 const getConfidenceColor = (level) => {
   switch (level) {
     case "High":
     case "Very High":
-      return "text-success-foreground bg-success/20"
+      return "bg-[#ddf1dd] text-[#005f00]" // green-100 bg, green-700 text
     case "Medium":
-      return "text-warning-foreground bg-warning/20"
+      return "bg-warning/20 text-warning-foreground"
     case "Low":
-      return "text-destructive-foreground bg-destructive/20"
+      return "bg-red-100 text-red-700" // red-100 bg, red-700 text for better visibility
     default:
       return "text-muted-foreground bg-muted"
   }
@@ -160,11 +161,12 @@ const transformCareerToRecommendation = (career, matchReason = "") => {
 
 const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
   const { user } = useAuth()
+  const prefersReducedMotion = useReducedMotion()
   const [isSaving, setIsSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const category = career.category || "default"
-  const Icon = categoryIconMap[category] || categoryIconMap.default
+  const IconComponent = categoryIconMap[category] || categoryIconMap.default
   const color = categoryColorMap[category] || categoryColorMap.default
 
   // Check if career is saved based on the savedCareerIds set
@@ -243,22 +245,22 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
       setIsSaving(false)
     }
   }
-
+  
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: index * 0.1 }}
-      whileHover={{ scale: 1.02 }}
+      transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: index * 0.1 }}
+      whileHover={prefersReducedMotion ? {} : { y: -2 }}
       className="group"
     >
       <>
-        <Card className="h-full border-2 hover:border-primary/20 hover:shadow-lg transition-all duration-300">
+        <Card className="h-full border-2 hover:border-primary/20 hover:shadow-lg transition-[box-shadow,border-color] duration-200 ease-out">
           <CardHeader className="space-y-4">
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-3">
-                <div className={`w-12 h-12 rounded-lg ${color} flex items-center justify-center`}>
-                  <Icon className="h-6 w-6 text-white" />
+                <div className={`w-12 h-12 rounded-lg ${color} flex items-center justify-center shrink-0`}>
+                  {IconComponent && <IconComponent className="h-6 w-6 text-white" />}
                 </div>
                 <div>
                   <CardTitle className="text-xl group-hover:text-primary transition-colors">
@@ -275,21 +277,22 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
               <button
                 onClick={handleStarClick}
                 disabled={isSaving}
-                className="transition-colors disabled:opacity-50 relative"
+                className="transition-colors disabled:opacity-50 relative z-10 p-1 rounded-md hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 title={isSaved ? "Remove from saved" : "Save career"}
+                aria-label={isSaved ? "Remove from saved" : "Save career"}
               >
                 {isSaving ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground shrink-0" />
                 ) : (
                   <motion.div
                     animate={showSuccess ? { scale: [1, 1.3, 1], rotate: [0, 180, 360] } : {}}
                     transition={{ duration: 0.6 }}
                   >
                     <Star
-                      className={`h-5 w-5 transition-colors cursor-pointer ${
+                      className={`h-5 w-5 shrink-0 transition-[color,fill] duration-200 ease-out cursor-pointer ${
                         isSaved
-                          ? "text-yellow-500 fill-yellow-500"
-                          : "text-muted-foreground group-hover:text-accent"
+                          ? "text-warning fill-warning"
+                          : "text-muted-foreground group-hover:text-primary"
                       }`}
                     />
                   </motion.div>
@@ -299,9 +302,9 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0, opacity: 0 }}
-                    className="absolute -top-1 -right-1"
+                    className="absolute -top-1 -right-1 z-20"
                   >
-                    <CheckCircle className="h-4 w-4 text-green-500 fill-green-500" />
+                    <CheckCircle className="h-4 w-4 shrink-0 text-success fill-success" />
                   </motion.div>
                 )}
               </button>
@@ -437,6 +440,7 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
 export default function RecommendationsPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const prefersReducedMotion = useReducedMotion()
   const [activeTab, setActiveTab] = useState("grades")
   const [allCareers, setAllCareers] = useState([])
   const [gradeRecs, setGradeRecs] = useState([])
@@ -694,50 +698,41 @@ export default function RecommendationsPage() {
       return
     }
 
-    // Try to load grades from user profile first
-    const loadGradesFromProfile = async () => {
-      try {
-        const userProfile = await getUserProfile(user.id)
-        if (userProfile && (userProfile.subjects?.length > 0 || userProfile.schoolName)) {
-          // Reconstruct analysis from user profile
-          const subjects = (userProfile.subjects || []).map((subjectName) => {
-            const marks = userProfile.gpa ? Math.round((userProfile.gpa / 4) * 100) : null
-            return {
-              name: subjectName,
-              marks: marks,
-              grade: null,
-            }
-          })
-
-          const analysis = {
-            studentName: userProfile.name || null,
-            schoolName: userProfile.schoolName || null,
-            examName: null,
-            stream: userProfile.stream || "general",
-            subjects: subjects,
-            grade12: userProfile.gpa ? (userProfile.gpa / 4) * 100 : 70,
-          }
-
-          setAnalysisSummary(analysis)
-          fetchGradeRecommendations(analysis)
-          return true
-        }
-      } catch (error) {
-        console.error("Failed to load grades from profile:", error)
-      }
-      return false
-    }
-
-    // Try localStorage as fallback
+    // Try to load grades from localStorage (actual uploaded marksheet)
+    // Only generate grade-based recommendations if marksheet was actually uploaded
     const loadFromLocalStorage = () => {
+      // Check for marksheet history (preferred method)
+      const historyKey = getUserStorageKey("aiGradesAnalyses", user.id)
+      const currentIdKey = getUserStorageKey("aiGradesCurrentId", user.id)
+      const storedHistory = localStorage.getItem(historyKey)
+      if (storedHistory) {
+        try {
+          const parsed = JSON.parse(storedHistory)
+          const list = Array.isArray(parsed) ? parsed : []
+          const currentId = localStorage.getItem(currentIdKey) || ""
+          const selected = (currentId && list.find((m) => m?.id === currentId)) || list[0]
+          if (selected?.analysis) {
+            setAnalysisSummary(selected.analysis)
+            fetchGradeRecommendations(selected.analysis)
+            return true
+          }
+        } catch (error) {
+          console.error("Failed to parse stored history:", error)
+        }
+      }
+      
+      // Fallback to legacy single analysis storage
       const analysisKey = getUserStorageKey("aiGradesAnalysis", user.id)
       const storedAnalysis = localStorage.getItem(analysisKey)
       if (storedAnalysis) {
         try {
           const parsed = JSON.parse(storedAnalysis)
-          setAnalysisSummary(parsed)
-          fetchGradeRecommendations(parsed)
-          return true
+          // Only use if it has actual grade data (not just profile fields like schoolName)
+          if (parsed && (parsed.subjects?.length > 0 || parsed.grade12)) {
+            setAnalysisSummary(parsed)
+            fetchGradeRecommendations(parsed)
+            return true
+          }
         } catch (error) {
           console.error("Failed to parse stored analysis:", error)
           localStorage.removeItem(analysisKey)
@@ -746,26 +741,63 @@ export default function RecommendationsPage() {
       return false
     }
 
-    // Try profile first, then localStorage
-    loadGradesFromProfile().then((loaded) => {
-      if (!loaded) {
-        loadFromLocalStorage()
-      }
-    })
+    // Only load from localStorage (actual uploaded marksheet)
+    // Don't use profile data to generate recommendations - profile data without marksheet upload
+    // shouldn't generate grade-based recommendations (avoids using default/placeholder values)
+    loadFromLocalStorage()
 
-    const interestsKey = getUserStorageKey("userInterests", user.id)
-    const storedInterests = localStorage.getItem(interestsKey)
-    if (storedInterests) {
+    // Load interests - try backend first, then localStorage
+    const loadInterests = async () => {
+      if (!user?.email) return
+
+      // Try to load from backend (Student entity)
       try {
-        const parsed = JSON.parse(storedInterests)
-        setInterestSummary(parsed)
-        fetchInterestRecommendations(parsed)
-      } catch (error) {
-        console.error("Failed to parse stored interests:", error)
-        localStorage.removeItem(interestsKey)
+        const response = await studentService.getByEmail(user.email)
+        const student = response.data
+        if (student) {
+          const hasInterests = 
+            (student.careerFields && student.careerFields.length > 0) ||
+            (student.activities && student.activities.length > 0) ||
+            (student.workEnvironments && student.workEnvironments.length > 0)
+          
+          if (hasInterests) {
+            const interests = {
+              careerFields: student.careerFields || [],
+              activities: student.activities || [],
+              workEnvironments: student.workEnvironments || [],
+            }
+            setInterestSummary(interests)
+            fetchInterestRecommendations(interests)
+            // Also save to localStorage for quick access
+            const interestsKey = getUserStorageKey("userInterests", user.id)
+            localStorage.setItem(interestsKey, JSON.stringify(interests))
+            return
+          }
+        }
+      } catch (err) {
+        // If student not found (404), ignore; otherwise log error
+        if (err.response?.status !== 404) {
+          console.error("Failed to load interests from backend:", err)
+        }
+      }
+
+      // Fallback to localStorage
+      const interestsKey = getUserStorageKey("userInterests", user.id)
+      const storedInterests = localStorage.getItem(interestsKey)
+      if (storedInterests) {
+        try {
+          const parsed = JSON.parse(storedInterests)
+          setInterestSummary(parsed)
+          fetchInterestRecommendations(parsed)
+        } catch (error) {
+          console.error("Failed to parse stored interests:", error)
+          localStorage.removeItem(interestsKey)
+        }
       }
     }
-  }, [user?.id, loadingCareers, allCareers])
+
+    loadInterests()
+  }, [user?.id, user?.email, loadingCareers, allCareers])
 
   // Helper function to check if a career is saved
   const isCareerSaved = (career) => {
@@ -798,6 +830,13 @@ export default function RecommendationsPage() {
     setLoadingGrades(true)
     setGradeError(null)
     try {
+      if (!analysis) {
+        console.warn("fetchGradeRecommendations: No analysis data provided")
+        setGradeError("No grade data available. Please upload your marksheet.")
+        setLoadingGrades(false)
+        return
+      }
+
       // Calculate average grade from subjects if available
       let grade12 = analysis.grade12
       if (!grade12 && analysis.subjects && Array.isArray(analysis.subjects) && analysis.subjects.length > 0) {
@@ -816,13 +855,17 @@ export default function RecommendationsPage() {
           ? analysis.subjects.map((s) => (typeof s === "string" ? s : s?.name || "")).filter(Boolean)
           : []
 
-      // Only use Python recommendation API - no fallback
-      const response = await recommendationService.getByGrades({
+      const requestData = {
         grade12: grade12,
         grade10: analysis.grade10 || null,
         stream: stream,
         subjects: subjects,
-      })
+      }
+
+      console.log("fetchGradeRecommendations: Request data:", requestData, "Original analysis:", analysis)
+
+      // Only use Python recommendation API - no fallback
+      const response = await recommendationService.getByGrades(requestData)
 
       if (response?.data?.recommendations && response.data.recommendations.length > 0) {
         // Transform API response to match UI format
@@ -868,16 +911,27 @@ export default function RecommendationsPage() {
     setLoadingInterests(true)
     setInterestError(null)
     try {
+      if (!interests) {
+        console.warn("fetchInterestRecommendations: No interests data provided")
+        setInterestError("No interests data available. Please complete your interests.")
+        setLoadingInterests(false)
+        return
+      }
+
       const careerFields = interests.careerFields || []
       const activities = interests.activities || []
       const workEnvironments = interests.workEnvironments || []
 
-      // Only use Python recommendation API - no fallback
-      const response = await recommendationService.getByInterests({
+      const requestData = {
         careerFields: careerFields,
         activities: activities,
         workEnvironments: workEnvironments,
-      })
+      }
+
+      console.log("fetchInterestRecommendations: Request data:", requestData, "Original interests:", interests)
+
+      // Only use Python recommendation API - no fallback
+      const response = await recommendationService.getByInterests(requestData)
 
       if (response?.data?.recommendations && response.data.recommendations.length > 0) {
         // Transform API response to match UI format
@@ -920,13 +974,27 @@ export default function RecommendationsPage() {
 
   const fetchCollegeRecommendations = async (analysis, interests) => {
     if (!user?.id) return
-    if (!analysis || !interests) return
+    if (!analysis || !interests) {
+      console.log("fetchCollegeRecommendations: Missing analysis or interests", { analysis, interests })
+      return
+    }
 
     setLoadingColleges(true)
     setCollegeError(null)
     try {
+      // Calculate grade12 from subjects if not directly available
+      let grade12 = analysis.grade12 ?? null
+      if (!grade12 && analysis.subjects && Array.isArray(analysis.subjects) && analysis.subjects.length > 0) {
+        const marks = analysis.subjects
+          .map((s) => (typeof s === "object" && s !== null ? s.marks : null))
+          .filter((m) => m != null && !isNaN(m))
+        if (marks.length > 0) {
+          grade12 = marks.reduce((sum, m) => sum + m, 0) / marks.length
+        }
+      }
+      grade12 = grade12 ?? 70 // Default to 70 if still not available
+
       const grade10 = analysis.grade10 ?? null
-      const grade12 = analysis.grade12 ?? null
       const stream = (analysis.stream || "general").toLowerCase()
       const subjects = Array.isArray(analysis.subjects)
         ? analysis.subjects
@@ -944,14 +1012,26 @@ export default function RecommendationsPage() {
         workEnvironments: interests.workEnvironments || [],
       }
 
+      console.log("fetchCollegeRecommendations: Request data:", request)
+
       if (!request.grade12 || !request.stream || request.subjects.length === 0) {
+        console.warn("fetchCollegeRecommendations: Missing required data", {
+          grade12: request.grade12,
+          stream: request.stream,
+          subjectsLength: request.subjects.length,
+        })
         setCollegeRecs([])
         setCollegeError(null)
         return
       }
 
-      const response = await getCollegeRecommendations(request, 5)
-      setCollegeRecs(Array.isArray(response) ? response : response?.data || [])
+      console.log("fetchCollegeRecommendations: Calling API with request:", request)
+      const response = await getCollegeRecommendations(request, 10) // Request at least 10 colleges
+      console.log("fetchCollegeRecommendations: API response:", response, "Type:", typeof response, "Is Array:", Array.isArray(response))
+      
+      const colleges = Array.isArray(response) ? response : response?.data || []
+      console.log("fetchCollegeRecommendations: Processed colleges:", colleges, "Count:", colleges.length)
+      setCollegeRecs(colleges)
     } catch (error) {
       console.error("Failed to fetch college recommendations:", error)
       setCollegeRecs([])
@@ -961,11 +1041,72 @@ export default function RecommendationsPage() {
     }
   }
 
+  // Fetch college recommendations whenever analysis or interests change
   useEffect(() => {
     if (!user?.id) return
     if (!analysisSummary || !interestSummary) return
+    
+    // Fetch college recommendations with latest data
+    // This will trigger whenever analysisSummary or interestSummary changes
     fetchCollegeRecommendations(analysisSummary, interestSummary)
   }, [user?.id, analysisSummary, interestSummary])
+  
+  // Reload interests from backend when window gains focus (user returns to tab/page)
+  useEffect(() => {
+    if (!user?.id || !user?.email) return
+    
+    const handleFocus = async () => {
+      // Reload interests from backend when window gains focus
+      try {
+        const response = await studentService.getByEmail(user.email)
+        const student = response.data
+        if (student) {
+          const hasInterests = 
+            (student.careerFields && student.careerFields.length > 0) ||
+            (student.activities && student.activities.length > 0) ||
+            (student.workEnvironments && student.workEnvironments.length > 0)
+          
+          if (hasInterests) {
+            const interests = {
+              careerFields: student.careerFields || [],
+              activities: student.activities || [],
+              workEnvironments: student.workEnvironments || [],
+            }
+            
+            // Check if interests actually changed
+            const currentInterests = interestSummary
+            const interestsChanged = 
+              !currentInterests ||
+              JSON.stringify(currentInterests.careerFields || []) !== JSON.stringify(interests.careerFields) ||
+              JSON.stringify(currentInterests.activities || []) !== JSON.stringify(interests.activities) ||
+              JSON.stringify(currentInterests.workEnvironments || []) !== JSON.stringify(interests.workEnvironments)
+            
+            if (interestsChanged) {
+              setInterestSummary(interests)
+              fetchInterestRecommendations(interests)
+              // Update localStorage
+              const interestsKey = getUserStorageKey("userInterests", user.id)
+              localStorage.setItem(interestsKey, JSON.stringify(interests))
+              
+              // Refresh college recommendations with new interests
+              if (analysisSummary) {
+                fetchCollegeRecommendations(analysisSummary, interests)
+              }
+            }
+          }
+        }
+      } catch (err) {
+        if (err.response?.status !== 404) {
+          console.error("Failed to reload interests on focus:", err)
+        }
+      }
+    }
+    
+    window.addEventListener('focus', handleFocus)
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [user?.id, user?.email, analysisSummary, interestSummary])
 
   const toggleCollegeSaved = async (collegeId) => {
     if (!user?.id) {
@@ -1006,12 +1147,12 @@ export default function RecommendationsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
           {/* Header */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6 }}
             className="space-y-2"
           >
             <div className="flex items-center space-x-2">
@@ -1025,9 +1166,9 @@ export default function RecommendationsPage() {
 
           {/* Stats Overview */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
+            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: 0.1 }}
             className="grid grid-cols-1 md:grid-cols-4 gap-4"
           >
             {[
@@ -1052,9 +1193,9 @@ export default function RecommendationsPage() {
 
           {/* Recommendations Tabs */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: 0.2 }}
           >
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
               <TabsList className="grid w-full grid-cols-3 h-12">
@@ -1283,9 +1424,9 @@ export default function RecommendationsPage() {
 
           {/* Action Section */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: 0.4 }}
           >
             <Card className="border-2 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5">
               <CardContent className="p-8 text-center space-y-4">

@@ -23,8 +23,6 @@ export const ENTITY_TYPES = {
   STUDENT: "student",
   CAREER: "career",
   COLLEGE: "college",
-  MENTOR: "mentor",
-  SCHOLARSHIP: "scholarship",
   TRAINING: "training",
 }
 

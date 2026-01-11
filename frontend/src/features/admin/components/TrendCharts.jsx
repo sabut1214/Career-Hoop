@@ -10,6 +10,7 @@ import {
   ChartLegendContent
 } from "@/shared/components/ui/chart"
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts"
+import { BarChart3 } from "lucide-react"
 
 export function TrendCharts() {
   const [trendData, setTrendData] = useState([])
@@ -119,61 +120,73 @@ export function TrendCharts() {
           </div>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px]">
-            <AreaChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="date" 
-                tick={{ fontSize: 12 }}
-                angle={-45}
-                textAnchor="end"
-                height={60}
-              />
-              <YAxis tick={{ fontSize: 12 }} />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Area 
-                type="monotone" 
-                dataKey="User Registrations" 
-                stackId="1"
-                stroke="var(--chart-1)"
-                fill="var(--chart-1)"
-                fillOpacity={0.6}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="Career Creations" 
-                stackId="1"
-                stroke="var(--chart-2)"
-                fill="var(--chart-2)"
-                fillOpacity={0.6}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="College Creations" 
-                stackId="1"
-                stroke="var(--chart-3)"
-                fill="var(--chart-3)"
-                fillOpacity={0.6}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="Training Creations" 
-                stackId="1"
-                stroke="var(--chart-4)"
-                fill="var(--chart-4)"
-                fillOpacity={0.6}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="Quiz Completions" 
-                stackId="1"
-                stroke="var(--chart-5)"
-                fill="var(--chart-5)"
-                fillOpacity={0.6}
-              />
-              <ChartLegend content={<ChartLegendContent />} />
-            </AreaChart>
-          </ChartContainer>
+          {chartData.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-[300px] text-center space-y-2">
+              <BarChart3 className="h-12 w-12 text-muted-foreground" />
+              <p className="text-sm font-medium text-foreground">No data in selected range</p>
+              <p className="text-xs text-muted-foreground">Try selecting a different time period</p>
+            </div>
+          ) : (
+            <ChartContainer config={chartConfig} className="h-[300px]">
+              <AreaChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                  label={{ value: "Date", position: "insideBottom", offset: -5, style: { textAnchor: "middle", fontSize: 12 } }}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }} 
+                  label={{ value: "Count", angle: -90, position: "insideLeft", style: { textAnchor: "middle", fontSize: 12 } }}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Area 
+                  type="monotone" 
+                  dataKey="User Registrations" 
+                  stackId="1"
+                  stroke="var(--chart-1)"
+                  fill="var(--chart-1)"
+                  fillOpacity={0.6}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="Career Creations" 
+                  stackId="1"
+                  stroke="var(--chart-2)"
+                  fill="var(--chart-2)"
+                  fillOpacity={0.6}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="College Creations" 
+                  stackId="1"
+                  stroke="var(--chart-3)"
+                  fill="var(--chart-3)"
+                  fillOpacity={0.6}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="Training Creations" 
+                  stackId="1"
+                  stroke="var(--chart-4)"
+                  fill="var(--chart-4)"
+                  fillOpacity={0.6}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="Quiz Completions" 
+                  stackId="1"
+                  stroke="var(--chart-5)"
+                  fill="var(--chart-5)"
+                  fillOpacity={0.6}
+                />
+                <ChartLegend content={<ChartLegendContent />} wrapperStyle={{ paddingTop: "20px" }} />
+              </AreaChart>
+            </ChartContainer>
+          )}
         </CardContent>
       </Card>
 
@@ -182,8 +195,15 @@ export function TrendCharts() {
           <CardTitle>User Registrations</CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[250px]">
-            <LineChart data={chartData}>
+          {chartData.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-[250px] text-center space-y-2">
+              <BarChart3 className="h-12 w-12 text-muted-foreground" />
+              <p className="text-sm font-medium text-foreground">No data in selected range</p>
+              <p className="text-xs text-muted-foreground">Try selecting a different time period</p>
+            </div>
+          ) : (
+            <ChartContainer config={chartConfig} className="h-[250px]">
+              <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="date" 
@@ -191,18 +211,23 @@ export function TrendCharts() {
                 angle={-45}
                 textAnchor="end"
                 height={60}
+                label={{ value: "Date", position: "insideBottom", offset: -5, style: { textAnchor: "middle", fontSize: 12 } }}
               />
-              <YAxis tick={{ fontSize: 12 }} />
+              <YAxis 
+                tick={{ fontSize: 12 }} 
+                label={{ value: "Registrations", angle: -90, position: "insideLeft", style: { textAnchor: "middle", fontSize: 12 } }}
+              />
               <ChartTooltip content={<ChartTooltipContent />} />
-              <Line 
-                type="monotone" 
-                dataKey="User Registrations" 
-                stroke="var(--chart-1)"
-                strokeWidth={2}
-                dot={{ r: 4 }}
-              />
-            </LineChart>
-          </ChartContainer>
+              <Line
+                  type="monotone" 
+                  dataKey="User Registrations" 
+                  stroke="var(--chart-1)"
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                />
+              </LineChart>
+            </ChartContainer>
+          )}
         </CardContent>
       </Card>
     </div>

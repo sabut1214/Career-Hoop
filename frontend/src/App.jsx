@@ -37,8 +37,6 @@ const AdminStudents = lazy(() => import("@/features/admin/pages/Students"))
 const AdminCareers = lazy(() => import("@/features/admin/pages/Careers"))
 const AdminColleges = lazy(() => import("@/features/admin/pages/Colleges"))
 const AdminTrainings = lazy(() => import("@/features/admin/pages/Trainings"))
-const AdminMentors = lazy(() => import("@/features/admin/pages/Mentors"))
-const AdminScholarships = lazy(() => import("@/features/admin/pages/Scholarships"))
 const AcademicRecords = lazy(() => import("@/features/admin/pages/AcademicRecords"))
 const Login = lazy(() => import("@/features/auth/pages/Login"))
 const Signup = lazy(() => import("@/features/auth/pages/Signup"))
@@ -51,6 +49,8 @@ const Contact = lazy(() => import("@/features/landing-page/pages/Contact"))
 const NotFound = lazy(() => import("@/shared/components/views/NotFound"))
 const BillingPage = lazy(() => import("@/features/payment/pages/billing"))
 const EsewaReturnPage = lazy(() => import("@/features/payment/pages/EsewaReturn"))
+const EsewaSuccessPage = lazy(() => import("@/features/payment/pages/EsewaSuccess"))
+const EsewaFailurePage = lazy(() => import("@/features/payment/pages/EsewaFailure"))
 
 // Inner component to access useNavigate hook
 function AppContent() {
@@ -82,9 +82,11 @@ function AppContent() {
                 <Route path="/features" element={<Features />} />
                 <Route path="/why-choose-us" element={<WhyChooseUs />} />
                 <Route path="/contact" element={<Contact />} />
-                <Route path="/onboarding" element={<Onboarding />} />
-                <Route path="/payment/esewa/return" element={<EsewaReturnPage />} />
-                <Route
+                  <Route path="/onboarding" element={<Onboarding />} />
+                  <Route path="/payment/esewa/return" element={<EsewaReturnPage />} />
+                  <Route path="/payment/esewa/success" element={<EsewaSuccessPage />} />
+                  <Route path="/payment/esewa/failure" element={<EsewaFailurePage />} />
+                  <Route
                   path="/health"
                   element={
                     <>
@@ -111,8 +113,8 @@ function AppContent() {
                 <Route element={<StudentLayout />}>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/assessment" element={<Assessment />} />
-                  <Route path="/grades" element={<Grades />} />
-                  <Route path="/interests" element={<Interests />} />
+                  <Route path="/grades" element={<Assessment />} />
+                  <Route path="/interests" element={<Assessment />} />
                   <Route path="/careers" element={<Careers />} />
                   <Route path="/colleges" element={<Colleges />} />
                   <Route path="/trainings" element={<Trainings />} />
@@ -131,8 +133,6 @@ function AppContent() {
                   <Route path="/admin/careers" element={<AdminCareers />} />
                   <Route path="/admin/colleges" element={<AdminColleges />} />
                   <Route path="/admin/trainings" element={<AdminTrainings />} />
-                  <Route path="/admin/mentors" element={<AdminMentors />} />
-                  <Route path="/admin/scholarships" element={<AdminScholarships />} />
                   <Route path="/admin/assessments" element={<AcademicRecords />} />
                   <Route path="/admin/academic-records" element={<AcademicRecords />} />
                 </Route>

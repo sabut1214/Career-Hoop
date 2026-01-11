@@ -15,13 +15,13 @@ export function PlanCard({
   buttonText = "Select Plan",
 }) {
   return (
-    <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
+    <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2, ease: "easeOut" }}>
       <Card
-        className={`p-6 cursor-pointer transition-all ${
+        className={`p-6 cursor-pointer transition-[border-color,box-shadow] duration-200 ease-out ${
           isSelected
-            ? "border-green-600 border-2 ring-2 ring-green-100"
+            ? "border-success border-2 ring-2 ring-success/20"
             : isCurrentPlan
-              ? "border-green-600 border-2"
+              ? "border-success border-2"
               : "border-border"
         }`}
         onClick={onSelect}
@@ -40,7 +40,7 @@ export function PlanCard({
           <ul className="space-y-2">
             {features.map((feature, idx) => (
               <li key={idx} className="flex items-center gap-2 text-sm text-foreground">
-                <Check size={16} className="text-green-600 flex-shrink-0" />
+                <Check size={16} className="text-success flex-shrink-0" />
                 <span>{feature}</span>
               </li>
             ))}
@@ -48,9 +48,9 @@ export function PlanCard({
 
           <Button
             onClick={onSelect}
-            className={`w-full transition-all ${
+            className={`w-full transition-[background-color,color] duration-200 ease-out ${
               isSelected || isCurrentPlan
-                ? "bg-green-600 hover:bg-green-700 text-white"
+                ? "bg-success hover:bg-success/90 text-success-foreground"
                 : "bg-muted hover:bg-muted text-foreground"
             }`}
           >

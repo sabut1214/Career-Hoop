@@ -32,18 +32,18 @@ export function PasswordStrengthMeter({ password, className }) {
     if (password.length >= 16) score++
     
     if (score <= 2) {
-      return { level: 1, label: "Weak", color: "bg-destructive", textColor: "text-destructive" }
+      return { level: 1, label: "Weak", color: "bg-error", textColor: "text-error" }
     } else if (score <= 4) {
-      return { level: 2, label: "Medium", color: "bg-yellow-500", textColor: "text-yellow-600 dark:text-yellow-500" }
+      return { level: 2, label: "Medium", color: "bg-warning", textColor: "text-warning-foreground" }
     } else {
-      return { level: 3, label: "Strong", color: "bg-green-500", textColor: "text-green-600 dark:text-green-500" }
+      return { level: 3, label: "Strong", color: "bg-success", textColor: "text-success-foreground" }
     }
   }, [password])
   
   if (!password) return null
   
   return (
-    <div id={id} className={cn("space-y-2", className)}>
+    <div className={cn("space-y-2", className)}>
       <div className="flex items-center justify-between text-xs">
         <span className="text-muted-foreground">Password strength:</span>
         <span className={cn("font-medium", strength.textColor)}>
@@ -52,15 +52,15 @@ export function PasswordStrengthMeter({ password, className }) {
       </div>
       <div className="flex gap-1 h-1.5">
         <div className={cn(
-          "flex-1 rounded-full transition-colors",
+          "flex-1 rounded-full transition-[background-color] duration-200 ease-out",
           strength.level >= 1 ? strength.color : "bg-muted"
         )} />
         <div className={cn(
-          "flex-1 rounded-full transition-colors",
+          "flex-1 rounded-full transition-[background-color] duration-200 ease-out",
           strength.level >= 2 ? strength.color : "bg-muted"
         )} />
         <div className={cn(
-          "flex-1 rounded-full transition-colors",
+          "flex-1 rounded-full transition-[background-color] duration-200 ease-out",
           strength.level >= 3 ? strength.color : "bg-muted"
         )} />
       </div>

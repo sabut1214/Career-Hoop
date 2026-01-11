@@ -23,10 +23,12 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog"
 import { getTrainings, deleteTraining, createTraining, updateTraining } from "@/shared/lib/api"
-import { Trash2, Plus, Pencil, Loader2 } from "lucide-react"
+import { Trash2, Plus, Pencil, Loader2, Zap } from "lucide-react"
 import { toast } from "react-toastify"
 import { TableRowSkeleton } from "@/shared/components/common/LoadingSkeleton"
 import Pagination from "@/shared/components/common/pagination"
+import { EmptyState } from "@/shared/components/common/EmptyState"
+import { getUserFriendlyError } from "@/shared/utils/userFriendlyErrors"
 
 export default function AdminTrainingsPage() {
   const [trainings, setTrainings] = useState([])
@@ -62,7 +64,7 @@ export default function AdminTrainingsPage() {
       setTrainings(trainingsData)
     } catch (error) {
       console.error("Failed to fetch trainings:", error)
-      toast.error("Failed to fetch trainings. Please try again.")
+      toast.error(getUserFriendlyError(error, "Unable to load trainings. Please refresh the page."))
       setTrainings([])
     } finally {
       setLoading(false)
@@ -83,7 +85,7 @@ export default function AdminTrainingsPage() {
       toast.success("Training deleted successfully.")
     } catch (error) {
       console.error("Failed to delete training:", error)
-      toast.error("Failed to delete training. Please try again.")
+      toast.error(getUserFriendlyError(error, "Could not delete training. It may be in use elsewhere."))
     } finally {
       setIsDeleting(false)
       setDeleteDialogOpen(false)
@@ -110,7 +112,7 @@ export default function AdminTrainingsPage() {
       fetchTrainings()
     } catch (error) {
       console.error("Failed to create training:", error)
-      toast.error(error.message || "Failed to create training. Please try again.")
+      toast.error(getUserFriendlyError(error, "Could not create training. Please check your input and try again."))
     } finally {
       setIsSubmitting(false)
     }
@@ -149,7 +151,7 @@ export default function AdminTrainingsPage() {
       fetchTrainings()
     } catch (error) {
       console.error("Failed to update training:", error)
-      toast.error(error.message || "Failed to update training. Please try again.")
+      toast.error(getUserFriendlyError(error, "Could not update training. Please check your input and try again."))
     } finally {
       setIsSubmitting(false)
     }
@@ -238,8 +240,21 @@ export default function AdminTrainingsPage() {
                         ))
                       ) : filteredTrainings.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="py-6 text-center text-muted-foreground">
-                            No trainings found
+                          <td colSpan={5} className="p-0">
+                            <EmptyState
+                              icon={Zap}
+                              title="No Trainings Found"
+                              description={searchTerm ? `No trainings match "${searchTerm}". Try adjusting your search.` : "Get started by adding your first training."}
+                              action={searchTerm ? {
+                                label: "Clear Search",
+                                onClick: () => setSearchTerm(""),
+                                variant: "secondary"
+                              } : {
+                                label: "Add Training",
+                                onClick: () => setIsAddDialogOpen(true),
+                                variant: "default"
+                              }}
+                            />
                           </td>
                         </tr>
                       ) : (
@@ -248,7 +263,7 @@ export default function AdminTrainingsPage() {
                           return (
                             <tr
                               key={training.id}
-                              className={`border-b transition-opacity ${isRowDeleting ? "opacity-60" : "hover:bg-muted/50"}`}
+                              className={`border-b transition-colors ${isRowDeleting ? "opacity-60" : "hover:bg-muted/50 cursor-pointer"}`}
                               aria-busy={isRowDeleting}
                             >
                               <td className="py-3 px-4 font-medium">{training.title || "N/A"}</td>
@@ -260,8 +275,9 @@ export default function AdminTrainingsPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleEditClick(training)}
-                                  className="text-muted-foreground hover:text-foreground"
+                                  className="text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                   disabled={isDeleting}
+                                  aria-label={`Edit ${training.title || "training"}`}
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
@@ -269,8 +285,9 @@ export default function AdminTrainingsPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDeleteClick(training)}
-                                  className="text-destructive hover:text-destructive"
+                                  className="text-destructive hover:text-destructive focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2"
                                   disabled={isDeleting}
+                                  aria-label={`Delete ${training.title || "training"}`}
                                 >
                                   {isRowDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                 </Button>

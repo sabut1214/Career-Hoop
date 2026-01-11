@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/shared/context/AuthContext"
 import { Navigate, useLocation } from "react-router-dom"
-import { getUserProfile } from "@/shared/lib/api"
+import { getMe } from "@/shared/lib/api"
 import { useState, useEffect } from "react"
 import { Spinner } from "@/shared/components/ui/spinner"
 
@@ -17,17 +17,27 @@ export function ProtectedRoute({ children, requiredRole = null, fullScreen = tru
     const verifyAdminRole = async () => {
       if (!loading && user && requiredRole === "admin" && user.id) {
         // Double-check admin role from backend for security
+        // Use /me endpoint which works for the current authenticated user
         try {
           setIsVerifying(true)
-          const userProfile = await getUserProfile(user.id)
+          const userProfile = await getMe()
           if (userProfile && userProfile.role) {
             // Update user if role changed
             if (userProfile.role !== user.role) {
               updateUser({ ...user, role: userProfile.role })
             }
+            // If verified user doesn't have admin role, fail verification
+            if (userProfile.role?.toLowerCase() !== "admin") {
+              setVerificationFailed(true)
+            }
+          } else {
+            // No role in response, fail verification
+            setVerificationFailed(true)
           }
         } catch (error) {
-          // Fail closed for admin routes if verification fails
+          // Check if it's a 403 - if so, likely authorization issue, user doesn't have admin access
+          // For other errors (401, network), also fail verification for security
+          console.error('Admin role verification failed:', error)
           setVerificationFailed(true)
         } finally {
           setIsVerifying(false)

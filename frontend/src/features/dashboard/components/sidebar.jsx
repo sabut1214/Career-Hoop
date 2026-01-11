@@ -149,7 +149,7 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 h-screen bg-card border-r border-border/50 z-40 flex flex-col",
+          "fixed left-0 top-0 h-screen bg-background border-r border-border z-40 flex flex-col",
           "transition-all duration-300 ease-in-out",
           "shadow-lg lg:shadow-xl",
           isCollapsed ? "w-[72px]" : "w-[260px]",
@@ -165,8 +165,8 @@ export function Sidebar() {
                 variant="outline"
                 size="icon"
                 onClick={toggleSidebar}
-                className={cn(
-                  "absolute top-4 z-50 h-8 w-8 rounded-md bg-card border-border/50 shadow-md hover:bg-muted/50 transition-all duration-200",
+                  className={cn(
+                  "absolute top-4 z-50 h-8 w-8 shrink-0 rounded-md bg-card border-border/50 shadow-md hover:bg-muted/50 transition-[background-color] duration-200 ease-out",
                   isCollapsed ? "right-[-16px]" : "right-[-16px]"
                 )}
                 aria-label={isCollapsed ? "Open sidebar" : "Close sidebar"}
@@ -223,13 +223,13 @@ export function Sidebar() {
                   <div key={item.label}>
                     <Link to={item.href}>
                       <Button
-                        variant={isActive ? "default" : "ghost"}
+                        variant="ghost"
                         className={cn(
-                          "w-full text-sm transition-all duration-200 rounded-lg",
+                          "w-full text-sm transition-[background-color,color,box-shadow,border-color] duration-200 ease-out rounded-lg relative",
                           isCollapsed ? "justify-center h-10 px-0" : "justify-start h-11 gap-3 px-3",
                           isActive 
-                            ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90" 
-                            : "hover:bg-muted/50 hover:text-foreground text-muted-foreground"
+                            ? "bg-[var(--primary-soft)] text-foreground border border-[var(--primary-soft-border)] shadow-sm hover:bg-[var(--primary-soft)]/90 border-l-[3px] border-l-[var(--primary)]" 
+                            : "hover:bg-[var(--primary-soft)]/50 hover:text-foreground text-muted-foreground"
                         )}
                         onClick={() => {
                           if (window.innerWidth < 1024) setIsMobileOpen(false)

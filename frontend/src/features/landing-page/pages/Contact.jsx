@@ -5,6 +5,8 @@ import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
 import { Textarea } from "@/shared/components/ui/textarea"
 import { Card, CardContent } from "@/shared/components/ui/card"
+import { Badge } from "@/shared/components/ui/badge"
+import { SectionContainer } from "@/shared/components/layout/section-container"
 import { Mail, Phone, MapPin, Clock, Send, MessageSquare, HelpCircle, Building } from "lucide-react"
 
 const contactMethods = [
@@ -86,11 +88,11 @@ export default function Contact() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="px-4 py-20 md:py-28">
-        <div className="container mx-auto max-w-4xl text-center">
-          <div className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
+      <SectionContainer>
+        <div className="max-w-4xl mx-auto text-center">
+          <Badge variant="default" className="mb-4">
             Contact Us
-          </div>
+          </Badge>
           <h1 className="mb-6 font-sans text-4xl font-bold leading-tight text-foreground md:text-5xl text-balance">
             We'd Love to <span className="text-primary">Hear From You</span>
           </h1>
@@ -99,11 +101,11 @@ export default function Contact() {
             would love to connect with you.
           </p>
         </div>
-      </section>
+      </SectionContainer>
 
       {/* Contact Methods */}
-      <section className="bg-muted/50 px-4 py-16">
-        <div className="container mx-auto max-w-6xl">
+      <section className="bg-muted/50">
+        <SectionContainer variant="compact">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {contactMethods.map((method) => (
               <Card key={method.title} className="border-border/50 bg-card">
@@ -120,12 +122,11 @@ export default function Contact() {
               </Card>
             ))}
           </div>
-        </div>
+      </SectionContainer>
       </section>
 
       {/* Contact Form & FAQ */}
-      <section className="px-4 py-20">
-        <div className="container mx-auto max-w-6xl">
+      <SectionContainer>
           <div className="grid gap-12 lg:grid-cols-2">
             {/* Contact Form */}
             <div>
@@ -198,7 +199,7 @@ export default function Contact() {
                   </div>
                   <Button
                     type="submit"
-                    className="w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                    className="w-full rounded-full bg-primary text-primary-foreground hover:bg-primary-hover transition-all duration-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? "Sending..." : "Send Message"}
@@ -220,7 +221,7 @@ export default function Contact() {
 
               <div className="space-y-4">
                 {faqs.map((faq) => (
-                  <Card key={faq.question} className="border-border/50 bg-card">
+                  <Card key={faq.question} className="border-border/50 bg-card transition-all duration-300 hover:shadow-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
                     <CardContent className="p-6">
                       <h3 className="mb-2 font-semibold text-foreground">{faq.question}</h3>
                       <p className="text-sm text-muted-foreground">{faq.answer}</p>
@@ -230,7 +231,7 @@ export default function Contact() {
               </div>
 
               {/* Partnership CTA */}
-              <Card className="mt-8 border-primary/20 bg-primary/5">
+              <Card className="mt-8 border-primary/20 bg-primary/5 transition-all duration-300 hover:shadow-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
@@ -241,7 +242,7 @@ export default function Contact() {
                       <p className="mb-4 text-sm text-muted-foreground">
                         We partner with schools, colleges, and organizations to bring CareerHoop to more students.
                       </p>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" className="transition-all duration-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                         Learn About Partnerships
                       </Button>
                     </div>
@@ -250,8 +251,7 @@ export default function Contact() {
               </Card>
             </div>
           </div>
-        </div>
-      </section>
+      </SectionContainer>
 
       <Footer />
     </div>

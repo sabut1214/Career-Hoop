@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl, getUserStorageKey } from "@/shared/utils/utils";
 import { Student } from "@/shared/entities/all";
 import { analyzeGradeSheet } from "@/shared/lib/api";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -31,19 +31,20 @@ import {
 import { useAuth } from "@/shared/context/AuthContext";
 
 const interests = [
-  { id: "technology", name: "Technology & IT", icon: Code, color: "from-blue-500 to-blue-600" },
-  { id: "healthcare", name: "Healthcare & Medicine", icon: Heart, color: "from-red-500 to-red-600" },
-  { id: "creative", name: "Creative Arts & Design", icon: Palette, color: "from-purple-500 to-purple-600" },
-  { id: "engineering", name: "Engineering", icon: Calculator, color: "from-green-500 to-green-600" },
-  { id: "business", name: "Business & Management", icon: Briefcase, color: "from-yellow-500 to-yellow-600" },
-  { id: "science", name: "Science & Research", icon: Microscope, color: "from-teal-500 to-teal-600" },
-  { id: "law", name: "Law & Legal Services", icon: Scale, color: "from-indigo-500 to-indigo-600" },
-  { id: "marketing", name: "Marketing & Communications", icon: Megaphone, color: "from-pink-500 to-pink-600" }
+  { id: "technology", name: "Technology & IT", icon: Code, color: "bg-primary" },
+  { id: "healthcare", name: "Healthcare & Medicine", icon: Heart, color: "bg-error" },
+  { id: "creative", name: "Creative Arts & Design", icon: Palette, color: "bg-accent" },
+  { id: "engineering", name: "Engineering", icon: Calculator, color: "bg-secondary" },
+  { id: "business", name: "Business & Management", icon: Briefcase, color: "bg-warning" },
+  { id: "science", name: "Science & Research", icon: Microscope, color: "bg-primary" },
+  { id: "law", name: "Law & Legal Services", icon: Scale, color: "bg-secondary" },
+  { id: "marketing", name: "Marketing & Communications", icon: Megaphone, color: "bg-accent" }
 ];
 
 export default function Assessment() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const prefersReducedMotion = useReducedMotion();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -147,12 +148,32 @@ export default function Assessment() {
       ? Math.round(marks.reduce((sum, m) => sum + m, 0) / marks.length)
       : 0;
 
-    // Detect stream from subject names
-    const subjectNames = backendResult.subjects.map(s => s.name?.toLowerCase() || '').join(' ');
-    let stream = 'science';
-    if (subjectNames.includes('commerce') || subjectNames.includes('accounting') || subjectNames.includes('economics')) {
+    // Detect stream from subject names using improved logic
+    const lowerSubjects = backendResult.subjects.map(s => s.name?.toLowerCase() || '').filter(Boolean);
+    const subjectNames = lowerSubjects.join(' ');
+    
+    // Count keyword matches for each stream
+    const scienceKeywords = ['physics', 'chemistry', 'biology', 'mathematics', 'math', 'maths', 'computer', 'engineering', 'science'];
+    const commerceKeywords = ['commerce', 'business', 'accounting', 'accounts', 'economics', 'finance', 'marketing', 'management'];
+    const artsKeywords = ['arts', 'history', 'political', 'sociology', 'psychology', 'design', 'language', 'literature', 'english', 'nepali'];
+    
+    const scienceHits = lowerSubjects.filter(name => 
+      scienceKeywords.some(keyword => name.includes(keyword))
+    ).length;
+    const commerceHits = lowerSubjects.filter(name => 
+      commerceKeywords.some(keyword => name.includes(keyword))
+    ).length;
+    const artsHits = lowerSubjects.filter(name => 
+      artsKeywords.some(keyword => name.includes(keyword))
+    ).length;
+    
+    // Determine stream based on highest hits, default to 'general' if no clear match
+    let stream = 'general';
+    if (scienceHits >= Math.max(commerceHits, artsHits, 1)) {
+      stream = 'science';
+    } else if (commerceHits >= Math.max(scienceHits, artsHits, 1)) {
       stream = 'commerce';
-    } else if (subjectNames.includes('arts') || subjectNames.includes('history') || subjectNames.includes('political')) {
+    } else if (artsHits >= Math.max(scienceHits, commerceHits, 1)) {
       stream = 'arts';
     }
 
@@ -341,9 +362,10 @@ export default function Assessment() {
         return (
           <motion.div
             key="step1"
-            initial={{ opacity: 0, x: 20 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: -20 }}
+            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.3 }}
             className="space-y-6"
           >
             <div className="text-center mb-8">
@@ -365,7 +387,7 @@ export default function Assessment() {
                 className="text-lg p-4"
               />
               {formData.full_name && user?.name && formData.full_name === user.name && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Note: Pre-filled from your account
                 </p>
               )}
@@ -377,9 +399,10 @@ export default function Assessment() {
         return (
           <motion.div
             key="step2"
-            initial={{ opacity: 0, x: 20 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: -20 }}
+            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.3 }}
             className="space-y-6"
           >
             <div className="text-center mb-8">
@@ -444,35 +467,52 @@ export default function Assessment() {
                 )}
               </div>
             ) : (
-              <div className="bg-green-50 border border-green-200 rounded-xl p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                  <h3 className="font-semibold text-green-800">Marksheet Analyzed Successfully!</h3>
+              <div className="bg-success/10 border border-success/20 rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <CheckCircle className="w-6 h-6 text-success" />
+                  <h3 className="font-semibold text-success text-lg">Marksheet Analyzed Successfully!</h3>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Grade 10 Percentage:</p>
-                    <p className="font-semibold text-lg text-foreground">{formData.extracted_grades.grade_10_percentage}%</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Grade 12 Percentage:</p>
-                    <p className="font-semibold text-lg text-foreground">{formData.extracted_grades.grade_12_percentage}%</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Stream:</p>
-                    <p className="font-semibold capitalize text-foreground">{formData.extracted_grades.stream}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Subjects:</p>
-                    <p className="font-semibold text-foreground">{formData.extracted_grades.subjects?.join(", ")}</p>
-                  </div>
+                <div className="space-y-4 mb-6">
+                  {formData.extracted_grades.subjects && formData.extracted_grades.subjects.length > 0 && (
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-20">
+                        <p className="text-sm text-muted-foreground font-medium">Subjects:</p>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex flex-wrap gap-2">
+                          {formData.extracted_grades.subjects.map((subject, index) => (
+                            <span
+                              key={index}
+                              className="inline-flex items-center px-3 py-1.5 rounded-md bg-primary/10 text-primary text-sm font-medium border border-primary/20"
+                            >
+                              {subject}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {formData.extracted_grades.subject_grades && Object.keys(formData.extracted_grades.subject_grades).length > 0 && (
+                  <div className="mt-6 pt-6 border-t border-success/30">
+                    <p className="text-sm font-semibold text-foreground mb-4">Subject Grades (OCR Extraction):</p>
+                    <div className="grid md:grid-cols-2 gap-3">
+                      {Object.entries(formData.extracted_grades.subject_grades).map(([subject, marks]) => (
+                        <div key={subject} className="flex justify-between items-center p-3 bg-background/50 border border-border rounded-lg hover:bg-muted/50 transition-colors">
+                          <span className="font-medium text-foreground text-sm">{subject}</span>
+                          <span className="font-semibold text-primary text-base">{marks}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <Button
                   variant="outline"
                   size="sm"
-                  className="mt-4"
+                  className="mt-6 w-full"
                   onClick={() => {
                     setFormData(prev => ({ ...prev, extracted_grades: null, marksheet_url: "" }));
                     setUploadedFile(null);
@@ -489,9 +529,10 @@ export default function Assessment() {
         return (
           <motion.div
             key="step3"
-            initial={{ opacity: 0, x: 20 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: -20 }}
+            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.3 }}
             className="space-y-6"
           >
             <div className="text-center mb-8">
@@ -502,27 +543,28 @@ export default function Assessment() {
             <div className="grid md:grid-cols-2 gap-4">
               {interests.map((interest) => {
                 const isSelected = formData.interests.includes(interest.id);
+                const IconComponent = interest.icon;
                 return (
                   <motion.div
                     key={interest.id}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={prefersReducedMotion ? {} : { y: -2 }}
+                    whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
                     onClick={() => handleInterestToggle(interest.id)}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-[border-color,background-color,box-shadow] duration-200 ease-out hover:shadow-md ${
                       isSelected
                         ? 'border-primary bg-primary/10'
                         : 'border-border hover:border-primary/50 bg-card'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${interest.color} flex items-center justify-center`}>
-                        <interest.icon className="w-5 h-5 text-white" />
+                      <div className={`w-10 h-10 rounded-lg ${interest.color} flex items-center justify-center shrink-0`}>
+                        {IconComponent && <IconComponent className="w-5 h-5 text-white" />}
                       </div>
                       <div className="flex-1">
                         <h3 className="font-medium text-foreground">{interest.name}</h3>
                       </div>
                       {isSelected && (
-                        <CheckCircle className="w-5 h-5 text-primary" />
+                        <CheckCircle className="w-5 h-5 text-primary shrink-0" />
                       )}
                     </div>
                   </motion.div>
@@ -543,9 +585,10 @@ export default function Assessment() {
         return (
           <motion.div
             key="step4"
-            initial={{ opacity: 0, x: 20 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: -20 }}
+            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.3 }}
             className="space-y-6"
           >
             <div className="text-center mb-8">
@@ -562,17 +605,20 @@ export default function Assessment() {
                 onChange={(e) => setFormData(prev => ({ ...prev, preferred_location: e.target.value }))}
                 className="text-lg p-4"
               />
+              <p className="text-sm text-muted-foreground">
+                This helps us recommend colleges and opportunities in your preferred area.
+              </p>
             </div>
 
-            <div className="bg-green-50 border border-green-200 rounded-xl p-6 mt-8">
-              <h3 className="font-semibold text-green-800 mb-2 flex items-center gap-2">
+            <div className="bg-success/10 border border-success/20 rounded-xl p-6 mt-8">
+              <h3 className="font-semibold text-success mb-2 flex items-center gap-2">
                 <CheckCircle className="w-5 h-5" />
                 Ready for AI Analysis!
               </h3>
-              <p className="text-green-700 text-sm mb-3">
+              <p className="text-success text-sm mb-3">
                 You'll get two types of personalized recommendations:
               </p>
-              <ul className="text-green-700 text-sm space-y-1 ml-4">
+              <ul className="text-success text-sm space-y-1 ml-4">
                 <li><strong>Academic-Based:</strong> Careers recommended by AI analysis of your marksheet</li>
                 <li><strong>Interest-Based:</strong> Careers aligned with your selected interests</li>
               </ul>
@@ -586,10 +632,12 @@ export default function Assessment() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl mx-auto">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6 }}
         className="mb-8"
       >
         <div className="mb-6">
@@ -657,6 +705,7 @@ export default function Assessment() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

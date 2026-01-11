@@ -103,12 +103,12 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> {
                     logger.warn("Login attempt failed - user not found: {}", maskEmail(request.getEmail()));
-                    return new IllegalArgumentException("Invalid credentials");
+                    return new IllegalArgumentException("Incorrect email");
                 });
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             logger.warn("Login attempt failed - invalid password for user: {}", maskEmail(request.getEmail()));
-            throw new IllegalArgumentException("Invalid credentials");
+            throw new IllegalArgumentException("Incorrect password");
         }
 
         // Generate tokens

@@ -1,25 +1,26 @@
 import { Link } from "react-router-dom"
 import { Button } from "@/shared/components/ui/button"
+import { Badge } from "@/shared/components/ui/badge"
 import { ArrowRight, Sparkles } from "lucide-react"
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-background via-primary/20 to-secondary/30 px-4 py-20 md:py-32">
-      {/* Decorative elements */}
-      <div className="absolute top-20 left-10 h-64 w-64 rounded-full bg-primary/30 blur-3xl" />
-      <div className="absolute bottom-10 right-10 h-48 w-48 rounded-full bg-secondary/40 blur-3xl" />
+    <section className="relative overflow-hidden bg-gradient-to-br from-[var(--primary-soft)] via-[var(--primary-soft)]/80 to-[var(--primary-soft)]/60 px-4 py-16 md:py-24 lg:py-32">
+      {/* Decorative elements - very subtle */}
+      <div className="absolute top-20 left-10 h-64 w-64 rounded-full bg-accent/30 blur-3xl" />
+      <div className="absolute bottom-10 right-10 h-48 w-48 rounded-full bg-secondary/20 blur-3xl" />
 
       <div className="container relative mx-auto max-w-6xl">
         <div className="grid items-center gap-12 lg:grid-cols-2">
-          <div className="space-y-8 text-center lg:text-left animate-in fade-in slide-in-from-left-5 duration-700">
-            <div className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground">
-              <Sparkles className="h-4 w-4 text-primary" />
+          <div className="space-y-8 text-center lg:text-left">
+            <Badge variant="accent" className="gap-2">
+              <Sparkles className="h-4 w-4" />
               Your Career Journey Starts Here
-            </div>
+            </Badge>
 
             <h1 className="font-sans text-4xl font-bold leading-tight tracking-tight text-foreground md:text-5xl lg:text-6xl text-balance">
               Find Your Future,{" "}
-              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              <span className="text-primary">
                 Build Your Career
               </span>
             </h1>
@@ -32,7 +33,7 @@ export function HeroSection() {
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center lg:justify-start">
               <Button
                 size="lg"
-                className="gap-2 rounded-full bg-primary px-8 text-primary-foreground hover:bg-primary/90"
+                className="gap-2 rounded-full bg-primary px-8 text-primary-foreground hover:bg-primary-hover transition-[background-color] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 asChild
               >
                 <Link to="/signup">
@@ -42,8 +43,8 @@ export function HeroSection() {
               </Button>
               <Button
                 size="lg"
-                variant="outline"
-                className="rounded-full px-8 border-primary/20 hover:bg-primary/5 bg-transparent"
+                variant="secondary"
+                className="rounded-full px-8 transition-[background-color,border-color] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 asChild
               >
                 <Link to="/features">Explore Features</Link>
@@ -68,16 +69,16 @@ export function HeroSection() {
             </div>
           </div>
 
-          <div className="relative animate-in fade-in slide-in-from-right-5 duration-700 delay-200">
+          <div className="relative">
             <div className="relative mx-auto aspect-square max-w-md">
               <img
                 src="/diverse-students-exploring-careers-on-laptop--illu.jpg"
                 alt="Students exploring career paths on laptops"
-                className="relative z-10 h-full w-full rounded-3xl object-cover shadow-2xl brightness-110 contrast-125 saturate-110"
+                className="relative z-10 h-full w-full rounded-xl object-cover shadow-xl brightness-110 contrast-125 saturate-110"
               />
 
               {/* Floating cards */}
-              <div className="absolute -left-4 top-1/4 z-20 rounded-xl bg-card p-3 shadow-lg animate-in fade-in zoom-in duration-500 delay-500">
+              <div className="absolute -left-4 top-1/4 z-20 rounded-xl bg-card p-3 shadow-lg border border-border/50">
                 <div className="flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
                     <Sparkles className="h-4 w-4 text-secondary-foreground" />
@@ -89,7 +90,7 @@ export function HeroSection() {
                 </div>
               </div>
 
-              <div className="absolute -right-4 bottom-1/4 z-20 rounded-xl bg-card p-3 shadow-lg animate-in fade-in zoom-in duration-500 delay-700">
+              <div className="absolute -right-4 bottom-1/4 z-20 rounded-xl bg-card p-3 shadow-lg border border-border/50">
                 <div className="flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent">
                     <span className="text-sm">🎯</span>

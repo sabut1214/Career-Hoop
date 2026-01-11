@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
@@ -8,8 +8,10 @@ import { Input } from "@/shared/components/ui/input"
 import { getAvailableTrainings } from "@/shared/lib/api"
 import { useAuth } from "@/shared/context/AuthContext"
 import { BookOpen, Clock, Users, Search, Loader, ExternalLink } from "lucide-react"
+import { EmptyState } from "@/shared/components/common/EmptyState"
 
 export default function TrainingPage() {
+  const prefersReducedMotion = useReducedMotion()
   const [trainings, setTrainings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -57,12 +59,12 @@ export default function TrainingPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
           {/* Header */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6 }}
             className="space-y-2"
           >
             <div className="flex items-center space-x-2">
@@ -112,12 +114,12 @@ export default function TrainingPage() {
               {filteredTrainings.map((training, index) => (
                 <motion.div
                   key={training.id}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  whileHover={{ scale: 1.02 }}
+                  transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: index * 0.1 }}
+                  whileHover={prefersReducedMotion ? {} : { y: -2 }}
                 >
-                  <Card className="h-full hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/20">
+                  <Card className="h-full hover:shadow-lg transition-[box-shadow,border-color] duration-200 ease-out border-2 hover:border-primary/20">
                     <CardHeader>
                       <div className="flex items-start">
                         <div className="space-y-2">
@@ -131,11 +133,11 @@ export default function TrainingPage() {
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="flex items-center space-x-2 p-2 bg-muted/50 rounded">
-                          <Clock className="h-4 w-4 text-blue-600" />
+                          <Clock className="h-4 w-4 text-primary" />
                           <span className="text-xs font-medium">{training.duration || "N/A"}</span>
                         </div>
                         <div className="flex items-center space-x-2 p-2 bg-muted/50 rounded">
-                          <Users className="h-4 w-4 text-green-600" />
+                          <Users className="h-4 w-4 text-secondary" />
                           <span className="text-xs font-medium">{training.level || "All Levels"}</span>
                         </div>
                       </div>
@@ -171,32 +173,25 @@ export default function TrainingPage() {
 
           {/* Empty State */}
           {!loading && !error && trainings.length === 0 && (
-            <Card>
-              <CardContent className="pt-12 text-center">
-                <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-2">No training programs available.</p>
-                <p className="text-sm text-muted-foreground">
-                  Please ensure the backend is running and database migrations have been applied.
-                </p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={BookOpen}
+              title="No Training Programs Available"
+              description="Training programs are currently being set up. Please check back soon or contact support if you believe this is an error."
+            />
           )}
 
           {/* No Search Results */}
           {!loading && !error && trainings.length > 0 && filteredTrainings.length === 0 && (
-            <Card>
-              <CardContent className="pt-12 text-center">
-                <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No training programs found matching "{searchTerm}".</p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => setSearchTerm("")}
-                >
-                  Clear Search
-                </Button>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Search}
+              title="No Training Programs Found"
+              description={`No training programs match "${searchTerm}". Try adjusting your search or filters.`}
+              action={{
+                label: "Clear Search",
+                onClick: () => setSearchTerm(""),
+                variant: "secondary"
+              }}
+            />
           )}
     </div>
   )

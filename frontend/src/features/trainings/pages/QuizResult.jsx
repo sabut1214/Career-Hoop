@@ -56,7 +56,7 @@ export default function QuizResult() {
               </div>
               <div className="rounded-lg border p-4">
                 <p className="text-sm text-muted-foreground">Correct Answers</p>
-                <p className="text-3xl font-bold text-green-600">{result.correctCount}</p>
+                <p className="text-3xl font-bold text-success">{result.correctCount}</p>
               </div>
               <div className="rounded-lg border p-4">
                 <p className="text-sm text-muted-foreground">Accuracy</p>
@@ -86,16 +86,16 @@ export default function QuizResult() {
                   return (
                     <div
                       key={questionResult.questionId || index}
-                      className={`rounded-lg border-2 p-4 ${
-                        questionResult.isCorrect ? "border-green-500 bg-green-50/50" : "border-red-500 bg-red-50/50"
+                      className={`rounded-lg border-2 p-4 transition-[border-color,background-color] duration-200 ease-out ${
+                        questionResult.isCorrect ? "border-success bg-success/10" : "border-error bg-error/10"
                       }`}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center space-x-2">
                           <Badge variant="outline">Question {index + 1}</Badge>
                           {questionResult.isCorrect ? (
-                            <Badge className="bg-green-600">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                            <Badge className="bg-success text-success-foreground">
+                              <CheckCircle2 className="h-3 w-3 mr-1 shrink-0" />
                               Correct
                             </Badge>
                           ) : (
@@ -117,9 +117,9 @@ export default function QuizResult() {
 
                           let className = "w-full text-left p-3 border rounded-lg transition-colors"
                           if (isCorrect) {
-                            className += " border-green-600 bg-green-100 font-semibold"
+                            className += " border-success bg-success/20 font-semibold"
                           } else if (isSelected && !isCorrect) {
-                            className += " border-red-600 bg-red-100 font-semibold"
+                            className += " border-error bg-error/20 font-semibold"
                           } else {
                             className += " border-muted bg-muted/30"
                           }
@@ -129,10 +129,10 @@ export default function QuizResult() {
                               <span className="font-semibold mr-2">{optionKey}.</span>
                               {optionLabel}
                               {isCorrect && (
-                                <span className="ml-2 text-green-700 font-semibold">Correct Answer</span>
+                                <span className="ml-2 text-success font-semibold">Correct Answer</span>
                               )}
                               {isSelected && !isCorrect && (
-                                <span className="ml-2 text-red-700 font-semibold">Your Answer</span>
+                                <span className="ml-2 text-error font-semibold">Your Answer</span>
                               )}
                             </div>
                           )

@@ -99,10 +99,16 @@ export function FormInputSkeleton() {
  */
 export function StatCardSkeleton() {
   return (
-    <div className="p-6 border rounded-lg space-y-2">
-      <Skeleton className="h-4 w-1/2" />
-      <Skeleton className="h-8 w-1/3" />
-      <Skeleton className="h-3 w-2/3" />
+    <div className="border-2 rounded-xl p-6 space-y-4">
+      <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-10 w-10 rounded-lg" />
+      </div>
+      <div className="flex items-baseline justify-between">
+        <Skeleton className="h-8 w-16" />
+        <Skeleton className="h-4 w-12" />
+      </div>
+      <Skeleton className="h-3 w-24" />
     </div>
   )
 }

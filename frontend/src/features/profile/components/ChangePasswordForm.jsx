@@ -178,12 +178,12 @@ export function ChangePasswordForm() {
                 <div className="flex items-center gap-2">
                   <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                     <div
-                      className={`h-full transition-all ${
+                      className={`h-full transition-[background-color,width] duration-200 ease-out ${
                         passwordStrength.strength <= 2
-                          ? "bg-destructive w-1/3"
+                          ? "bg-error w-1/3"
                           : passwordStrength.strength <= 3
-                          ? "bg-yellow-500 w-2/3"
-                          : "bg-green-500 w-full"
+                          ? "bg-warning w-2/3"
+                          : "bg-success w-full"
                       }`}
                     />
                   </div>
@@ -192,20 +192,20 @@ export function ChangePasswordForm() {
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className={`flex items-center gap-1 ${passwordStrength.minLength ? "text-green-600" : "text-muted-foreground"}`}>
-                    {passwordStrength.minLength ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                  <div className={`flex items-center gap-1 transition-[color] duration-200 ease-out ${passwordStrength.minLength ? "text-success" : "text-muted-foreground"}`}>
+                    {passwordStrength.minLength ? <CheckCircle2 className="h-3 w-3 shrink-0" /> : <XCircle className="h-3 w-3 shrink-0" />}
                     8+ characters
                   </div>
-                  <div className={`flex items-center gap-1 ${passwordStrength.hasUpperCase ? "text-green-600" : "text-muted-foreground"}`}>
-                    {passwordStrength.hasUpperCase ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                  <div className={`flex items-center gap-1 transition-[color] duration-200 ease-out ${passwordStrength.hasUpperCase ? "text-success" : "text-muted-foreground"}`}>
+                    {passwordStrength.hasUpperCase ? <CheckCircle2 className="h-3 w-3 shrink-0" /> : <XCircle className="h-3 w-3 shrink-0" />}
                     Uppercase
                   </div>
-                  <div className={`flex items-center gap-1 ${passwordStrength.hasLowerCase ? "text-green-600" : "text-muted-foreground"}`}>
-                    {passwordStrength.hasLowerCase ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                  <div className={`flex items-center gap-1 transition-[color] duration-200 ease-out ${passwordStrength.hasLowerCase ? "text-success" : "text-muted-foreground"}`}>
+                    {passwordStrength.hasLowerCase ? <CheckCircle2 className="h-3 w-3 shrink-0" /> : <XCircle className="h-3 w-3 shrink-0" />}
                     Lowercase
                   </div>
-                  <div className={`flex items-center gap-1 ${passwordStrength.hasNumber ? "text-green-600" : "text-muted-foreground"}`}>
-                    {passwordStrength.hasNumber ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                  <div className={`flex items-center gap-1 transition-[color] duration-200 ease-out ${passwordStrength.hasNumber ? "text-success" : "text-muted-foreground"}`}>
+                    {passwordStrength.hasNumber ? <CheckCircle2 className="h-3 w-3 shrink-0" /> : <XCircle className="h-3 w-3 shrink-0" />}
                     Number
                   </div>
                 </div>
@@ -238,8 +238,8 @@ export function ChangePasswordForm() {
               <p className="text-sm text-destructive">{errors.confirmPassword}</p>
             )}
             {confirmPassword && newPassword && confirmPassword === newPassword && (
-              <p className="text-sm text-green-600 flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" />
+              <p className="text-sm text-success flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3 shrink-0" />
                 Passwords match
               </p>
             )}

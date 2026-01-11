@@ -1,12 +1,12 @@
 /* Landing Page Styles */
 .landing-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: linear-gradient(135deg, var(--primary-soft) 0%, var(--primary-soft) 100%);
 }
 
 .hero-section {
-  background: linear-gradient(135deg, var(--primary-color) 0%, #1e465e 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--primary-soft) 0%, var(--primary-soft)/80 50%, var(--primary-soft)/60 100%);
+  color: var(--foreground);
   padding: 4rem 0 6rem;
   text-align: center;
 }
@@ -37,11 +37,11 @@
 }
 
 .highlight-primary {
-  color: #4CAF50;
+  color: var(--success); /* Brand Lime #a8df60 */
 }
 
 .highlight-secondary {
-  color: #FF6B35;
+  color: var(--secondary); /* Brand Aqua #2eb4ac */
 }
 
 .hero-description {
@@ -93,7 +93,7 @@
 .stat-number {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #4CAF50;
+  color: var(--primary); /* Brand Deep Teal */
   margin-bottom: 0.5rem;
 }
 
@@ -104,7 +104,7 @@
 
 .features-section {
   padding: 6rem 0;
-  background: white;
+  background: var(--card);
 }
 
 .section-header {
@@ -115,13 +115,13 @@
 .section-title {
   font-size: 2.5rem;
   font-weight: 700;
-  color: var(--dark-color);
+  color: var(--foreground);
   margin-bottom: 1rem;
 }
 
 .section-description {
   font-size: 1.2rem;
-  color: var(--gray-color);
+  color: var(--muted-foreground);
   max-width: 600px;
   margin: 0 auto;
 }
@@ -133,18 +133,18 @@
 }
 
 .feature-card {
-  background: white;
+  background: var(--card);
   padding: 2.5rem;
   border-radius: 1rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
   text-align: center;
-  transition: all 0.3s ease;
+  transition: box-shadow 0.2s ease-out, border-color 0.2s ease-out;
   border: 2px solid transparent;
 }
 
 .feature-card:hover {
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-  border-color: var(--primary-color);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary);
 }
 
 .feature-icon {
@@ -160,18 +160,18 @@
 .feature-title {
   font-size: 1.5rem;
   font-weight: 600;
-  color: var(--dark-color);
+  color: var(--foreground);
   margin-bottom: 1rem;
 }
 
 .feature-description {
-  color: var(--gray-color);
+  color: var(--muted-foreground);
   line-height: 1.6;
 }
 
 .benefits-section {
   padding: 6rem 0;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: linear-gradient(135deg, var(--primary-soft) 0%, var(--primary-soft)/80 100%);
 }
 
 .benefits-content {
@@ -194,11 +194,11 @@
   align-items: center;
   gap: 1rem;
   margin-bottom: 1rem;
-  color: var(--dark-color);
+  color: var(--foreground);
 }
 
 .benefit-item .icon {
-  color: var(--secondary-color);
+  color: var(--secondary);
   flex-shrink: 0;
 }
 
@@ -208,10 +208,10 @@
 }
 
 .career-match-card {
-  background: white;
+  background: var(--card);
   padding: 2rem;
   border-radius: 1.5rem;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
   max-width: 350px;
 }
 
@@ -225,7 +225,7 @@
 .card-icon {
   width: 3rem;
   height: 3rem;
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
   border-radius: 0.75rem;
   display: flex;
   align-items: center;
@@ -234,13 +234,13 @@
 
 .card-header h3 {
   font-weight: 600;
-  color: var(--dark-color);
+  color: var(--foreground);
   margin: 0;
 }
 
 .card-header p {
   font-size: 0.9rem;
-  color: var(--gray-color);
+  color: var(--muted-foreground);
   margin: 0;
 }
 
@@ -255,20 +255,20 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem;
-  background: #f8f9fa;
+  background: var(--muted);
   border-radius: 0.5rem;
   font-size: 0.9rem;
 }
 
 .match-percentage {
   font-weight: 600;
-  color: var(--primary-color);
+  color: var(--primary);
 }
 
 .cta-section {
   padding: 6rem 0;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--primary-soft) 0%, var(--primary-soft)/70 50%, var(--primary-soft)/50 100%);
+  color: var(--foreground);
   text-align: center;
 }
 
@@ -290,8 +290,8 @@
 }
 
 .footer {
-  background: var(--dark-color);
-  color: white;
+  background: var(--foreground);
+  color: var(--card);
   padding: 3rem 0 1rem;
 }
 
@@ -318,7 +318,7 @@
 .footer-link {
   color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
-  transition: color 0.3s ease;
+  transition: color 0.2s ease-out;
 }
 
 .footer-link:hover {

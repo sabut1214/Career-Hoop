@@ -42,13 +42,13 @@ export function SystemHealth() {
   const getStatusColor = (status) => {
     switch (status) {
       case "HEALTHY":
-        return "text-green-600 bg-green-100"
+        return "text-success bg-success/10"
       case "WARNING":
-        return "text-yellow-600 bg-yellow-100"
+        return "text-warning bg-warning/10"
       case "CRITICAL":
-        return "text-red-600 bg-red-100"
+        return "text-error bg-error/10"
       default:
-        return "text-gray-600 bg-gray-100"
+        return "text-muted-foreground bg-muted"
     }
   }
 
@@ -112,7 +112,7 @@ export function SystemHealth() {
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
                 <Activity className="h-4 w-4" />
               </div>
               <div>
@@ -124,7 +124,7 @@ export function SystemHealth() {
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-100 text-purple-600">
+              <div className="p-2 rounded-lg bg-secondary/10 text-secondary">
                 <Users className="h-4 w-4" />
               </div>
               <div>
@@ -134,7 +134,7 @@ export function SystemHealth() {
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-orange-100 text-orange-600">
+              <div className="p-2 rounded-lg bg-warning/10 text-warning">
                 <Clock className="h-4 w-4" />
               </div>
               <div>
@@ -153,8 +153,8 @@ export function SystemHealth() {
 
 function Badge({ children, variant = "default", className }) {
   const variantClasses = {
-    default: "bg-green-100 text-green-800",
-    destructive: "bg-red-100 text-red-800",
+    default: "bg-success/10 text-success",
+    destructive: "bg-error/10 text-error",
   }
   
   return (

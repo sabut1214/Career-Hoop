@@ -53,13 +53,13 @@ export function PendingItemsCounter() {
   const hasPending = totalPending > 0
 
   return (
-    <Card className={cn("border-2", hasPending && "border-orange-300")}>
+    <Card className={cn("border-2 transition-[border-color] duration-200 ease-out", hasPending && "border-warning/50")}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           {hasPending ? (
-            <AlertCircle className="h-5 w-5 text-orange-600" />
+            <AlertCircle className="h-5 w-5 shrink-0 text-warning" />
           ) : (
-            <Clock className="h-5 w-5" />
+            <Clock className="h-5 w-5 shrink-0" />
           )}
           Pending Items
         </CardTitle>

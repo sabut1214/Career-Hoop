@@ -201,21 +201,21 @@ export default function GradesPage() {
   const collegesPerPage = 4
 
   const getGradeColor = (grade) => {
-    if (!grade) return "bg-gray-500"
+    if (!grade) return "bg-muted-foreground/50"
     const normalized = grade.toUpperCase()
-    if (["A+", "A", "O"].includes(normalized)) return "bg-green-500"
-    if (["B+", "B"].includes(normalized)) return "bg-blue-500"
-    if (["C+", "C"].includes(normalized)) return "bg-yellow-500"
-    if (["D", "E", "F"].includes(normalized)) return "bg-red-500"
-    return "bg-gray-500"
+    if (["A+", "A", "O"].includes(normalized)) return "bg-success" // Brand Lime
+    if (["B+", "B"].includes(normalized)) return "bg-primary" // Brand Deep Teal
+    if (["C+", "C"].includes(normalized)) return "bg-warning" // Brand YellowGreen
+    if (["D", "E", "F"].includes(normalized)) return "bg-error" // Keep red for errors
+    return "bg-muted-foreground/50"
   }
 
   const getMarksTone = (marks) => {
     if (marks == null) return "text-foreground"
-    if (marks >= 90) return "text-green-600 dark:text-green-400"
-    if (marks >= 75) return "text-blue-600 dark:text-blue-400"
-    if (marks >= 60) return "text-yellow-600 dark:text-yellow-400"
-    return "text-red-600 dark:text-red-400"
+    if (marks >= 90) return "text-success" // Brand Lime
+    if (marks >= 75) return "text-primary" // Brand Deep Teal
+    if (marks >= 60) return "text-warning" // Brand YellowGreen (needs dark text for contrast)
+    return "text-error" // Keep red for errors
   }
 
   const getIndicatorWidth = (marks) => {
@@ -225,10 +225,10 @@ export default function GradesPage() {
 
   const getIndicatorTone = (marks) => {
     if (marks == null) return "bg-muted-foreground/50"
-    if (marks >= 90) return "bg-green-500"
-    if (marks >= 75) return "bg-blue-500"
-    if (marks >= 60) return "bg-yellow-500"
-    return "bg-red-500"
+    if (marks >= 90) return "bg-success" // Brand Lime
+    if (marks >= 75) return "bg-primary" // Brand Deep Teal
+    if (marks >= 60) return "bg-warning" // Brand YellowGreen
+    return "bg-error" // Keep red for errors
   }
 
   const saveGradesToProfile = async (analysisResult, profile) => {
@@ -433,21 +433,74 @@ export default function GradesPage() {
           : []
         : []
 
+      // Load interests from localStorage
+      let interests = {
+        careerFields: [],
+        activities: [],
+        workEnvironments: [],
+      }
+      if (user?.id) {
+        try {
+          const interestsKey = getUserStorageKey("userInterests", user.id)
+          const storedInterests = localStorage.getItem(interestsKey) || localStorage.getItem("userInterests")
+          if (storedInterests) {
+            const parsed = JSON.parse(storedInterests)
+            if (parsed && typeof parsed === "object") {
+              interests = {
+                careerFields: Array.isArray(parsed.careerFields) ? parsed.careerFields.slice(0, 2) : [],
+                activities: Array.isArray(parsed.activities) ? parsed.activities.slice(0, 3) : [],
+                workEnvironments: Array.isArray(parsed.workEnvironments) ? parsed.workEnvironments.slice(0, 1) : [],
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("Failed to load interests for college recommendations:", err)
+        }
+      }
+
       // Call Python recommendation service via backend
       // Fetch more colleges (20) so we can paginate through the best recommendations
-      const recommendations = await getCollegeRecommendations(
+      console.log("Fetching college recommendations with params:", {
+        grade12,
+        grade10: analysisData?.grade10 || null,
+        stream,
+        subjects,
+        interests,
+      })
+      
+      const response = await getCollegeRecommendations(
         {
           grade12: grade12,
           grade10: analysisData?.grade10 || null,
           stream: stream,
           subjects: subjects,
+          careerFields: interests.careerFields || [],
+          activities: interests.activities || [],
+          workEnvironments: interests.workEnvironments || [],
         },
         20  // Fetch top 20 colleges for pagination
       )
 
+      console.log("College recommendations API response:", response, "Type:", typeof response, "Is Array:", Array.isArray(response))
+
+      // Handle different response formats: array, {data: [...]}, or {recommendations: [...]}
+      let recommendations = []
+      if (Array.isArray(response)) {
+        recommendations = response
+        console.log("Response is array, recommendations count:", recommendations.length)
+      } else if (response?.data && Array.isArray(response.data)) {
+        recommendations = response.data
+        console.log("Response has data array, recommendations count:", recommendations.length)
+      } else if (response?.recommendations && Array.isArray(response.recommendations)) {
+        recommendations = response.recommendations
+        console.log("Response has recommendations array, recommendations count:", recommendations.length)
+      } else {
+        console.warn("Unexpected response format:", response)
+      }
+
       if (recommendations && recommendations.length > 0) {
-        // Transform API response to match UI format
-        return recommendations.map((college) => {
+        console.log("Processing recommendations, count:", recommendations.length)
+        const transformed = recommendations.map((college) => {
           return {
             ...college,
             id: college.id || college.name,
@@ -460,9 +513,12 @@ export default function GradesPage() {
             highlight: college.highlight || "",
           }
         })
+        console.log("Transformed recommendations:", transformed)
+        return transformed
       }
 
       // Python service returned empty recommendations
+      console.warn("No recommendations received from API")
       return []
     } catch (err) {
       logger.error("Failed to fetch recommended colleges:", err)
@@ -602,7 +658,7 @@ export default function GradesPage() {
 
                 {/* Privacy Assurance */}
                 <div className="mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-success" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                   </svg>
                   <span>Your marksheet is encrypted and never shared with anyone</span>
@@ -657,7 +713,7 @@ export default function GradesPage() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 }}
-                      className="relative rounded-xl border-2 border-primary/20 p-6 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 shadow-md hover:shadow-lg transition-all duration-300"
+                      className="relative rounded-xl border-2 border-primary/20 p-6 bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5 shadow-md hover:shadow-lg transition-[box-shadow] duration-200 ease-out"
                     >
                       <div className="flex items-start gap-3">
                         <div className="p-2 rounded-lg bg-primary/20">
@@ -676,11 +732,11 @@ export default function GradesPage() {
                       initial={{ opacity: 0, y: -20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.2 }}
-                      className="relative rounded-xl border-2 border-primary/20 p-6 bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20 shadow-md hover:shadow-lg transition-all duration-300"
+                      className="relative rounded-xl border-2 border-primary/20 p-6 bg-gradient-to-br from-accent/10 to-accent/5 dark:from-accent/10 dark:to-accent/5 shadow-md hover:shadow-lg transition-[box-shadow] duration-200 ease-out"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg bg-purple-500/20">
-                          <School className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                        <div className="p-2 rounded-lg bg-accent/20">
+                          <School className="h-5 w-5 shrink-0 text-accent-foreground" />
                         </div>
                         <div className="flex-1">
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">School / College</p>
@@ -695,11 +751,11 @@ export default function GradesPage() {
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.3 }}
-                      className="relative rounded-xl border-2 border-primary/20 p-6 bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 shadow-md hover:shadow-lg transition-all duration-300"
+                      className="relative rounded-xl border-2 border-primary/20 p-6 bg-gradient-to-br from-success/10 to-success/5 dark:from-success/10 dark:to-success/5 shadow-md hover:shadow-lg transition-[box-shadow] duration-200 ease-out"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg bg-green-500/20">
-                          <Award className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <div className="p-2 rounded-lg bg-success/20">
+                          <Award className="h-5 w-5 shrink-0 text-success-foreground" />
                         </div>
                         <div className="flex-1">
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Examination</p>

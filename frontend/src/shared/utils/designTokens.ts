@@ -7,30 +7,53 @@
 
 export const designTokens = {
   colors: {
-    primary: 'var(--primary)',
+    // Brand Colors - LIGHT Palette
+    brandInk: 'var(--brand-ink)', // Legacy - use primary scale
+    brandAquaTeal: 'var(--brand-aqua-teal)', // Legacy - use primary scale
+    brandSoftMint: 'var(--brand-soft-mint)', // Legacy - use primary scale
+    brandSuccessLime: 'var(--brand-success-lime)', // Legacy - use success
+    brandHighlightLime: 'var(--brand-highlight-lime)', // Legacy - use warning
+    brandMutedSlate: 'var(--brand-muted-slate)', // Legacy - use muted colors
+    
+    // Brand Scale (50-900 based on #2596be)
+    brand50: 'var(--brand-50)',
+    brand100: 'var(--brand-100)',
+    brand200: 'var(--brand-200)',
+    brand300: 'var(--brand-300)',
+    brand400: 'var(--brand-400)',
+    brand500: 'var(--brand-500)', // Base brand #2596be
+    brand600: 'var(--brand-600)',
+    brand700: 'var(--brand-700)',
+    brand800: 'var(--brand-800)',
+    brand900: 'var(--brand-900)',
+    
+    // Semantic Colors (mapped to brand palette)
+    primary: 'var(--primary)', // primary-700 #196784 for buttons with white text
     primaryHover: 'var(--primary-hover)',
     primaryActive: 'var(--primary-active)',
-    primaryForeground: 'var(--primary-foreground)',
-    secondary: 'var(--secondary)',
+    primaryForeground: 'var(--primary-foreground)', // White text
+    secondary: 'var(--secondary)', // primary-500 #2596be for accents
     secondaryHover: 'var(--secondary-hover)',
     secondaryActive: 'var(--secondary-active)',
-    secondaryForeground: 'var(--secondary-foreground)',
-    success: 'var(--success)',
-    successForeground: 'var(--success-foreground)',
-    warning: 'var(--warning)',
-    warningForeground: 'var(--warning-foreground)',
+    secondaryForeground: 'var(--secondary-foreground)', // Dark text (NOT white)
+    success: 'var(--success)', // Success green
+    successForeground: 'var(--success-foreground)', // White text
+    warning: 'var(--warning)', // Warning amber
+    warningForeground: 'var(--warning-foreground)', // White text
     error: 'var(--error)',
     errorForeground: 'var(--error-foreground)',
-    info: 'var(--info)',
-    infoForeground: 'var(--info-foreground)',
-    background: 'var(--background)',
-    surface: 'var(--surface)',
+    info: 'var(--info)', // Brand primary-500 #2596be
+    infoForeground: 'var(--info-foreground)', // White text
+    background: 'var(--background)', // Light background #f9fbfc
+    surface: 'var(--surface)', // Pure white
     surfaceElevated: 'var(--surface-elevated)',
-    foreground: 'var(--foreground)',
+    foreground: 'var(--foreground)', // Dark text #0f172a
     muted: 'var(--muted)',
-    mutedForeground: 'var(--muted-foreground)',
+    mutedForeground: 'var(--muted-foreground)', // Muted text #5b6b7a
     mutedSubtle: 'var(--muted-subtle)',
-    border: 'var(--border)',
+    accent: 'var(--accent)', // primary-50 #e7f5fb
+    accentForeground: 'var(--accent-foreground)', // Dark text
+    border: 'var(--border)', // Light border #d9e6ee
     borderStrong: 'var(--border-strong)',
     borderSubtle: 'var(--border-subtle)',
     disabled: 'var(--disabled)',

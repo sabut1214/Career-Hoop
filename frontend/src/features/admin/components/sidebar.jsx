@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import { LayoutDashboard, Users, BookOpen, Building2, Zap, FileText, LogOut, ChevronLeft, ChevronRight, Menu, X, Sun, Moon, UserCheck, Award } from "lucide-react"
+import { LayoutDashboard, Users, BookOpen, Building2, Zap, FileText, LogOut, ChevronLeft, ChevronRight, Menu, X, Sun, Moon } from "lucide-react"
 import { Button } from "@/shared/components/ui/button"
 import { Switch } from "@/shared/components/ui/switch"
 import { useAuth } from "@/shared/context/AuthContext"
@@ -29,8 +29,6 @@ const menuItems = [
   { href: "/admin/careers", label: "Careers", icon: BookOpen },
   { href: "/admin/colleges", label: "Colleges", icon: Building2 },
   { href: "/admin/trainings", label: "Trainings", icon: Zap },
-  { href: "/admin/mentors", label: "Mentors", icon: UserCheck },
-  { href: "/admin/scholarships", label: "Scholarships", icon: Award },
   { href: "/admin/assessments", label: "Assessments", icon: FileText },
 ]
 
@@ -101,7 +99,7 @@ export function AdminSidebar() {
       <Button
         variant="outline"
         size="icon"
-        className="lg:hidden fixed top-4 right-4 z-50 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border-border/50 hover:bg-background"
+        className="lg:hidden fixed top-20 right-4 z-50 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border-border/50 hover:bg-background"
         onClick={toggleMobileSidebar}
       >
         {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -125,7 +123,7 @@ export function AdminSidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 h-screen bg-card border-r border-border/50 z-40 flex flex-col",
+          "fixed left-0 top-0 h-screen bg-background border-r border-border z-40 flex flex-col",
           "transition-all duration-300 ease-in-out",
           "shadow-lg lg:shadow-xl",
           isCollapsed ? "w-[72px]" : "w-[260px]",
@@ -142,7 +140,7 @@ export function AdminSidebar() {
                 size="icon"
                 onClick={toggleSidebar}
                 className={cn(
-                  "absolute top-4 z-50 h-8 w-8 rounded-md bg-card border-border/50 shadow-md hover:bg-muted/50 transition-all duration-200",
+                  "absolute top-4 z-50 h-8 w-8 rounded-md bg-white border-border/50 shadow-md hover:bg-muted/50 transition-[background-color] duration-200 ease-out",
                   isCollapsed ? "right-[-16px]" : "right-[-16px]"
                 )}
                 aria-label={isCollapsed ? "Open sidebar" : "Close sidebar"}
@@ -205,13 +203,13 @@ export function AdminSidebar() {
                   <div key={item.href}>
                     <Link to={item.href}>
                       <Button
-                        variant={isActive ? "default" : "ghost"}
+                        variant="ghost"
                         className={cn(
-                          "w-full text-sm transition-all duration-200 rounded-lg",
+                          "w-full text-sm transition-[background-color,color,box-shadow,border-color] duration-200 ease-out rounded-lg relative",
                           isCollapsed ? "justify-center h-10 px-0" : "justify-start h-11 gap-3 px-3",
                           isActive
-                            ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
-                            : "hover:bg-muted/50 hover:text-foreground text-muted-foreground"
+                            ? "bg-[var(--primary-soft)] text-foreground border border-[var(--primary-soft-border)] shadow-sm hover:bg-[var(--primary-soft)]/90 border-l-[3px] border-l-[var(--primary)]"
+                            : "hover:bg-[var(--primary-soft)]/50 hover:text-foreground text-muted-foreground"
                         )}
                         onClick={() => {
                           if (window.innerWidth < 1024) setIsMobileOpen(false)

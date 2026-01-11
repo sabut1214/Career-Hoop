@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { GraduationCap, AlertCircle, Eye, EyeOff } from "lucide-react"
 
 import { Button } from "@/shared/components/ui/button"
@@ -10,11 +10,39 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Input } from "@/shared/components/ui/input"
 import { Label } from "@/shared/components/ui/label"
 import { Alert, AlertDescription } from "@/shared/components/ui/alert"
-import { PasswordStrengthMeter } from "@/shared/components/forms/PasswordStrengthMeter"
 import { useAuth } from "@/shared/context/AuthContext"
 import { register } from "@/shared/lib/api"
 import { toast } from "react-toastify"
+import { cn } from "@/shared/lib/utils"
 import logoImg from "@/assets/images/Logo.png"
+
+// Helper functions
+const isEmailValid = (email) => {
+  if (!email) return false
+  // Practical email regex - not overly strict
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+const getMissingPasswordRequirements = (password) => {
+  const missing = []
+  if (!password || password.length < 8) {
+    missing.push("at least 8 characters")
+  }
+  if (!password || !/[A-Z]/.test(password)) {
+    missing.push("1 uppercase letter")
+  }
+  if (!password || !/[a-z]/.test(password)) {
+    missing.push("1 lowercase letter")
+  }
+  if (!password || !/[0-9]/.test(password)) {
+    missing.push("1 number")
+  }
+  if (!password || !/[^A-Za-z0-9]/.test(password)) {
+    missing.push("1 special character")
+  }
+  return missing
+}
 
 export default function Signup() {
   const navigate = useNavigate()
@@ -31,17 +59,15 @@ export default function Signup() {
   const [passwordError, setPasswordError] = useState("")
   const [confirmPasswordError, setConfirmPasswordError] = useState("")
 
-  const isValidEmail = (value) => /\S+@\S+\.\S+/.test(value)
+  const missingPasswordRequirements = getMissingPasswordRequirements(password)
+  const emailValid = isEmailValid(email)
+  const passwordsMatch = confirmPassword && password === confirmPassword
+  const passwordValid = password && missingPasswordRequirements.length === 0
+  const isFormValid = fullName.trim() && emailValid && passwordValid && passwordsMatch
+
   const validatePassword = (value) => {
-    const checks = [
-      { test: value.length >= 8, message: "at least 8 characters" },
-      { test: /[A-Z]/.test(value), message: "an uppercase letter" },
-      { test: /[a-z]/.test(value), message: "a lowercase letter" },
-      { test: /[0-9]/.test(value), message: "a number" },
-      { test: /[^A-Za-z0-9]/.test(value), message: "a special character" },
-    ]
-    const failures = checks.filter((check) => !check.test).map((check) => check.message)
-    return failures.length ? failures : null
+    const missing = getMissingPasswordRequirements(value)
+    return missing.length ? missing : null
   }
 
   const handleSignup = async (e) => {
@@ -53,7 +79,7 @@ export default function Signup() {
       return
     }
 
-    if (!isValidEmail(email)) {
+    if (!isEmailValid(email)) {
       setError("Please enter a valid email address.")
       return
     }
@@ -139,7 +165,7 @@ export default function Signup() {
                     setEmailError("")
                   }}
                   onBlur={(e) => {
-                    if (e.target.value && !isValidEmail(e.target.value)) {
+                    if (e.target.value && !isEmailValid(e.target.value)) {
                       setEmailError("Please enter a valid email address")
                     } else {
                       setEmailError("")
@@ -147,9 +173,19 @@ export default function Signup() {
                   }}
                   required
                   disabled={loading}
-                  aria-invalid={!!emailError}
-                  aria-describedby={emailError ? "email-error" : undefined}
+                  aria-invalid={!emailValid && email.length > 0}
+                  aria-describedby={email && !emailValid ? "email-hint" : undefined}
                 />
+                {email && !emailValid && (
+                  <p
+                    id="email-hint"
+                    className="text-sm text-destructive"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    Enter a valid email address
+                  </p>
+                )}
                 {emailError && (
                   <p id="email-error" className="text-sm text-destructive" role="alert">
                     {emailError}
@@ -160,18 +196,6 @@ export default function Signup() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                </div>
-                {/* Password Requirements Info */}
-                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-2">
-                  <p className="text-xs font-medium text-blue-900 dark:text-blue-100 mb-2">Password must include:</p>
-                  <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
-                    <li>At least 8 characters</li>
-                    <li>One uppercase letter</li>
-                    <li>One lowercase letter</li>
-                    <li>One number</li>
-                    <li>One special character</li>
-                  </ul>
-                  <p className="text-xs text-blue-600 dark:text-blue-300 mt-2 font-medium">Example: Pass@2024</p>
                 </div>
                 <div className="relative">
                   <Input
@@ -194,8 +218,8 @@ export default function Signup() {
                     required
                     disabled={loading}
                     className="h-10 pr-10"
-                    aria-invalid={!!passwordError}
-                    aria-describedby={passwordError ? "password-error" : password ? "password-strength" : undefined}
+                    aria-invalid={!!passwordError || (password && missingPasswordRequirements.length > 0)}
+                    aria-describedby={password && missingPasswordRequirements.length > 0 ? "password-missing" : passwordError ? "password-error" : undefined}
                   />
                   <button
                     type="button"
@@ -207,9 +231,26 @@ export default function Signup() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {password && (
-                  <PasswordStrengthMeter password={password} id="password-strength" />
-                )}
+                <AnimatePresence mode="wait">
+                  {password && missingPasswordRequirements.length > 0 && (
+                    <motion.div
+                      id="password-missing"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="space-y-1 text-sm overflow-hidden"
+                      role="status"
+                      aria-live="polite"
+                    >
+                      {missingPasswordRequirements.map((req, index) => (
+                        <div key={index} className="text-destructive">
+                          Missing: {req}
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 {passwordError && (
                   <p id="password-error" className="text-sm text-destructive" role="alert">
                     {passwordError}
@@ -239,8 +280,8 @@ export default function Signup() {
                     required
                     disabled={loading}
                     className="h-10 pr-10"
-                    aria-invalid={!!confirmPasswordError}
-                    aria-describedby={confirmPasswordError ? "confirm-password-error" : undefined}
+                    aria-invalid={!!confirmPasswordError || (confirmPassword && !passwordsMatch)}
+                    aria-describedby={confirmPassword && !passwordsMatch ? "confirm-password-hint" : confirmPasswordError ? "confirm-password-error" : undefined}
                   />
                   <button
                     type="button"
@@ -252,6 +293,16 @@ export default function Signup() {
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {confirmPassword && !passwordsMatch && (
+                  <p
+                    id="confirm-password-hint"
+                    className="text-sm text-destructive"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    Passwords do not match
+                  </p>
+                )}
                 {confirmPasswordError && (
                   <p id="confirm-password-error" className="text-sm text-destructive" role="alert">
                     {confirmPasswordError}
@@ -266,7 +317,7 @@ export default function Signup() {
                 </Alert>
               )}
 
-              <Button type="submit" className="w-full h-10" loading={loading} disabled={loading}>
+              <Button type="submit" className="w-full h-10" loading={loading} disabled={loading || !isFormValid}>
                 {loading ? "Creating account..." : "Create Account"}
               </Button>
             </form>

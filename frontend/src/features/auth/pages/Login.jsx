@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate, Link, useLocation } from "react-router-dom"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/shared/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Input } from "@/shared/components/ui/input"
@@ -12,20 +12,47 @@ import { login as apiLogin } from "@/shared/lib/api"
 import { toast } from "react-toastify"
 import logoImg from "@/assets/images/Logo.png"
 
-const isValidEmail = (value) => /\S+@\S+\.\S+/.test(value)
+// Helper functions
+const isEmailValid = (email) => {
+  if (!email) return false
+  // Practical email regex - not overly strict
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
 const MIN_PASSWORD_LENGTH = 8
 
 export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, login: authLogin, updateUser } = useAuth()
+  const { user, login: authLogin, updateUser, logout: authLogout } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [emailError, setEmailError] = useState("")
+  const [passwordError, setPasswordError] = useState("")
+
+  const emailValid = isEmailValid(email)
+  const passwordValid = password && password.length >= MIN_PASSWORD_LENGTH
+  const isFormValid = emailValid && passwordValid
 
   useEffect(() => {
+    // Check if we were redirected due to verification failure
+    const state = location.state
+    if (state && (state.reason === "verification_failed" || state.reason === "insufficient_permissions")) {
+      // Don't auto-redirect if verification failed - user needs to re-login
+      // Show error message and clear invalid session
+      if (user) {
+        setError("Your session could not be verified. Please log in again.")
+        // Clear invalid user data using logout to properly clean up
+        authLogout()
+      }
+      return
+    }
+
+    // Only auto-redirect if we have a valid user and no verification issues
     if (user) {
       if (user.role === "admin") {
         navigate("/admin")
@@ -33,7 +60,7 @@ export default function Login() {
         navigate("/dashboard")
       }
     }
-  }, [user, navigate])
+  }, [user, navigate, location.state, authLogout])
 
   useEffect(() => {
     if (user || email) return
@@ -46,8 +73,10 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault()
     setError("")
+    setEmailError("")
+    setPasswordError("")
 
-    if (!isValidEmail(email)) {
+    if (!isEmailValid(email)) {
       setError("Please enter a valid email address.")
       return
     }
@@ -94,7 +123,23 @@ export default function Login() {
       }
     } catch (err) {
       console.error('Login error:', err)
-      const errorMessage = err.message || "Login failed. Please try again."
+      let errorMessage = err.message || "Login failed. Please try again."
+      
+      // Handle specific error messages from backend
+      if (errorMessage.includes("Incorrect email")) {
+        errorMessage = `Incorrect email: ${email}`
+        setEmailError("Incorrect email address")
+      } else if (errorMessage.includes("Incorrect password")) {
+        errorMessage = "Incorrect password"
+        setPasswordError("Incorrect password")
+      } else if (errorMessage.toLowerCase().includes("email")) {
+        errorMessage = `Email error: ${email ? email : 'Please enter a valid email address'}`
+        setEmailError(errorMessage)
+      } else if (errorMessage.toLowerCase().includes("password")) {
+        errorMessage = "Password error: Please check your password"
+        setPasswordError(errorMessage)
+      }
+      
       setError(errorMessage)
       toast.error(errorMessage)
     } finally {
@@ -138,11 +183,38 @@ export default function Login() {
                   type="email"
                   placeholder="you@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setEmailError("")
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value && !isEmailValid(e.target.value)) {
+                      setEmailError("Please enter a valid email address")
+                    } else {
+                      setEmailError("")
+                    }
+                  }}
                   required
                   disabled={loading}
                   className="h-10"
+                  aria-invalid={!emailValid && email.length > 0}
+                  aria-describedby={email && !emailValid ? "email-hint" : undefined}
                 />
+                {email && !emailValid && (
+                  <p
+                    id="email-hint"
+                    className="text-sm text-destructive"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    Enter a valid email address
+                  </p>
+                )}
+                {emailError && (
+                  <p id="email-error" className="text-sm text-destructive" role="alert">
+                    {emailError}
+                  </p>
+                )}
               </div>
 
               {/* Password Field */}
@@ -162,20 +234,54 @@ export default function Login() {
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value)
+                      setPasswordError("")
+                    }}
+                    onBlur={(e) => {
+                      if (e.target.value && e.target.value.length < MIN_PASSWORD_LENGTH) {
+                        setPasswordError("Password must be at least 8 characters")
+                      } else {
+                        setPasswordError("")
+                      }
+                    }}
                     required
                     disabled={loading}
                     className="h-10 pr-10"
+                    aria-invalid={!!passwordError || (password && !passwordValid)}
+                    aria-describedby={password && !passwordValid ? "password-hint" : passwordError ? "password-error" : undefined}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     disabled={loading}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                <AnimatePresence mode="wait">
+                  {password && !passwordValid && (
+                    <motion.div
+                      id="password-hint"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="text-sm text-destructive overflow-hidden"
+                      role="status"
+                      aria-live="polite"
+                    >
+                      Missing: at least 8 characters
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                {passwordError && (
+                  <p id="password-error" className="text-sm text-destructive" role="alert">
+                    {passwordError}
+                  </p>
+                )}
               </div>
 
               {/* Error Alert */}
@@ -187,7 +293,7 @@ export default function Login() {
               )}
 
               {/* Login Button */}
-              <Button type="submit" className="w-full h-10" loading={loading} disabled={loading}>
+              <Button type="submit" className="w-full h-10" loading={loading} disabled={loading || !isFormValid}>
                 {loading ? "Signing in..." : "Sign In"}
               </Button>
             </form>

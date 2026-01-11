@@ -23,10 +23,12 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog"
 import { getColleges, deleteCollege, createCollege, updateCollege } from "@/shared/lib/api"
-import { Trash2, Plus, Pencil, Loader2 } from "lucide-react"
+import { Trash2, Plus, Pencil, Loader2, Building2 } from "lucide-react"
 import { toast } from "react-toastify"
 import { TableRowSkeleton } from "@/shared/components/common/LoadingSkeleton"
 import Pagination from "@/shared/components/common/pagination"
+import { EmptyState } from "@/shared/components/common/EmptyState"
+import { getUserFriendlyError } from "@/shared/utils/userFriendlyErrors"
 
 export default function AdminCollegesPage() {
   const [colleges, setColleges] = useState([])
@@ -62,7 +64,7 @@ export default function AdminCollegesPage() {
       setColleges(collegesData)
     } catch (error) {
       console.error("Failed to fetch colleges:", error)
-      toast.error("Failed to fetch colleges. Please try again.")
+      toast.error(getUserFriendlyError(error, "Unable to load colleges. Please refresh the page."))
       setColleges([])
     } finally {
       setLoading(false)
@@ -83,7 +85,7 @@ export default function AdminCollegesPage() {
       toast.success("College deleted successfully.")
     } catch (error) {
       console.error("Failed to delete college:", error)
-      toast.error("Failed to delete college. Please try again.")
+      toast.error(getUserFriendlyError(error, "Could not delete college. It may be in use elsewhere."))
     } finally {
       setIsDeleting(false)
       setDeleteDialogOpen(false)
@@ -110,7 +112,7 @@ export default function AdminCollegesPage() {
       fetchColleges()
     } catch (error) {
       console.error("Failed to create college:", error)
-      toast.error(error.message || "Failed to create college. Please try again.")
+      toast.error(getUserFriendlyError(error, "Could not create college. Please check your input and try again."))
     } finally {
       setIsSubmitting(false)
     }
@@ -149,7 +151,7 @@ export default function AdminCollegesPage() {
       fetchColleges()
     } catch (error) {
       console.error("Failed to update college:", error)
-      toast.error(error.message || "Failed to update college. Please try again.")
+      toast.error(getUserFriendlyError(error, "Could not update college. Please check your input and try again."))
     } finally {
       setIsSubmitting(false)
     }
@@ -235,8 +237,21 @@ export default function AdminCollegesPage() {
                         ))
                       ) : filteredColleges.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="py-6 text-center text-muted-foreground">
-                            No colleges found
+                          <td colSpan={4} className="p-0">
+                            <EmptyState
+                              icon={Building2}
+                              title="No Colleges Found"
+                              description={searchTerm ? `No colleges match "${searchTerm}". Try adjusting your search.` : "Get started by adding your first college."}
+                              action={searchTerm ? {
+                                label: "Clear Search",
+                                onClick: () => setSearchTerm(""),
+                                variant: "secondary"
+                              } : {
+                                label: "Add College",
+                                onClick: () => setIsAddDialogOpen(true),
+                                variant: "default"
+                              }}
+                            />
                           </td>
                         </tr>
                       ) : (
@@ -245,7 +260,7 @@ export default function AdminCollegesPage() {
                           return (
                             <tr
                               key={college.id}
-                              className={`border-b transition-opacity ${isRowDeleting ? "opacity-60" : "hover:bg-muted/50"}`}
+                              className={`border-b transition-colors ${isRowDeleting ? "opacity-60" : "hover:bg-muted/50 cursor-pointer"}`}
                               aria-busy={isRowDeleting}
                             >
                               <td className="py-3 px-4 font-medium">{college.name || "N/A"}</td>
@@ -256,8 +271,9 @@ export default function AdminCollegesPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleEditClick(college)}
-                                  className="text-muted-foreground hover:text-foreground"
+                                  className="text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                   disabled={isDeleting}
+                                  aria-label={`Edit ${college.name || "college"}`}
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
@@ -265,8 +281,9 @@ export default function AdminCollegesPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDeleteClick(college)}
-                                  className="text-destructive hover:text-destructive"
+                                  className="text-destructive hover:text-destructive focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2"
                                   disabled={isDeleting}
+                                  aria-label={`Delete ${college.name || "college"}`}
                                 >
                                   {isRowDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                 </Button>

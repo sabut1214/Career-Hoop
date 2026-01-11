@@ -20,19 +20,17 @@ export function getUserStorageKey(baseKey, userId) {
 /**
  * Clear all user-specific data from localStorage
  * This should be called on logout or when switching users
+ * NOTE: Marksheet data (aiGradesAnalyses_*) and interests (userInterests_*) are NOT cleared 
+ * to preserve them across sessions. They are stored in the backend and will be reloaded on login.
  */
 export function clearUserData() {
   // Clear old generic keys (for backward compatibility)
   localStorage.removeItem("aiGradesAnalysis");
   localStorage.removeItem("userInterests");
   
-  // Clear all user-specific keys by pattern
-  const keysToRemove = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && (key.startsWith("aiGradesAnalysis_") || key.startsWith("userInterests_"))) {
-      keysToRemove.push(key);
-    }
-  }
-  keysToRemove.forEach(key => localStorage.removeItem(key));
+  // Clear user-specific keys by pattern
+  // NOTE: We do NOT clear marksheet data (aiGradesAnalyses_*, aiGradesCurrentId_*) 
+  // or interests (userInterests_*) to preserve them across logout/login sessions.
+  // Both are stored in the backend and will be reloaded on login.
+  // This is intentionally left empty - we preserve user data in localStorage
 }

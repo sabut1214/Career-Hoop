@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
@@ -48,36 +48,37 @@ const categoryIconMap = {
 }
 
 const categoryColorMap = {
-  Technology: "bg-blue-500",
-  "Data Science": "bg-green-500",
-  Healthcare: "bg-red-500",
-  Design: "bg-purple-500",
-  Engineering: "bg-orange-500",
-  Science: "bg-teal-500",
-  Business: "bg-indigo-500",
-  Education: "bg-yellow-500",
-  Media: "bg-pink-500",
-  "History & Research": "bg-amber-500",
-  "Social Science": "bg-cyan-500",
-  "Space & Aeronautics": "bg-violet-500",
-  default: "bg-gray-500",
+  Technology: "bg-primary", /* Brand Deep Teal */
+  "Data Science": "bg-secondary", /* Brand Aqua */
+  Healthcare: "bg-error",
+  Design: "bg-accent", /* Brand Mint */
+  Engineering: "bg-secondary", /* Brand Aqua */
+  Science: "bg-primary", /* Brand Deep Teal */
+  Business: "bg-primary", /* Brand Deep Teal */
+  Education: "bg-success", /* Brand Lime */
+  Media: "bg-accent", /* Brand Mint */
+  "History & Research": "bg-primary", /* Brand Deep Teal */
+  "Social Science": "bg-secondary", /* Brand Aqua */
+  "Space & Aeronautics": "bg-primary", /* Brand Deep Teal */
+  default: "bg-muted-foreground", /* Use muted from brand */
 }
 
 const getJobOutlookColor = (outlook) => {
-  if (!outlook) return "text-gray-600 bg-gray-100"
+  if (!outlook) return "text-muted-foreground bg-muted"
   const lower = outlook.toLowerCase()
-  if (lower.includes("very high") || lower.includes("high")) return "text-green-600 bg-green-100"
-  if (lower.includes("medium")) return "text-yellow-600 bg-yellow-100"
-  if (lower.includes("low")) return "text-red-600 bg-red-100"
-  return "text-gray-600 bg-gray-100"
+  if (lower.includes("very high") || lower.includes("high")) return "text-success bg-success/20"
+  if (lower.includes("medium")) return "text-warning bg-warning/20"
+  if (lower.includes("low")) return "text-destructive bg-destructive/20"
+  return "text-muted-foreground bg-muted"
 }
 
 const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
   const { user } = useAuth()
+  const prefersReducedMotion = useReducedMotion()
   const [isSaving, setIsSaving] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const category = career.category || "default"
-  const Icon = categoryIconMap[category] || categoryIconMap.default
+  const IconComponent = categoryIconMap[category] || categoryIconMap.default
   const color = categoryColorMap[category] || categoryColorMap.default
 
   // Check if career is saved based on the savedCareerIds set
@@ -156,19 +157,19 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: index * 0.1 }}
-      whileHover={{ scale: 1.02 }}
+      transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: index * 0.1 }}
+      whileHover={prefersReducedMotion ? {} : { y: -2 }}
       className="group"
     >
       <>
-        <Card className="h-full border-2 hover:border-primary/20 hover:shadow-lg transition-all duration-300">
+        <Card className="h-full border-2 hover:border-primary/20 hover:shadow-lg transition-[box-shadow,border-color] duration-200 ease-out">
           <CardHeader className="space-y-4">
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-3">
-                <div className={`w-12 h-12 rounded-lg ${color} flex items-center justify-center`}>
-                  <Icon className="h-6 w-6 text-white" />
+                <div className={`w-12 h-12 rounded-lg ${color} flex items-center justify-center shrink-0`}>
+                  {IconComponent && <IconComponent className="h-6 w-6 text-white" />}
                 </div>
                 <div>
                   <CardTitle className="text-xl group-hover:text-primary transition-colors">
@@ -191,9 +192,9 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 ) : (
                   <Star
-                    className={`h-5 w-5 transition-colors cursor-pointer ${
+                    className={`h-5 w-5 shrink-0 transition-[color,fill] duration-200 ease-out cursor-pointer ${
                       isSaved
-                        ? "text-yellow-500 fill-yellow-500"
+                        ? "text-warning fill-warning"
                         : "text-muted-foreground group-hover:text-accent"
                     }`}
                   />
@@ -219,7 +220,7 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
               {(career.averageSalaryUSD || career.salaryRange) && (
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center space-x-2">
-                    <DollarSign className="h-4 w-4 text-green-600" />
+                    <DollarSign className="h-4 w-4 shrink-0 text-success" />
                     <span className="text-sm font-medium">Salary Range</span>
                   </div>
                   <span className="text-sm font-semibold">
@@ -231,7 +232,7 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
               {career.requiredEducation && (
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center space-x-2">
-                    <BookOpen className="h-4 w-4 text-blue-600" />
+                    <BookOpen className="h-4 w-4 shrink-0 text-primary" />
                     <span className="text-sm font-medium">Education</span>
                   </div>
                   <span className="text-sm font-semibold text-right max-w-[60%]">
@@ -336,6 +337,7 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
 
 export default function CareersPage() {
   const { user } = useAuth()
+  const prefersReducedMotion = useReducedMotion()
   const [allCareers, setAllCareers] = useState([])
   const [careers, setCareers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -556,12 +558,12 @@ export default function CareersPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
           {/* Header */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6 }}
             className="space-y-4"
           >
             <div className="flex items-center space-x-2">
@@ -599,13 +601,13 @@ export default function CareersPage() {
                   label: searchTerm ? "Search Results" : "Available",
                   value: combinedCareers.length,
                   icon: Target,
-                  color: "text-blue-600",
+                  color: "text-secondary",
                 },
                 {
                   label: "Categories",
                   value: new Set(allCareers.map((c) => c.category).filter(Boolean)).size,
                   icon: BarChart3,
-                  color: "text-purple-600",
+                  color: "text-accent",
                 },
                 { label: "Saved", value: savedCareersFullData.length, icon: Star, color: "text-accent" },
               ].map((stat) => (

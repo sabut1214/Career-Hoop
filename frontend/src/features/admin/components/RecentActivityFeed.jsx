@@ -22,12 +22,12 @@ const ACTIVITY_ICONS = {
 }
 
 const ACTIVITY_COLORS = {
-  user_registration: "text-blue-600 bg-blue-100",
-  career_created: "text-green-600 bg-green-100",
-  college_created: "text-purple-600 bg-purple-100",
-  training_created: "text-yellow-600 bg-yellow-100",
-  academic_record_submitted: "text-orange-600 bg-orange-100",
-  quiz_completed: "text-indigo-600 bg-indigo-100",
+  user_registration: "text-primary bg-primary/10",
+  career_created: "text-secondary bg-secondary/10",
+  college_created: "text-accent bg-accent/10",
+  training_created: "text-warning bg-warning/10",
+  academic_record_submitted: "text-info bg-info/10",
+  quiz_completed: "text-success bg-success/10",
 }
 
 export function RecentActivityFeed() {

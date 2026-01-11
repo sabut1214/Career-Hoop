@@ -22,10 +22,15 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog"
 import { getStudents, deleteStudent, createStudent, updateStudent } from "@/shared/lib/api"
-import { Trash2, Plus, Pencil, Loader2 } from "lucide-react"
+import { Trash2, Plus, Pencil, Loader2, Users } from "lucide-react"
 import { toast } from "react-toastify"
 import { TableRowSkeleton } from "@/shared/components/common/LoadingSkeleton"
 import Pagination from "@/shared/components/common/pagination"
+import { EmptyState } from "@/shared/components/common/EmptyState"
+import { getUserFriendlyError } from "@/shared/utils/userFriendlyErrors"
+import { Checkbox as UICheckbox } from "@/shared/components/ui/checkbox"
+import { exportToCSV, exportToJSON } from "@/shared/utils/export"
+import { Download } from "lucide-react"
 
 export default function StudentsPage() {
   const [students, setStudents] = useState([])
@@ -48,6 +53,9 @@ export default function StudentsPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [selectedStudents, setSelectedStudents] = useState(new Set())
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false)
+  const [formErrors, setFormErrors] = useState({})
 
   useEffect(() => {
     fetchStudents()
@@ -61,7 +69,7 @@ export default function StudentsPage() {
       setStudents(studentsData)
     } catch (error) {
       console.error("Failed to fetch students:", error)
-      toast.error("Failed to fetch students. Please try again.")
+      toast.error(getUserFriendlyError(error, "Unable to load students. Please refresh the page."))
       setStudents([])
     } finally {
       setLoading(false)
@@ -82,7 +90,7 @@ export default function StudentsPage() {
       toast.success("Student deleted successfully.")
     } catch (error) {
       console.error("Failed to delete student:", error)
-      toast.error("Failed to delete student. Please try again.")
+      toast.error(getUserFriendlyError(error, "Could not delete student. It may be in use elsewhere."))
     } finally {
       setIsDeleting(false)
       setDeleteDialogOpen(false)
@@ -92,6 +100,9 @@ export default function StudentsPage() {
 
   const handleAddStudent = async (e) => {
     e.preventDefault()
+    if (!validateForm()) {
+      return
+    }
     setIsSubmitting(true)
     try {
       const studentData = {
@@ -109,7 +120,7 @@ export default function StudentsPage() {
       fetchStudents()
     } catch (error) {
       console.error("Failed to create student:", error)
-      toast.error(error.message || "Failed to create student. Please try again.")
+      toast.error(getUserFriendlyError(error, "Could not create student. Please check your input and try again."))
     } finally {
       setIsSubmitting(false)
     }
@@ -131,6 +142,9 @@ export default function StudentsPage() {
   const handleEditStudent = async (e) => {
     e.preventDefault()
     if (!editingStudent) return
+    if (!validateForm()) {
+      return
+    }
     setIsSubmitting(true)
     try {
       const studentData = {
@@ -148,7 +162,7 @@ export default function StudentsPage() {
       fetchStudents()
     } catch (error) {
       console.error("Failed to update student:", error)
-      toast.error(error.message || "Failed to update student. Please try again.")
+      toast.error(getUserFriendlyError(error, "Could not update student. Please check your input and try again."))
     } finally {
       setIsSubmitting(false)
     }
@@ -164,6 +178,41 @@ export default function StudentsPage() {
       workEnvironments: "",
     })
     setEditingStudent(null)
+    setFormErrors({})
+  }
+
+  const validateForm = () => {
+    const errors = {}
+    if (!formData.name.trim()) {
+      errors.name = "Name is required"
+    }
+    if (!formData.email.trim()) {
+      errors.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = "Please enter a valid email address"
+    }
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const validateField = (fieldName, value) => {
+    const errors = { ...formErrors }
+    if (fieldName === "name") {
+      if (!value.trim()) {
+        errors.name = "Name is required"
+      } else {
+        delete errors.name
+      }
+    } else if (fieldName === "email") {
+      if (!value.trim()) {
+        errors.email = "Email is required"
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        errors.email = "Please enter a valid email address"
+      } else {
+        delete errors.email
+      }
+    }
+    setFormErrors(errors)
   }
 
   const filteredStudents = students.filter(
@@ -176,6 +225,47 @@ export default function StudentsPage() {
   const endIndex = startIndex + pageSize
   const paginatedStudents = filteredStudents.slice(startIndex, endIndex)
   const deletingId = isDeleting ? studentToDelete?.id : null
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      const allIds = new Set(paginatedStudents.map(s => s.id))
+      setSelectedStudents(new Set([...selectedStudents, ...allIds]))
+    } else {
+      const pageIds = new Set(paginatedStudents.map(s => s.id))
+      setSelectedStudents(new Set([...selectedStudents].filter(id => !pageIds.has(id))))
+    }
+  }
+
+  const handleSelectStudent = (studentId, checked) => {
+    const newSelected = new Set(selectedStudents)
+    if (checked) {
+      newSelected.add(studentId)
+    } else {
+      newSelected.delete(studentId)
+    }
+    setSelectedStudents(newSelected)
+  }
+
+  const isAllSelected = paginatedStudents.length > 0 && paginatedStudents.every(s => selectedStudents.has(s.id))
+  const isSomeSelected = paginatedStudents.some(s => selectedStudents.has(s.id))
+
+  const handleBulkDelete = async () => {
+    if (selectedStudents.size === 0 || isDeleting) return
+    setIsDeleting(true)
+    try {
+      const deletePromises = Array.from(selectedStudents).map(id => deleteStudent(id))
+      await Promise.all(deletePromises)
+      await fetchStudents()
+      toast.success(`${selectedStudents.size} student(s) deleted successfully.`)
+      setSelectedStudents(new Set())
+      setBulkDeleteDialogOpen(false)
+    } catch (error) {
+      console.error("Failed to delete students:", error)
+      toast.error(getUserFriendlyError(error, "Could not delete some students. Please try again."))
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   useEffect(() => {
     setCurrentPage(1)
@@ -192,10 +282,36 @@ export default function StudentsPage() {
                 <h1 className="text-3xl font-bold">Students</h1>
                 <p className="text-muted-foreground mt-1">Manage student accounts</p>
               </div>
-              <Button className="gap-2" onClick={() => setIsAddDialogOpen(true)}>
-                <Plus className="h-4 w-4" />
-                Add Student
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    try {
+                      const dataToExport = searchTerm ? filteredStudents : students
+                      exportToCSV(
+                        dataToExport,
+                        `students_${new Date().toISOString().split("T")[0]}.csv`,
+                        [
+                          { key: "name", label: "Name" },
+                          { key: "email", label: "Email" },
+                          { key: "grade", label: "Grade" },
+                        ]
+                      )
+                      toast.success("Students exported successfully.")
+                    } catch (error) {
+                      toast.error("Failed to export students.")
+                    }
+                  }}
+                >
+                  <Download className="h-4 w-4" />
+                  Export CSV
+                </Button>
+                <Button className="gap-2" onClick={() => setIsAddDialogOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  Add Student
+                </Button>
+              </div>
             </div>
 
             <Card className="border-2">
@@ -213,7 +329,25 @@ export default function StudentsPage() {
 
             <Card className="border-2">
               <CardHeader>
-                <CardTitle>All Students ({filteredStudents.length})</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>All Students ({filteredStudents.length})</CardTitle>
+                  {selectedStudents.size > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        {selectedStudents.size} selected
+                      </span>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setBulkDeleteDialogOpen(true)}
+                        disabled={isDeleting}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Selected
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 {!loading && filteredStudents.length > 0 && (
@@ -225,6 +359,13 @@ export default function StudentsPage() {
                   <table className="w-full text-sm" aria-busy={loading}>
                     <thead className="border-b">
                       <tr>
+                        <th className="text-left py-3 px-4 font-semibold w-12">
+                          <UICheckbox
+                            checked={isAllSelected}
+                            onCheckedChange={handleSelectAll}
+                            aria-label="Select all"
+                          />
+                        </th>
                         <th className="text-left py-3 px-4 font-semibold">Name</th>
                         <th className="text-left py-3 px-4 font-semibold">Email</th>
                         <th className="text-left py-3 px-4 font-semibold">Grade</th>
@@ -238,19 +379,40 @@ export default function StudentsPage() {
                         ))
                       ) : filteredStudents.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="py-6 text-center text-muted-foreground">
-                            No students found
+                          <td colSpan={5} className="p-0">
+                            <EmptyState
+                              icon={Users}
+                              title="No Students Found"
+                              description={searchTerm ? `No students match "${searchTerm}". Try adjusting your search.` : "Get started by adding your first student."}
+                              action={searchTerm ? {
+                                label: "Clear Search",
+                                onClick: () => setSearchTerm(""),
+                                variant: "secondary"
+                              } : {
+                                label: "Add Student",
+                                onClick: () => setIsAddDialogOpen(true),
+                                variant: "default"
+                              }}
+                            />
                           </td>
                         </tr>
                       ) : (
                         paginatedStudents.map((student) => {
                           const isRowDeleting = deletingId === student.id
+                          const isSelected = selectedStudents.has(student.id)
                           return (
                             <tr
                               key={student.id}
-                              className={`border-b transition-opacity ${isRowDeleting ? "opacity-60" : "hover:bg-muted/50"}`}
+                              className={`border-b transition-colors ${isRowDeleting ? "opacity-60" : "hover:bg-muted/50 cursor-pointer"} ${isSelected ? "bg-muted/30" : ""}`}
                               aria-busy={isRowDeleting}
                             >
+                              <td className="py-3 px-4">
+                                <UICheckbox
+                                  checked={isSelected}
+                                  onCheckedChange={(checked) => handleSelectStudent(student.id, checked)}
+                                  aria-label={`Select ${student.name || "student"}`}
+                                />
+                              </td>
                               <td className="py-3 px-4">{student.name || "N/A"}</td>
                               <td className="py-3 px-4">{student.email || "N/A"}</td>
                               <td className="py-3 px-4">{student.grade || "N/A"}</td>
@@ -259,8 +421,9 @@ export default function StudentsPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleEditClick(student)}
-                                  className="text-muted-foreground hover:text-foreground"
+                                  className="text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                   disabled={isDeleting}
+                                  aria-label={`Edit ${student.name || "student"}`}
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
@@ -268,8 +431,9 @@ export default function StudentsPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDeleteClick(student)}
-                                  className="text-destructive hover:text-destructive"
+                                  className="text-destructive hover:text-destructive focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2"
                                   disabled={isDeleting}
+                                  aria-label={`Delete ${student.name || "student"}`}
                                 >
                                   {isRowDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                 </Button>
@@ -308,10 +472,17 @@ export default function StudentsPage() {
                       <Input
                         id="name"
                         value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, name: e.target.value })
+                          validateField("name", e.target.value)
+                        }}
                         required
                         placeholder="Enter student name"
+                        className={formErrors.name ? "border-destructive" : ""}
                       />
+                      {formErrors.name && (
+                        <p className="text-sm text-destructive">{formErrors.name}</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email *</Label>
@@ -319,10 +490,17 @@ export default function StudentsPage() {
                         id="email"
                         type="email"
                         value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, email: e.target.value })
+                          validateField("email", e.target.value)
+                        }}
                         required
                         placeholder="Enter student email"
+                        className={formErrors.email ? "border-destructive" : ""}
                       />
+                      {formErrors.email && (
+                        <p className="text-sm text-destructive">{formErrors.email}</p>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -394,10 +572,17 @@ export default function StudentsPage() {
                       <Input
                         id="edit-name"
                         value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, name: e.target.value })
+                          validateField("name", e.target.value)
+                        }}
                         required
                         placeholder="Enter student name"
+                        className={formErrors.name ? "border-destructive" : ""}
                       />
+                      {formErrors.name && (
+                        <p className="text-sm text-destructive">{formErrors.name}</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-email">Email *</Label>
@@ -405,10 +590,17 @@ export default function StudentsPage() {
                         id="edit-email"
                         type="email"
                         value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, email: e.target.value })
+                          validateField("email", e.target.value)
+                        }}
                         required
                         placeholder="Enter student email"
+                        className={formErrors.email ? "border-destructive" : ""}
                       />
+                      {formErrors.email && (
+                        <p className="text-sm text-destructive">{formErrors.email}</p>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -471,13 +663,44 @@ export default function StudentsPage() {
                   <AlertDialogTitle>Delete Student</AlertDialogTitle>
                   <AlertDialogDescription>
                     Are you sure you want to delete <strong>{studentToDelete?.name}</strong> ({studentToDelete?.email})?
-                    This action cannot be undone.
+                    <br />
+                    <br />
+                    This will permanently delete the student account and all associated data including:
+                    <ul className="list-disc list-inside mt-2 space-y-1">
+                      <li>Academic records</li>
+                      <li>Assessment results</li>
+                      <li>Quiz history</li>
+                    </ul>
+                    <br />
+                    <strong>This action cannot be undone.</strong>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDeleteConfirm}
+                    disabled={isDeleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeleting ? "Deleting..." : "Delete"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Selected Students</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete <strong>{selectedStudents.size}</strong> student(s)?
+                    This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleBulkDelete}
                     disabled={isDeleting}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >

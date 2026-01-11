@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
@@ -33,6 +33,7 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from "@/shared/context/AuthContext"
 import { toast } from "react-toastify"
 import { getUserProfile, updateUserProfile, getSavedCareers, getSavedColleges } from "@/shared/lib/api"
+import { EmptyState } from "@/shared/components/common/EmptyState"
 import { ChangePasswordForm } from "../components/ChangePasswordForm"
 import { PrivacySettings } from "../components/PrivacySettings"
 import { AcademicDetailsForm } from "../components/AcademicDetailsForm"
@@ -62,7 +63,7 @@ const getCareerIcon = (careerName) => {
 }
 
 const getCareerColor = (index) => {
-  const colors = ["bg-blue-500", "bg-purple-500", "bg-green-500", "bg-orange-500", "bg-pink-500", "bg-indigo-500"]
+  const colors = ["bg-primary", "bg-secondary", "bg-success", "bg-accent", "bg-info", "bg-primary/80"]
   return colors[index % colors.length]
 }
 
@@ -95,6 +96,7 @@ const mapResponseToProfile = (data, fallback = initialProfile) => ({
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth()
+  const prefersReducedMotion = useReducedMotion()
   const [profileInfo, setProfileInfo] = useState(initialProfile)
   const [isEditing, setIsEditing] = useState(false)
   const [editedInfo, setEditedInfo] = useState(initialProfile)
@@ -520,12 +522,12 @@ export default function ProfilePage() {
   const displayEmail = profileInfo.email || user?.email || ""
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
           {/* Header */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6 }}
             className="space-y-2"
           >
             <div>
@@ -541,9 +543,9 @@ export default function ProfilePage() {
 
           {/* Profile Overview */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
+            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: 0.1 }}
           >
             <Card className="border-2">
               <CardHeader>
@@ -663,9 +665,9 @@ export default function ProfilePage() {
 
           {/* Main Content Tabs */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: 0.2 }}
           >
             <Tabs defaultValue="info" className="space-y-6">
               <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
@@ -800,9 +802,9 @@ export default function ProfilePage() {
                         ].map((item, index) => (
                           <motion.div
                             key={item.label}
-                            initial={{ opacity: 0, x: -20 }}
+                            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.4, delay: index * 0.1 }}
+                            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.4, delay: index * 0.1 }}
                             className="flex items-center space-x-3 p-4 bg-muted/50 rounded-lg"
                           >
                             <item.icon className="h-5 w-5 text-primary" />
@@ -829,22 +831,27 @@ export default function ProfilePage() {
                     {loadingSavedItems ? (
                       <p className="text-sm text-muted-foreground">Loading saved careers...</p>
                     ) : savedCareers.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground">No saved careers yet</p>
-                        <p className="text-sm text-muted-foreground mt-2">Start exploring careers and save your favorites!</p>
-                      </div>
+                      <EmptyState
+                        icon={Star}
+                        title="No Saved Careers Yet"
+                        description="Start exploring careers and save your favorites to see them here."
+                        action={{
+                          label: "Explore Careers",
+                          onClick: () => navigate("/careers"),
+                          variant: "default"
+                        }}
+                      />
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {savedCareers.map((career, index) => (
                         <motion.div
                           key={career.id}
-                          initial={{ opacity: 0, y: 20 }}
+                          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.4, delay: index * 0.1 }}
-                          whileHover={{ scale: 1.02 }}
+                          transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.4, delay: index * 0.1 }}
+                          whileHover={prefersReducedMotion ? {} : { y: -2 }}
                         >
-                          <Card className="border hover:border-primary/20 hover:shadow-md transition-all duration-300">
+                          <Card className="border hover:border-primary/20 hover:shadow-md transition-[box-shadow,border-color] duration-200 ease-out">
                             <CardContent className="p-4 space-y-3">
                               <div className="flex items-center space-x-3">
                                 <div
@@ -861,7 +868,7 @@ export default function ProfilePage() {
                               </div>
                               <div className="flex items-center justify-between">
                                 {career.confidence && (
-                                  <Badge variant="secondary" className="bg-green-100 text-green-700">
+                                  <Badge variant="secondary" className="bg-success/20 text-success">
                                     {career.confidence}% Match
                                   </Badge>
                                 )}
@@ -890,11 +897,16 @@ export default function ProfilePage() {
                     {loadingSavedItems ? (
                       <p className="text-sm text-muted-foreground">Loading saved colleges...</p>
                     ) : savedColleges.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground">No saved colleges yet</p>
-                        <p className="text-sm text-muted-foreground mt-2">Explore colleges and save your favorites!</p>
-                      </div>
+                      <EmptyState
+                        icon={Building2}
+                        title="No Saved Colleges Yet"
+                        description="Explore colleges and save your favorites to see them here."
+                        action={{
+                          label: "Explore Colleges",
+                          onClick: () => navigate("/colleges"),
+                          variant: "default"
+                        }}
+                      />
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {savedColleges.map((college, index) => (
@@ -903,10 +915,10 @@ export default function ProfilePage() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.4, delay: index * 0.1 }}
-                            whileHover={{ scale: 1.02 }}
+                            whileHover={{ y: -2 }}
                           >
                             <Card
-                              className="border hover:border-primary/20 hover:shadow-md transition-all duration-300 h-full flex flex-col cursor-pointer"
+                              className="border hover:border-primary/20 hover:shadow-md transition-[box-shadow,border-color] duration-200 ease-out h-full flex flex-col cursor-pointer"
                               onClick={() => {
                                 const website = college.website
                                 if (!website) return
@@ -959,19 +971,27 @@ export default function ProfilePage() {
                     {loadingSavedItems ? (
                       <p className="text-sm text-muted-foreground">Loading achievements...</p>
                     ) : achievements.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Award className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground">No achievements yet</p>
-                        <p className="text-sm text-muted-foreground mt-2">Complete your profile and start exploring to unlock achievements!</p>
-                      </div>
+                      <EmptyState
+                        icon={Award}
+                        title="No Achievements Yet"
+                        description="Complete your profile and start exploring to unlock achievements!"
+                        action={{
+                          label: "Complete Profile",
+                          onClick: () => {
+                            const infoTab = document.querySelector('[value="info"]')
+                            if (infoTab) infoTab.click()
+                          },
+                          variant: "default"
+                        }}
+                      />
                     ) : (
                       <div className="space-y-4">
                         {achievements.map((achievement, index) => (
                         <motion.div
                           key={achievement.title}
-                          initial={{ opacity: 0, x: -20 }}
+                          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.4, delay: index * 0.1 }}
+                          transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.4, delay: index * 0.1 }}
                           className="flex items-center space-x-4 p-4 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors"
                         >
                           <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">

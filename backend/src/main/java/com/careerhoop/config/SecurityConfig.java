@@ -68,10 +68,6 @@ public class SecurityConfig {
                                 "/api/colleges/**",
                                 "/api/trainings",
                                 "/api/trainings/**",
-                                "/api/scholarships",
-                                "/api/scholarships/**",
-                                "/api/mentors",
-                                "/api/mentors/**",
                                 "/api/programs",
                                 "/api/programs/**",
                                 "/api/universities",
@@ -140,7 +136,9 @@ public class SecurityConfig {
                                 "/api/recommendations/colleges",
                                 // Payment gateway callbacks
                                 "/api/payments/esewa/success",
-                                "/api/payments/esewa/failure"
+                                "/api/payments/esewa/failure",
+                                // V2 payment verification endpoint (called from frontend after redirect)
+                                "/api/payments/esewa/v2/verify"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

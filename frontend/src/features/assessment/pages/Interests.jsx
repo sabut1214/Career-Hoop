@@ -47,14 +47,14 @@ const steps = [
 ]
 
 const careerFields = [
-  { id: "medicine", name: "Medicine & Healthcare", icon: Stethoscope, color: "bg-red-500" },
-  { id: "technology", name: "Technology & IT", icon: Code, color: "bg-blue-500" },
-  { id: "arts", name: "Arts & Design", icon: Palette, color: "bg-purple-500" },
-  { id: "engineering", name: "Engineering", icon: Wrench, color: "bg-orange-500" },
-  { id: "business", name: "Business & Finance", icon: Briefcase, color: "bg-green-500" },
-  { id: "science", name: "Science & Research", icon: Beaker, color: "bg-teal-500" },
-  { id: "education", name: "Education", icon: Users, color: "bg-indigo-500" },
-  { id: "media", name: "Media & Communications", icon: Camera, color: "bg-pink-500" },
+  { id: "medicine", name: "Medicine & Healthcare", icon: Stethoscope, color: "bg-error" },
+  { id: "technology", name: "Technology & IT", icon: Code, color: "bg-primary" },
+  { id: "arts", name: "Arts & Design", icon: Palette, color: "bg-accent" },
+  { id: "engineering", name: "Engineering", icon: Wrench, color: "bg-secondary" },
+  { id: "business", name: "Business & Finance", icon: Briefcase, color: "bg-success" },
+  { id: "science", name: "Science & Research", icon: Beaker, color: "bg-primary/80" },
+  { id: "education", name: "Education", icon: Users, color: "bg-secondary" },
+  { id: "media", name: "Media & Communications", icon: Camera, color: "bg-accent" },
 ]
 
 const activities = [
@@ -394,10 +394,10 @@ export default function InterestsPage() {
                 return (
                   <motion.div
                     key={field.id}
-                    whileHover={!isDisabled ? { scale: 1.02 } : {}}
+                    whileHover={!isDisabled ? { y: -2 } : {}}
                     whileTap={!isDisabled ? { scale: 0.98 } : {}}
                     onClick={() => !isDisabled && toggleField(field.id)}
-                    className={`p-4 rounded-lg border-2 transition-all duration-300 ${
+                    className={`p-4 rounded-lg border-2 transition-[border-color,background-color,box-shadow] duration-200 ease-out hover:shadow-md ${
                       isSelected
                         ? "border-primary bg-primary/5 shadow-md cursor-pointer"
                         : isDisabled
@@ -443,10 +443,10 @@ export default function InterestsPage() {
                 return (
                   <motion.div
                     key={activity}
-                    whileHover={!isDisabled ? { scale: 1.02 } : {}}
+                    whileHover={!isDisabled ? { y: -2 } : {}}
                     whileTap={!isDisabled ? { scale: 0.98 } : {}}
                     onClick={() => !isDisabled && toggleActivity(activity)}
-                    className={`p-3 rounded-lg border-2 text-center transition-all duration-300 ${
+                    className={`p-3 rounded-lg border-2 text-center transition-[border-color,background-color,box-shadow] duration-200 ease-out hover:shadow-md ${
                       isSelected
                         ? "border-secondary bg-secondary/5 text-secondary cursor-pointer"
                         : isDisabled
@@ -480,10 +480,10 @@ export default function InterestsPage() {
                 return (
                   <motion.div
                     key={environment}
-                    whileHover={{ scale: 1.02 }}
+                    whileHover={{ y: -2 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => toggleEnvironment(environment)}
-                    className={`cursor-pointer p-4 rounded-lg border-2 text-center transition-all duration-300 ${
+                    className={`cursor-pointer p-4 rounded-lg border-2 text-center transition-[border-color,background-color,box-shadow] duration-200 ease-out hover:shadow-md ${
                       isSelected
                         ? "border-accent bg-accent/5 text-accent"
                         : "border-border hover:border-accent/50 hover:bg-muted/50"

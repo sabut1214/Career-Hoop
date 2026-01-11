@@ -15,7 +15,7 @@ export function OrderSummary({ selectedPlan, selectedPrice, currentPlan, upgrade
             </div>
             <div className="border-t border-border pt-3 flex justify-between">
               <span className="font-semibold text-foreground">Total</span>
-              <span className="text-lg font-bold text-green-600">{total.toLocaleString()} NPR</span>
+              <span className="text-lg font-bold text-success">{total.toLocaleString()} NPR</span>
             </div>
           </>
         ) : (
@@ -26,7 +26,7 @@ export function OrderSummary({ selectedPlan, selectedPrice, currentPlan, upgrade
             </div>
             <div className="border-t border-border pt-3 flex justify-between">
               <span className="font-semibold text-foreground">Total</span>
-              <span className="text-lg font-bold text-green-600">{total.toLocaleString()} NPR</span>
+              <span className="text-lg font-bold text-success">{total.toLocaleString()} NPR</span>
             </div>
           </>
         )}

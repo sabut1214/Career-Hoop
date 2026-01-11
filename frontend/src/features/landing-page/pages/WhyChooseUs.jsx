@@ -3,6 +3,8 @@ import { Navbar } from "@/shared/components/layout/navbar"
 import { Footer } from "@/shared/components/layout/footer"
 import { Card, CardContent } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
+import { Badge } from "@/shared/components/ui/badge"
+import { SectionContainer } from "@/shared/components/layout/section-container"
 import { CheckCircle2, TrendingUp, Award, Shield, Users, Zap, Heart, ArrowRight, Star } from "lucide-react"
 
 const benefits = [
@@ -141,11 +143,11 @@ export default function WhyChooseUs() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="px-4 py-20 md:py-28">
-        <div className="container mx-auto max-w-4xl text-center">
-          <div className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary border border-primary/20 transition-all duration-200 hover:bg-primary/15 active:scale-[0.98]">
+      <SectionContainer>
+        <div className="max-w-4xl mx-auto text-center">
+          <Badge variant="default" className="mb-4">
             Why Choose Us
-          </div>
+          </Badge>
           <h1 className="mb-6 font-sans text-4xl font-bold leading-tight text-foreground md:text-5xl text-balance">
             The Smarter Way to Plan <span className="text-primary">Your Career</span>
           </h1>
@@ -154,25 +156,24 @@ export default function WhyChooseUs() {
             career guidance platform for students.
           </p>
         </div>
-      </section>
+      </SectionContainer>
 
       {/* Stats Section */}
-      <section className="bg-gradient-to-r from-primary to-secondary px-4 py-16">
-        <div className="container mx-auto max-w-6xl">
+      <section className="bg-gradient-to-br from-[var(--primary-soft)] via-[var(--primary-soft)]/80 to-[var(--primary-soft)]/60">
+        <SectionContainer variant="compact">
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {stats.map((stat) => (
               <div key={stat.label} className="text-center">
-                <div className="mb-2 text-4xl font-bold text-white md:text-5xl">{stat.value}</div>
-                <div className="text-white/80">{stat.label}</div>
+                <div className="mb-2 text-4xl font-bold text-foreground md:text-5xl">{stat.value}</div>
+                <div className="text-foreground/80">{stat.label}</div>
               </div>
             ))}
           </div>
-        </div>
+      </SectionContainer>
       </section>
 
       {/* Benefits Grid */}
-      <section className="px-4 py-20">
-        <div className="container mx-auto max-w-6xl">
+      <SectionContainer>
           <div className="mb-12 text-center">
             <h2 className="mb-4 font-sans text-3xl font-bold text-foreground md:text-4xl">What Makes Us Different</h2>
             <p className="mx-auto max-w-2xl text-muted-foreground">
@@ -181,7 +182,7 @@ export default function WhyChooseUs() {
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {benefits.map((benefit) => (
-              <Card key={benefit.title} className="border-border/50 bg-card">
+              <Card key={benefit.title} className="border-border/50 bg-card transition-all duration-300 hover:shadow-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
                 <CardContent className="p-6">
                   <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
                     <benefit.icon className="h-6 w-6 text-primary" />
@@ -192,12 +193,12 @@ export default function WhyChooseUs() {
               </Card>
             ))}
           </div>
-        </div>
-      </section>
+      </SectionContainer>
 
       {/* Comparison Table */}
-      <section className="bg-muted/50 px-4 py-20">
-        <div className="container mx-auto max-w-4xl">
+      <section className="bg-muted/50">
+        <SectionContainer>
+          <div className="max-w-4xl mx-auto">
           <div className="mb-12 text-center">
             <h2 className="mb-4 font-sans text-3xl font-bold text-foreground md:text-4xl">
               CareerHoop vs Traditional Counseling
@@ -237,12 +238,12 @@ export default function WhyChooseUs() {
               ))}
             </CardContent>
           </Card>
-        </div>
+          </div>
+        </SectionContainer>
       </section>
 
       {/* Testimonials */}
-      <section className="px-4 py-20">
-        <div className="container mx-auto max-w-6xl">
+      <SectionContainer>
           <div className="mb-12 text-center">
             <h2 className="mb-4 font-sans text-3xl font-bold text-foreground md:text-4xl">
               Loved by Students Everywhere
@@ -253,7 +254,7 @@ export default function WhyChooseUs() {
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {testimonials.map((testimonial) => (
-              <Card key={testimonial.name} className="border-border/50 bg-card">
+              <Card key={testimonial.name} className="border-border/50 bg-card transition-all duration-300 hover:shadow-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
                 <CardContent className="p-6">
                   <div className="mb-4 flex gap-1">
                     {[...Array(testimonial.rating)].map((_, i) => (
@@ -276,24 +277,25 @@ export default function WhyChooseUs() {
               </Card>
             ))}
           </div>
-        </div>
-      </section>
+      </SectionContainer>
 
       {/* CTA */}
-      <section className="bg-gradient-to-r from-primary to-secondary px-4 py-20">
-        <div className="container mx-auto max-w-4xl text-center">
-          <Heart className="mx-auto mb-6 h-12 w-12 text-white" />
-          <h2 className="mb-4 font-sans text-3xl font-bold text-white md:text-4xl">Join the CareerHoop Family</h2>
-          <p className="mb-8 text-lg text-white/80">
+      <section className="bg-gradient-to-br from-[var(--primary-soft)] via-[var(--primary-soft)]/70 to-[var(--primary-soft)]/50">
+        <SectionContainer>
+          <div className="max-w-4xl mx-auto text-center">
+          <Heart className="mx-auto mb-6 h-12 w-12 text-primary" />
+          <h2 className="mb-4 font-sans text-3xl font-bold text-foreground md:text-4xl">Join the CareerHoop Family</h2>
+          <p className="mb-8 text-lg text-foreground/90">
             Start your journey to career clarity today. It's completely free for students.
           </p>
-          <Button size="lg" className="rounded-full bg-white px-8 text-primary hover:bg-white/90" asChild>
+          <Button size="lg" className="rounded-full bg-primary px-8 text-primary-foreground hover:bg-primary-hover transition-all duration-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" asChild>
             <Link to="/signup">
               Get Started Free
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
-        </div>
+          </div>
+        </SectionContainer>
       </section>
 
       <Footer />

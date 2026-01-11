@@ -3,18 +3,16 @@ import { cva } from "class-variance-authority"
 import { cn } from "@/shared/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 active:scale-[0.98]",
+  "inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition-[transform,background-color,border-color,color] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98]",
   {
     variants: {
       variant: {
-        default: "border-transparent bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active",
-        secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary-hover active:bg-secondary-active",
-        destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive/80",
-        outline: "text-foreground border-border hover:bg-muted hover:text-foreground",
-        // Light background with dark text (for chips on light surfaces)
-        light: "border-transparent bg-surface text-foreground hover:bg-muted active:bg-muted/80",
-        // Primary/dark background with white text
-        primary: "border-transparent bg-primary-600 text-primary-foreground hover:bg-primary active:bg-primary-active",
+        default: "border-transparent bg-primary/10 text-primary hover:bg-primary/15 active:bg-primary/20",
+        primary: "border-transparent bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active",
+        secondary: "border-transparent bg-secondary/20 text-secondary-foreground hover:bg-secondary/30 active:bg-secondary/40",
+        success: "border-transparent bg-[#ddf1dd] text-[#005f00] hover:bg-[#bfe3bf] active:bg-[#93cc93]", // green-100 bg, green-700 text
+        accent: "border-transparent bg-accent text-accent-foreground hover:bg-accent/90 active:bg-accent/80", // Brand Mint
+        outline: "text-foreground border-border/50 bg-transparent hover:bg-muted/50 hover:border-border",
       },
     },
     defaultVariants: {

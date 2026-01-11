@@ -1,4 +1,6 @@
 import { Card, CardContent } from "@/shared/components/ui/card"
+import { Badge } from "@/shared/components/ui/badge"
+import { SectionContainer } from "@/shared/components/layout/section-container"
 import { CheckCircle2, TrendingUp, Award, Shield } from "lucide-react"
 
 const benefits = [
@@ -47,12 +49,11 @@ const testimonials = [
 
 export function WhyChooseSection() {
   return (
-    <section className="px-4 py-20 md:py-28">
-      <div className="container mx-auto max-w-6xl">
-        <div className="mb-16 text-center">
-          <div className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary border border-primary/20 transition-all duration-200 hover:bg-primary/15 active:scale-[0.98]">
-            Why CareerHoop
-          </div>
+    <SectionContainer>
+      <div className="mb-16 text-center">
+        <Badge variant="default" className="mb-4">
+          Why CareerHoop
+        </Badge>
           <h2 className="mb-4 font-sans text-3xl font-bold text-foreground md:text-4xl text-balance">
             Why Students <span className="text-primary">Choose Us</span>
           </h2>
@@ -65,7 +66,7 @@ export function WhyChooseSection() {
         <div className="mb-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {benefits.map((benefit) => (
             <div key={benefit.title} className="text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/20">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-primary/10">
                 <benefit.icon className="h-8 w-8 text-primary" />
               </div>
               <h3 className="mb-2 font-semibold text-foreground">{benefit.title}</h3>
@@ -75,7 +76,7 @@ export function WhyChooseSection() {
         </div>
 
         {/* Confidence Meter */}
-        <div className="mb-16 rounded-3xl bg-gradient-to-r from-primary/20 via-secondary/20 to-accent/30 p-8 md:p-12">
+        <div className="mb-16 rounded-xl bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/20 p-8 md:p-12">
           <div className="grid items-center gap-8 md:grid-cols-2">
             <div>
               <h3 className="mb-4 text-2xl font-bold text-foreground">Student Confidence Meter</h3>
@@ -118,7 +119,7 @@ export function WhyChooseSection() {
         {/* Testimonials */}
         <div className="grid gap-6 md:grid-cols-3">
           {testimonials.map((testimonial) => (
-            <Card key={testimonial.name} className="border-border/50 bg-card">
+            <Card key={testimonial.name} className="border-border/50 bg-card transition-all duration-300 hover:shadow-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
               <CardContent className="p-6">
                 <p className="mb-6 text-foreground/80 italic">"{testimonial.quote}"</p>
                 <div className="flex items-center gap-3">
@@ -136,8 +137,7 @@ export function WhyChooseSection() {
             </Card>
           ))}
         </div>
-      </div>
-    </section>
+    </SectionContainer>
   )
 }
 

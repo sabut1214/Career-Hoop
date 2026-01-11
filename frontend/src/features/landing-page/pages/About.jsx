@@ -1,5 +1,7 @@
 import { Navbar } from "@/shared/components/layout/navbar"
 import { Footer } from "@/shared/components/layout/footer"
+import { Badge } from "@/shared/components/ui/badge"
+import { SectionContainer } from "@/shared/components/layout/section-container"
 import { Target, Users, Lightbulb, Heart, Award, BookOpen } from "lucide-react"
 
 const values = [
@@ -62,11 +64,11 @@ export default function About() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="px-4 py-20 md:py-28">
-        <div className="container mx-auto max-w-4xl text-center">
-          <div className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
+      <SectionContainer>
+        <div className="max-w-4xl mx-auto text-center">
+          <Badge variant="default" className="mb-4">
             About Us
-          </div>
+          </Badge>
           <h1 className="mb-6 font-sans text-4xl font-bold leading-tight text-foreground md:text-5xl text-balance">
             Empowering the Next Generation of <span className="text-primary">Career Leaders</span>
           </h1>
@@ -75,11 +77,11 @@ export default function About() {
             guidance that was once only available to the privileged few.
           </p>
         </div>
-      </section>
+      </SectionContainer>
 
       {/* Story Section */}
-      <section className="bg-muted/50 px-4 py-20">
-        <div className="container mx-auto max-w-6xl">
+      <section className="bg-muted/50">
+        <SectionContainer>
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>
               <h2 className="mb-6 font-sans text-3xl font-bold text-foreground md:text-4xl">Our Story</h2>
@@ -102,29 +104,28 @@ export default function About() {
               </div>
             </div>
             <div className="relative">
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-primary/20 to-secondary/20" />
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-tr from-primary/10 to-secondary/10" />
               <img
                 src="/diverse-students-collaborating-on-career-planning.jpg"
                 alt="Students collaborating"
-                className="relative z-10 rounded-3xl object-cover"
+                className="relative z-10 rounded-xl object-cover"
               />
             </div>
           </div>
-        </div>
+        </SectionContainer>
       </section>
 
       {/* Mission & Vision */}
-      <section className="px-4 py-20">
-        <div className="container mx-auto max-w-6xl">
-          <div className="grid gap-8 md:grid-cols-2">
-            <div className="rounded-3xl bg-primary/10 p-8 md:p-12">
-              <h3 className="mb-4 text-2xl font-bold text-foreground">Our Mission</h3>
-              <p className="text-muted-foreground">
-                To democratize career guidance by providing every student with AI-powered, personalized recommendations
-                and access to mentors who can help them navigate their professional journey.
-              </p>
-            </div>
-            <div className="rounded-3xl bg-secondary/20 p-8 md:p-12">
+      <SectionContainer>
+        <div className="grid gap-8 md:grid-cols-2">
+          <div className="rounded-xl bg-primary/10 p-8 md:p-12">
+            <h3 className="mb-4 text-2xl font-bold text-foreground">Our Mission</h3>
+            <p className="text-muted-foreground">
+              To democratize career guidance by providing every student with AI-powered, personalized recommendations
+              and access to mentors who can help them navigate their professional journey.
+            </p>
+          </div>
+          <div className="rounded-xl bg-secondary/10 p-8 md:p-12">
               <h3 className="mb-4 text-2xl font-bold text-foreground">Our Vision</h3>
               <p className="text-muted-foreground">
                 A world where no student feels lost about their future. Where every young person has the tools,
@@ -132,12 +133,11 @@ export default function About() {
               </p>
             </div>
           </div>
-        </div>
-      </section>
+      </SectionContainer>
 
       {/* Values */}
-      <section className="bg-muted/50 px-4 py-20">
-        <div className="container mx-auto max-w-6xl">
+      <section className="bg-muted/50">
+        <SectionContainer>
           <div className="mb-12 text-center">
             <h2 className="mb-4 font-sans text-3xl font-bold text-foreground md:text-4xl">Our Values</h2>
             <p className="mx-auto max-w-2xl text-muted-foreground">
@@ -146,7 +146,7 @@ export default function About() {
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {values.map((value) => (
-              <div key={value.title} className="rounded-2xl bg-card p-6 shadow-sm border border-border/50">
+              <div key={value.title} className="rounded-xl bg-card p-6 shadow-sm border border-border/50 transition-all duration-300 hover:shadow-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
                   <value.icon className="h-6 w-6 text-primary" />
                 </div>
@@ -155,12 +155,11 @@ export default function About() {
               </div>
             ))}
           </div>
-        </div>
+        </SectionContainer>
       </section>
 
       {/* Team */}
-      <section className="px-4 py-20">
-        <div className="container mx-auto max-w-6xl">
+      <SectionContainer>
           <div className="mb-12 text-center">
             <h2 className="mb-4 font-sans text-3xl font-bold text-foreground md:text-4xl">Meet Our Team</h2>
             <p className="mx-auto max-w-2xl text-muted-foreground">Passionate experts dedicated to student success</p>
@@ -179,8 +178,7 @@ export default function About() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
+      </SectionContainer>
 
       <Footer />
     </div>

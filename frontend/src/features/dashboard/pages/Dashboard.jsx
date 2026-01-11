@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Progress } from "@/shared/components/ui/progress"
@@ -21,17 +21,20 @@ import {
 import { Link } from "react-router-dom"
 import { useAuth } from "@/shared/context/AuthContext"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/components/ui/tooltip"
 import { getUserStorageKey } from "@/shared/utils/utils"
 import { getSavedCareers, getSavedColleges, getUserProfile } from "@/shared/lib/api"
 import { EmptyState } from "@/shared/components/common/EmptyState"
 import { Rocket } from "lucide-react"
 import { useOnboarding } from "@/features/onboarding/hooks/useOnboarding"
 import { DashboardCardSkeletonGrid } from "@/shared/components/common/DashboardCardSkeleton"
+import { isAuthError } from "@/shared/utils/errorMessages"
 
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { hasCompletedOnboarding, isChecking } = useOnboarding()
+  const prefersReducedMotion = useReducedMotion()
 
   // Redirect to onboarding if not completed
   useEffect(() => {
@@ -60,10 +63,13 @@ export default function Dashboard() {
       try {
         setLoading(true)
         
-        // Check for grades
+        // Check for grades (check both history and legacy keys)
+        const historyKey = getUserStorageKey("aiGradesAnalyses", user.id)
         const gradesKey = getUserStorageKey("aiGradesAnalysis", user.id)
+        const storedHistory = localStorage.getItem(historyKey)
         const storedGrades = localStorage.getItem(gradesKey)
-        setHasGrades(!!storedGrades)
+        const hasStoredGrades = !!storedHistory || !!storedGrades
+        setHasGrades(hasStoredGrades)
 
         // Check for interests
         const interestsKey = getUserStorageKey("userInterests", user.id)
@@ -75,7 +81,12 @@ export default function Dashboard() {
           const profileData = await getUserProfile(user.id)
           setProfileCompletion(profileData.profileCompletionPercent ?? 0)
         } catch (error) {
-          console.error("Failed to fetch profile:", error)
+          // Silently handle auth errors - API layer will handle redirects
+          // Only log non-auth errors for debugging
+          if (!isAuthError(error)) {
+            console.error("Failed to fetch profile:", error)
+          }
+          // Keep profileCompletion at 0 if fetch fails
         }
 
         // Fetch saved careers and colleges
@@ -156,10 +167,18 @@ export default function Dashboard() {
           // Sort by time (most recent first) and limit to 3
           setRecentActivity(activities.slice(0, 3))
         } catch (error) {
-          console.error("Failed to fetch saved items:", error)
+          // Silently handle auth errors - API layer will handle redirects
+          // Only log non-auth errors for debugging
+          if (!isAuthError(error)) {
+            console.error("Failed to fetch saved items:", error)
+          }
+          // Keep counts at 0 if fetch fails
         }
       } catch (error) {
-        console.error("Failed to fetch dashboard data:", error)
+        // Only log non-auth errors - auth errors are handled by API layer
+        if (!isAuthError(error)) {
+          console.error("Failed to fetch dashboard data:", error)
+        }
       } finally {
         setLoading(false)
       }
@@ -243,9 +262,9 @@ export default function Dashboard() {
       title: "Explore Colleges",
       description: `Find universities that match you${savedCollegesCount > 0 ? ` (${savedCollegesCount} saved)` : ''}`,
       icon: Building2,
-      color: "bg-blue-500",
-      textColor: "text-white",
-      borderColor: "border-blue-500/20",
+      color: "bg-primary",
+      textColor: "text-primary-foreground",
+      borderColor: "border-primary/20",
       href: "/colleges",
       completed: savedCollegesCount > 0,
       size: "md",
@@ -254,9 +273,9 @@ export default function Dashboard() {
       title: "Skill Training",
       description: "Build in-demand skills",
       icon: Briefcase,
-      color: "bg-green-500",
-      textColor: "text-white",
-      borderColor: "border-green-500/20",
+      color: "bg-[var(--primary-soft)]",
+      textColor: "text-foreground",
+      borderColor: "border-[var(--primary-soft-border)]",
       href: "/trainings",
       completed: false,
       size: "md",
@@ -305,12 +324,12 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6 }}
           className="space-y-2"
         >
           <h1 className="text-4xl font-bold text-balance">Welcome back, {userName}!</h1>
@@ -321,9 +340,9 @@ export default function Dashboard() {
 
         {/* Progress Tracker */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
+          transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: 0.1 }}
         >
           <Card className="border-2">
             <CardHeader>
@@ -341,45 +360,61 @@ export default function Dashboard() {
               <Progress value={loading ? 0 : overallProgress} className="h-2" />
 
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                {progressSteps.map((step, index) => (
-                  <motion.div
-                    key={step.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, delay: 0.2 + index * 0.1 }}
-                    className={`flex flex-col items-center text-center space-y-2 p-4 rounded-lg border-2 transition-all duration-300 ${
-                      step.completed
-                        ? "bg-primary/5 border-primary/20"
-                        : step.current
-                          ? "bg-accent/5 border-accent/20"
-                          : "bg-muted/50 border-border"
-                    }`}
-                  >
-                    {step.completed ? (
-                      <CheckCircle className="h-8 w-8 text-primary" />
-                    ) : step.current ? (
-                      <Clock className="h-8 w-8 text-accent" />
-                    ) : (
-                      <Circle className="h-8 w-8 text-muted-foreground" />
-                    )}
-                    <span
-                      className={`text-sm font-medium ${
-                        step.completed ? "text-primary" : step.current ? "text-accent" : "text-muted-foreground"
-                      }`}
-                    >
-                      {step.title}
-                    </span>
-                  </motion.div>
-                ))}
+                <TooltipProvider delayDuration={300}>
+                  {progressSteps.map((step, index) => {
+                    const stepDescriptions = {
+                      1: "Complete your assessment by uploading your marksheet and selecting your interests",
+                      2: "View personalized career recommendations based on your profile",
+                      3: "Explore and save colleges that match your career goals",
+                      4: "Build skills through training programs to prepare for your chosen career"
+                    }
+                    return (
+                      <Tooltip key={step.id}>
+                        <TooltipTrigger asChild>
+                          <motion.div
+                            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.4, delay: 0.2 + index * 0.1 }}
+                            className={`flex flex-col items-center text-center space-y-2 p-4 rounded-lg border-2 transition-all duration-300 cursor-help ${
+                              step.completed
+                                ? "bg-[var(--primary-soft)] border-[var(--primary-soft-border)]"
+                                : step.current
+                                  ? "bg-[var(--primary-soft)]/50 border-[var(--primary-soft-border)]"
+                                  : "bg-muted/50 border-border"
+                            }`}
+                          >
+                            {step.completed ? (
+                              <CheckCircle className="h-8 w-8 text-primary shrink-0" />
+                            ) : step.current ? (
+                              <Clock className="h-8 w-8 text-primary shrink-0" />
+                            ) : (
+                              <Circle className="h-8 w-8 text-muted-foreground shrink-0" />
+                            )}
+                            <span
+                              className={`text-sm font-medium ${
+                                step.completed ? "text-foreground" : step.current ? "text-foreground" : "text-muted-foreground"
+                              }`}
+                            >
+                              {step.title}
+                            </span>
+                          </motion.div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p>{stepDescriptions[step.id] || step.title}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  })}
+                </TooltipProvider>
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+          transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: 0.2 }}
           className="space-y-6"
         >
           <h2 className="text-2xl font-bold">Quick Actions</h2>
@@ -390,26 +425,26 @@ export default function Dashboard() {
               {actionCards.map((card, index) => (
               <motion.div
                 key={card.title}
-                initial={{ opacity: 0, y: 20 }}
+                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 + index * 0.1 }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: 0.3 + index * 0.1 }}
+                whileHover={prefersReducedMotion ? {} : { y: -2 }}
+                whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
                 className={card.size === "lg" ? "md:col-span-2 lg:col-span-2 lg:row-span-2" : ""}
               >
                 <Link to={card.href}>
                   <Card
-                    className={`h-full hover:shadow-lg transition-all duration-300 border-2 ${card.borderColor} group cursor-pointer`}
+                    className={`h-full hover:shadow-lg transition-[box-shadow] duration-200 ease-out border-2 ${card.borderColor} group cursor-pointer`}
                   >
                     <CardHeader className={card.size === "lg" ? "space-y-6" : "space-y-4"}>
                       <div
-                        className={`w-12 h-12 rounded-lg ${card.color} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}
+                        className={`w-12 h-12 shrink-0 rounded-lg ${card.color} flex items-center justify-center group-hover:scale-105 transition-transform duration-200 ease-out`}
                       >
-                        <card.icon className={`h-6 w-6 ${card.textColor}`} />
+                        <card.icon className={`h-6 w-6 shrink-0 ${card.textColor}`} />
                       </div>
                       <div className="flex items-center justify-between">
                         <CardTitle className={card.size === "lg" ? "text-2xl" : "text-xl"}>{card.title}</CardTitle>
-                        {card.completed && <CheckCircle className="h-5 w-5 text-primary" />}
+                        {card.completed && <CheckCircle className="h-5 w-5 shrink-0 text-primary" />}
                       </div>
                     </CardHeader>
                     <CardContent className={card.size === "lg" ? "space-y-6" : "space-y-4"}>
@@ -417,11 +452,11 @@ export default function Dashboard() {
                         {card.description}
                       </CardDescription>
                       <Button
-                        className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300"
+                        className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-[background-color,color] duration-200 ease-out"
                         variant={card.completed ? "outline" : "default"}
                       >
                         {card.completed ? "Review" : "Start"}
-                        <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
+                        <ArrowRight className="ml-2 h-4 w-4 shrink-0 group-hover:translate-x-1 transition-transform duration-200 ease-out" />
                       </Button>
                     </CardContent>
                   </Card>
@@ -434,9 +469,9 @@ export default function Dashboard() {
 
         {/* Recent Activity */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
+          transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: 0.4 }}
         >
           <Card className="border-2">
             <CardHeader>
@@ -461,9 +496,9 @@ export default function Dashboard() {
                 recentActivity.map((activity, index) => (
                 <motion.div
                   key={activity.action}
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4, delay: 0.5 + index * 0.1 }}
+                  transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.4, delay: 0.5 + index * 0.1 }}
                   className="flex items-center space-x-4 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors duration-200"
                 >
                   <activity.icon className="h-5 w-5 text-primary" />

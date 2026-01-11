@@ -60,7 +60,7 @@ export default function EsewaReturnPage() {
       <Card className="p-8 max-w-md w-full text-center">
         <div className="flex justify-center mb-4">
           {isSuccess ? (
-            <CheckCircle className="h-16 w-16 text-green-600" />
+            <CheckCircle className="h-16 w-16 shrink-0 text-success" />
           ) : (
             <AlertCircle className="h-16 w-16 text-destructive" />
           )}
@@ -110,7 +110,7 @@ export default function EsewaReturnPage() {
 
         <div className="flex gap-3">
           <Link to="/billing" className="flex-1">
-            <Button className="w-full bg-green-600 hover:bg-green-700">{isSuccess ? "View Plans" : "Retry Payment"}</Button>
+            <Button className="w-full bg-success hover:bg-success/90 text-success-foreground transition-[background-color] duration-200 ease-out">{isSuccess ? "View Plans" : "Retry Payment"}</Button>
           </Link>
           <Link to={user ? "/dashboard" : "/login"} className="flex-1">
             <Button variant="outline" className="w-full bg-transparent">

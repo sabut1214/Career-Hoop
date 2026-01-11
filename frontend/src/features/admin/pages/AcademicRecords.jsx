@@ -22,10 +22,12 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog"
 import { getAcademicRecords, deleteAcademicRecord, createAcademicRecord, updateAcademicRecord } from "@/shared/lib/api"
-import { Trash2, Plus, Pencil, Loader2 } from "lucide-react"
+import { Trash2, Plus, Pencil, Loader2, FileText } from "lucide-react"
 import { toast } from "react-toastify"
 import { TableRowSkeleton } from "@/shared/components/common/LoadingSkeleton"
 import Pagination from "@/shared/components/common/pagination"
+import { EmptyState } from "@/shared/components/common/EmptyState"
+import { getUserFriendlyError } from "@/shared/utils/userFriendlyErrors"
 
 export default function AcademicRecordsPage() {
   const [records, setRecords] = useState([])
@@ -59,7 +61,7 @@ export default function AcademicRecordsPage() {
       setRecords(recordsData)
     } catch (error) {
       console.error("Failed to fetch academic records:", error)
-      toast.error("Failed to fetch academic records. Please try again.")
+      toast.error(getUserFriendlyError(error, "Unable to load academic records. Please refresh the page."))
       setRecords([])
     } finally {
       setLoading(false)
@@ -80,7 +82,7 @@ export default function AcademicRecordsPage() {
       toast.success("Academic record deleted successfully.")
     } catch (error) {
       console.error("Failed to delete record:", error)
-      toast.error("Failed to delete academic record. Please try again.")
+      toast.error(getUserFriendlyError(error, "Could not delete academic record. It may be in use elsewhere."))
     } finally {
       setIsDeleting(false)
       setDeleteDialogOpen(false)
@@ -110,7 +112,7 @@ export default function AcademicRecordsPage() {
       fetchRecords()
     } catch (error) {
       console.error("Failed to create academic record:", error)
-      toast.error(error.message || "Failed to create academic record. Please try again.")
+      toast.error(getUserFriendlyError(error, "Could not create academic record. Please check your input and try again."))
     } finally {
       setIsSubmitting(false)
     }
@@ -144,7 +146,7 @@ export default function AcademicRecordsPage() {
       fetchRecords()
     } catch (error) {
       console.error("Failed to update academic record:", error)
-      toast.error(error.message || "Failed to update academic record. Please try again.")
+      toast.error(getUserFriendlyError(error, "Could not update academic record. Please check your input and try again."))
     } finally {
       setIsSubmitting(false)
     }
@@ -236,8 +238,21 @@ export default function AcademicRecordsPage() {
                         ))
                       ) : filteredRecords.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="py-6 text-center text-muted-foreground">
-                            No records found
+                          <td colSpan={5} className="p-0">
+                            <EmptyState
+                              icon={FileText}
+                              title="No Academic Records Found"
+                              description={searchTerm ? `No records match "${searchTerm}". Try adjusting your search.` : "Get started by adding your first academic record."}
+                              action={searchTerm ? {
+                                label: "Clear Search",
+                                onClick: () => setSearchTerm(""),
+                                variant: "secondary"
+                              } : {
+                                label: "Add Record",
+                                onClick: () => setIsAddDialogOpen(true),
+                                variant: "default"
+                              }}
+                            />
                           </td>
                         </tr>
                       ) : (
@@ -246,7 +261,7 @@ export default function AcademicRecordsPage() {
                           return (
                             <tr
                               key={record.id}
-                              className={`border-b transition-opacity ${isRowDeleting ? "opacity-60" : "hover:bg-muted/50"}`}
+                              className={`border-b transition-colors ${isRowDeleting ? "opacity-60" : "hover:bg-muted/50 cursor-pointer"}`}
                               aria-busy={isRowDeleting}
                             >
                               <td className="py-3 px-4 font-medium">
@@ -260,8 +275,9 @@ export default function AcademicRecordsPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleEditClick(record)}
-                                  className="text-muted-foreground hover:text-foreground"
+                                  className="text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                   disabled={isDeleting}
+                                  aria-label={`Edit record for ${record.student?.name || record.student?.email || "student"}`}
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
@@ -269,8 +285,9 @@ export default function AcademicRecordsPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDeleteClick(record)}
-                                  className="text-destructive hover:text-destructive"
+                                  className="text-destructive hover:text-destructive focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2"
                                   disabled={isDeleting}
+                                  aria-label={`Delete record for ${record.student?.name || record.student?.email || "student"}`}
                                 >
                                   {isRowDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                 </Button>

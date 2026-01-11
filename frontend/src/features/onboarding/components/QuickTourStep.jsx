@@ -8,29 +8,29 @@ const features = [
     icon: BookOpen,
     title: "Enter Your Grades",
     description: "Upload your marksheet and let our AI analyze your academic strengths",
-    color: "text-blue-500",
-    bgColor: "bg-blue-500/10",
+    color: "text-primary",
+    bgColor: "bg-primary/10",
   },
   {
     icon: Target,
     title: "Select Your Interests",
     description: "Tell us what excites you and we'll match you with perfect careers",
-    color: "text-purple-500",
-    bgColor: "bg-purple-500/10",
+    color: "text-accent-foreground",
+    bgColor: "bg-accent/20",
   },
   {
     icon: BarChart3,
     title: "Get Recommendations",
     description: "Receive personalized career suggestions based on your profile",
-    color: "text-green-500",
-    bgColor: "bg-green-500/10",
+    color: "text-success",
+    bgColor: "bg-success/10",
   },
   {
     icon: Building2,
     title: "Explore Colleges",
     description: "Find universities and programs that match your career goals",
-    color: "text-orange-500",
-    bgColor: "bg-orange-500/10",
+    color: "text-secondary",
+    bgColor: "bg-secondary/10",
   },
 ]
 
@@ -61,10 +61,10 @@ export function QuickTourStep({ onNext, onPrev, onSkip }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Card className="h-full border-2 hover:border-primary/20 transition-colors">
+              <Card className="h-full border-2 hover:border-primary/20 transition-[border-color] duration-200 ease-out">
                 <CardHeader>
-                  <div className={`w-12 h-12 rounded-lg ${feature.bgColor} flex items-center justify-center mb-4`}>
-                    <Icon className={`h-6 w-6 ${feature.color}`} />
+                  <div className={`w-12 h-12 shrink-0 rounded-lg ${feature.bgColor} flex items-center justify-center mb-4`}>
+                    <Icon className={`h-6 w-6 shrink-0 ${feature.color}`} />
                   </div>
                   <CardTitle className="text-xl">{feature.title}</CardTitle>
                 </CardHeader>

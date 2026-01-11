@@ -30,12 +30,6 @@ public class AdminDashboardService {
     private TrainingRepository trainingRepository;
 
     @Autowired
-    private MentorRepository mentorRepository;
-
-    @Autowired
-    private ScholarshipRepository scholarshipRepository;
-
-    @Autowired
     private AcademicRecordRepository academicRecordRepository;
 
     @Autowired
@@ -52,9 +46,7 @@ public class AdminDashboardService {
                 studentRepository.count(),
                 careerRepository.count(),
                 collegeRepository.count(),
-                trainingRepository.count(),
-                mentorRepository.count(),
-                scholarshipRepository.count()
+                trainingRepository.count()
         );
     }
 
@@ -251,34 +243,6 @@ public class AdminDashboardService {
                 trainingsWeekAgo,
                 trainingsGrowth,
                 trainingsGrowth > 0 ? "UP" : (trainingsGrowth < 0 ? "DOWN" : "STABLE")
-        ));
-
-        // Mentors
-        long currentMentors = mentorRepository.count();
-        long mentorsWeekAgo = mentorRepository.findAll().stream()
-                .filter(m -> m.getCreatedAt() != null && m.getCreatedAt().isBefore(weekAgo))
-                .count();
-        double mentorsGrowth = mentorsWeekAgo > 0 ? ((currentMentors - mentorsWeekAgo) * 100.0 / mentorsWeekAgo) : 0.0;
-        metrics.add(new GrowthMetricsDto(
-                "mentors",
-                currentMentors,
-                mentorsWeekAgo,
-                mentorsGrowth,
-                mentorsGrowth > 0 ? "UP" : (mentorsGrowth < 0 ? "DOWN" : "STABLE")
-        ));
-
-        // Scholarships
-        long currentScholarships = scholarshipRepository.count();
-        long scholarshipsWeekAgo = scholarshipRepository.findAll().stream()
-                .filter(s -> s.getCreatedAt() != null && s.getCreatedAt().isBefore(weekAgo))
-                .count();
-        double scholarshipsGrowth = scholarshipsWeekAgo > 0 ? ((currentScholarships - scholarshipsWeekAgo) * 100.0 / scholarshipsWeekAgo) : 0.0;
-        metrics.add(new GrowthMetricsDto(
-                "scholarships",
-                currentScholarships,
-                scholarshipsWeekAgo,
-                scholarshipsGrowth,
-                scholarshipsGrowth > 0 ? "UP" : (scholarshipsGrowth < 0 ? "DOWN" : "STABLE")
         ));
 
         return metrics;

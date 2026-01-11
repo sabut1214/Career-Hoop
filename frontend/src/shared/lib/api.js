@@ -50,14 +50,6 @@ const mockStats = {
     { id: "1", name: "MIT", location: "Cambridge, MA" },
     { id: "2", name: "Stanford", location: "Palo Alto, CA" },
   ],
-  mentors: [
-    { id: "1", name: "John Mentor", expertise: "Software Development" },
-    { id: "2", name: "Jane Expert", expertise: "Data Science" },
-  ],
-  scholarships: [
-    { id: "1", title: "Merit Scholarship", amount: 5000 },
-    { id: "2", title: "Need-Based Aid", amount: 3000 },
-  ],
   trainings: [
     { id: "1", title: "Python Basics", duration: "4 weeks" },
     { id: "2", title: "Web Development", duration: "8 weeks" },
@@ -334,120 +326,6 @@ export const deleteCollege = async (id) => {
     const errorText = await response.text()
     throw new Error(errorText || "Failed to delete college")
   }
-  return response.json()
-}
-
-// Mentors
-export const getMentors = async () => {
-  if (USE_MOCK_DATA) return { data: mockStats.mentors }
-  const response = await fetchWithAuth(`${API_BASE_URL}/mentors`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  })
-  if (!response.ok) throw new Error("Failed to fetch mentors")
-  const data = await response.json()
-  return { data }
-}
-
-export const getAvailableMentors = async () => {
-  if (USE_MOCK_DATA) return { data: mockStats.mentors }
-  const response = await fetch(`${API_BASE_URL}/mentors/available`)
-  if (!response.ok) throw new Error("Failed to fetch available mentors")
-  const data = await response.json()
-  return { data }
-}
-
-export const getMentor = async (id) => {
-  const response = await fetchWithAuth(`${API_BASE_URL}/mentors/${id}`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  })
-  if (!response.ok) throw new Error("Failed to fetch mentor")
-  return response.json()
-}
-
-export const createMentor = async (data) => {
-  const response = await fetchWithAuth(`${API_BASE_URL}/mentors`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  })
-  if (!response.ok) throw new Error("Failed to create mentor")
-  return response.json()
-}
-
-export const updateMentor = async (id, data) => {
-  const response = await fetchWithAuth(`${API_BASE_URL}/mentors/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  })
-  if (!response.ok) throw new Error("Failed to update mentor")
-  return response.json()
-}
-
-export const deleteMentor = async (id) => {
-  const response = await fetchWithAuth(`${API_BASE_URL}/mentors/${id}`, {
-    method: "DELETE",
-  })
-  if (!response.ok) throw new Error("Failed to delete mentor")
-  return response.json()
-}
-
-// Scholarships
-export const getScholarships = async () => {
-  if (USE_MOCK_DATA) return { data: mockStats.scholarships }
-  const response = await fetchWithAuth(`${API_BASE_URL}/scholarships`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  })
-  if (!response.ok) throw new Error("Failed to fetch scholarships")
-  const data = await response.json()
-  return { data }
-}
-
-export const getActiveScholarships = async () => {
-  if (USE_MOCK_DATA) return { data: mockStats.scholarships }
-  const response = await fetch(`${API_BASE_URL}/scholarships/active`)
-  if (!response.ok) throw new Error("Failed to fetch active scholarships")
-  const data = await response.json()
-  return { data }
-}
-
-export const getScholarship = async (id) => {
-  const response = await fetchWithAuth(`${API_BASE_URL}/scholarships/${id}`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  })
-  if (!response.ok) throw new Error("Failed to fetch scholarship")
-  return response.json()
-}
-
-export const createScholarship = async (data) => {
-  const response = await fetchWithAuth(`${API_BASE_URL}/scholarships`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  })
-  if (!response.ok) throw new Error("Failed to create scholarship")
-  return response.json()
-}
-
-export const updateScholarship = async (id, data) => {
-  const response = await fetchWithAuth(`${API_BASE_URL}/scholarships/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  })
-  if (!response.ok) throw new Error("Failed to update scholarship")
-  return response.json()
-}
-
-export const deleteScholarship = async (id) => {
-  const response = await fetchWithAuth(`${API_BASE_URL}/scholarships/${id}`, {
-    method: "DELETE",
-  })
-  if (!response.ok) throw new Error("Failed to delete scholarship")
   return response.json()
 }
 
@@ -1180,6 +1058,16 @@ export const refreshAccessToken = async (forceRefresh = false) => {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       const errorMessage = errorData.message || errorData.error || `Token refresh failed (${response.status})`
+      
+      // Handle rate limit (429) specially - return a special error that indicates rate limiting
+      if (response.status === 429) {
+        logger.warn('Token refresh rate limited - too many requests')
+        const rateLimitError = new Error('Rate limit exceeded. Please wait before retrying.')
+        rateLimitError.name = 'RateLimitError'
+        rateLimitError.status = 429
+        throw rateLimitError
+      }
+      
       logger.error('Token refresh failed:', errorMessage, errorData)
       throw new Error(errorMessage)
     }
@@ -1310,9 +1198,66 @@ export const fetchWithAuth = async (url, options = {}) => {
   // 403 can occur when token is expired but Spring Security returns 403 instead of 401
   // BUT: Don't try to refresh if this is a login/register/refresh endpoint (would cause infinite loop)
   const isAuthEndpoint = url.includes('/login') || url.includes('/register') || url.includes('/refresh')
+  
+  // Check if this is an admin endpoint - 403 from admin endpoints is usually authorization (role) issue, not auth issue
+  const isAdminEndpoint = url.includes('/admin/')
+  
+  // Check if we've been rate limited recently (within last minute)
+  const lastRateLimitTime = sessionStorage.getItem('lastRateLimitTime')
+  const wasRateLimited = lastRateLimitTime && (Date.now() - parseInt(lastRateLimitTime)) < 60000
 
-  if ((response.status === 401 || response.status === 403) && !isAuthEndpoint) {
-    // Check if we have user data (which means we should be authenticated)
+  if ((response.status === 401 || response.status === 403) && !isAuthEndpoint && !wasRateLimited) {
+    // 403 Forbidden usually means authorization (permission) issue, not authentication
+    // However, for user's own profile endpoints, 403 might indicate expired token
+    if (response.status === 403) {
+      // Check for user profile endpoints (pattern: /api/users/{uuid})
+      const isUserProfileEndpoint = /\/api\/users\/[^\/]+/.test(url) || url.includes('/api/users/')
+      
+      // For admin endpoints, 403 is definitely authorization (role) issue
+      if (isAdminEndpoint) {
+        logger.warn(`403 Forbidden - admin endpoint authorization issue, not refreshing token. URL: ${url}`)
+        return response
+      }
+      
+      // For user profile endpoints, check if user is accessing their own profile
+      // If yes, 403 might be due to expired token, so we should try refresh
+      if (isUserProfileEndpoint) {
+        const user = localStorage.getItem("user")
+        if (user) {
+          try {
+            const userData = JSON.parse(user)
+            const userId = userData.id || userData.uuid
+            // Extract UUID from URL (pattern: /api/users/{uuid})
+            const urlMatch = url.match(/\/api\/users\/([^\/]+)/)
+            const requestedUserId = urlMatch ? urlMatch[1] : null
+            
+            // If user is accessing their own profile, 403 might be expired token
+            if (userId && requestedUserId && String(userId) === String(requestedUserId)) {
+              logger.warn(`403 on own profile endpoint - might be expired token, will attempt refresh. URL: ${url}`)
+              // Continue to refresh logic below
+            } else {
+              // User trying to access someone else's profile - definitely authorization issue
+              logger.warn(`403 Forbidden - accessing other user's profile, not refreshing token. URL: ${url}`)
+              return response
+            }
+          } catch (e) {
+            // Can't parse user data, be conservative and skip refresh
+            logger.warn(`403 Forbidden - cannot verify user ID, treating as authorization issue. URL: ${url}`)
+            return response
+          }
+        } else {
+          // No user data, skip refresh
+          logger.warn(`403 Forbidden - no user data, treating as authorization issue. URL: ${url}`)
+          return response
+        }
+      } else {
+        // Not a user profile endpoint, likely authorization issue
+        logger.warn(`403 Forbidden - likely authorization (permission) issue, not refreshing token. URL: ${url}`)
+        return response
+      }
+    }
+    
+    // For 401 errors, check if we have user data (which means we should be authenticated)
     const user = localStorage.getItem("user")
     if (!user) {
       // No user data, can't refresh - return the error
@@ -1328,9 +1273,92 @@ export const fetchWithAuth = async (url, options = {}) => {
     }
 
     try {
+      // First, check the error response to see if it's an authorization (permission) issue
+      // If so, don't try to refresh - it won't help
+      let isAuthorizationError = false
+      try {
+        const errorText = await response.clone().text()
+        if (errorText) {
+          try {
+            const errorData = JSON.parse(errorText)
+            const errorMessage = (errorData.message || errorData.error || '').toLowerCase()
+            // Check for authorization/permission-related keywords
+            isAuthorizationError = errorMessage.includes('access denied') ||
+                                  errorMessage.includes('forbidden') ||
+                                  errorMessage.includes('permission') ||
+                                  errorMessage.includes('not authorized') ||
+                                  errorMessage.includes('insufficient') ||
+                                  errorMessage.includes('role') ||
+                                  (response.status === 403 && isAdminEndpoint)
+          } catch (e) {
+            // Can't parse as JSON, check if it's plain text with authorization keywords
+            isAuthorizationError = errorText.toLowerCase().includes('access denied') ||
+                                  errorText.toLowerCase().includes('forbidden')
+          }
+        }
+      } catch (e) {
+        // Can't read error response, continue with refresh attempt
+      }
+      
+      // If it's clearly an authorization issue, don't try to refresh
+      if (isAuthorizationError) {
+        logger.warn('403 appears to be authorization (permission) issue, not attempting token refresh')
+        return response
+      }
+      
+      // Double-check rate limit status right before attempting refresh
+      // (in case we got rate limited since the initial check)
+      const currentRateLimitTime = sessionStorage.getItem('lastRateLimitTime')
+      const isCurrentlyRateLimited = currentRateLimitTime && (Date.now() - parseInt(currentRateLimitTime)) < 60000
+      if (isCurrentlyRateLimited) {
+        logger.warn('Rate limit active, skipping token refresh attempt')
+        return response
+      }
+      
       logger.log(`Token may be expired (${response.status}), attempting refresh...`)
+      
+      // Check if refresh is already in progress by checking for a pending refresh promise
+      // This prevents multiple simultaneous refresh attempts
+      if (window._refreshInProgress) {
+        logger.warn('Token refresh already in progress, waiting...')
+        try {
+          await window._refreshInProgress
+        } catch (e) {
+          // Refresh failed, continue with error handling
+        }
+        // After waiting, check rate limit again
+        const updatedRateLimitTime = sessionStorage.getItem('lastRateLimitTime')
+        const stillRateLimited = updatedRateLimitTime && (Date.now() - parseInt(updatedRateLimitTime)) < 60000
+        if (stillRateLimited) {
+          logger.warn('Still rate limited after waiting for refresh, returning error')
+          return response
+        }
+        // Try again if we're not rate limited
+        if (!response.ok && (response.status === 401 || response.status === 403)) {
+          // Retry the original request with fresh token
+          const newHeaders = await buildAuthHeaders()
+          options.headers = { ...options.headers, ...newHeaders }
+          options._retry = true
+          response = await fetch(url, options)
+          return response
+        }
+        return response
+      }
+      
+      // Create a refresh promise and store it to prevent concurrent refreshes
+      const refreshPromise = (async () => {
+        try {
+          return await refreshAccessToken(true)
+        } finally {
+          // Clear the flag after refresh completes (success or failure)
+          delete window._refreshInProgress
+        }
+      })()
+      
+      window._refreshInProgress = refreshPromise
+      
       // Force refresh since we got a response (403 means backend is available)
-      const refreshResult = await refreshAccessToken(true)
+      const refreshResult = await refreshPromise
 
       if (!refreshResult) {
         // Refresh failed - check the original error to see if it's an auth issue
@@ -1406,6 +1434,15 @@ export const fetchWithAuth = async (url, options = {}) => {
       }
     } catch (error) {
       logger.error('Token refresh failed:', error)
+      
+      // If we got rate limited, mark it and don't retry
+      if (error.name === 'RateLimitError' || error.status === 429 || error.message.includes('rate limit')) {
+        logger.warn('Rate limit hit during refresh - will not retry')
+        sessionStorage.setItem('lastRateLimitTime', Date.now().toString())
+        // Return the original response without retrying
+        return response
+      }
+      
       // Refresh failed, return original response
       return response
     }
@@ -1503,17 +1540,10 @@ export const saveCareer = async (userId, careerId, confidenceScore, matchReason,
   const isUUID = careerId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(careerId)
 
   let url, body
-  if (isUUID) {
-    // Use UUID endpoint
-    url = `${API_BASE_URL}/users/${userId}/saved-careers`
-    body = {
-      careerId,
-      confidenceScore: confidenceScore || null,
-      matchReason: matchReason || null,
-    }
-    logger.log(`Attempting to save career by UUID ${careerId} for user ${userId}`)
-  } else if (careerName) {
-    // Use name-based endpoint
+  // Prefer saving by name if careerName is available (will create career if it doesn't exist)
+  // This is more reliable for recommendations that might not be in the database
+  if (careerName) {
+    // Use name-based endpoint (will create career if it doesn't exist)
     url = `${API_BASE_URL}/users/${userId}/saved-careers/by-name`
     body = {
       careerName,
@@ -1521,6 +1551,15 @@ export const saveCareer = async (userId, careerId, confidenceScore, matchReason,
       matchReason: matchReason || null,
     }
     logger.log(`Attempting to save career by name ${careerName} for user ${userId}`)
+  } else if (isUUID) {
+    // Use UUID endpoint only if no careerName is available
+    url = `${API_BASE_URL}/users/${userId}/saved-careers`
+    body = {
+      careerId,
+      confidenceScore: confidenceScore || null,
+      matchReason: matchReason || null,
+    }
+    logger.log(`Attempting to save career by UUID ${careerId} for user ${userId}`)
   } else {
     throw new Error("Career ID or name is required")
   }
@@ -1536,6 +1575,35 @@ export const saveCareer = async (userId, careerId, confidenceScore, matchReason,
   logger.log(`Save career response status: ${response.status}`)
 
   if (!response.ok) {
+    // If UUID endpoint fails with "Career not found" and we have a careerName, try by-name endpoint
+    if (isUUID && careerName && response.status === 400) {
+      const errorData = await response.json().catch(() => ({}))
+      if (errorData.message?.includes("Career not found") || errorData.error?.includes("Career not found")) {
+        logger.log(`Career not found by UUID, retrying with name: ${careerName}`)
+        // Retry with by-name endpoint
+        const retryUrl = `${API_BASE_URL}/users/${userId}/saved-careers/by-name`
+        const retryBody = {
+          careerName,
+          confidenceScore: confidenceScore || null,
+          matchReason: matchReason || null,
+        }
+        const retryResponse = await fetchWithAuth(retryUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(retryBody),
+        })
+        
+        if (retryResponse.ok) {
+          const result = await retryResponse.json()
+          logger.log('Career saved successfully by name:', result)
+          return result
+        }
+        // If retry also fails, fall through to throw error
+      }
+    }
+    
     const errorData = await response.json().catch(() => ({}))
     const errorMessage = errorData.message || errorData.error || `Failed to save career (${response.status})`
     logger.error('Save career error:', errorMessage, errorData)
@@ -1874,6 +1942,33 @@ export const getEsewaPaymentStatus = async (pid) => {
   if (!response.ok) {
     const errorText = await response.text()
     throw new Error(`Failed to fetch payment status: ${response.status} ${errorText}`)
+  }
+  return await response.json()
+}
+
+// eSewa ePay V2 API functions
+export const initiateEsewaV2Payment = async (payload) => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/payments/esewa/v2/initiate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Failed to initiate eSewa V2 payment: ${response.status} ${errorText}`)
+  }
+  return await response.json()
+}
+
+export const verifyEsewaV2Payment = async (data) => {
+  const response = await fetch(`${API_BASE_URL}/payments/esewa/v2/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ data }),
+  })
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Failed to verify eSewa V2 payment: ${response.status} ${errorText}`)
   }
   return await response.json()
 }

@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect } from "react"
 import { clearUserData } from "@/shared/utils/utils"
 import { refreshAccessToken, logout as apiLogout } from "@/shared/lib/api"
 
-const AuthContext = createContext()
+const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)

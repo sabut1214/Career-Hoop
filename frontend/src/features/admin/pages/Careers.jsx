@@ -23,10 +23,12 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog"
 import { getCareers, deleteCareer, createCareer, updateCareer } from "@/shared/lib/api"
-import { Trash2, Plus, Pencil, Loader2 } from "lucide-react"
+import { Trash2, Plus, Pencil, Loader2, BookOpen } from "lucide-react"
 import { toast } from "react-toastify"
 import { TableRowSkeleton } from "@/shared/components/common/LoadingSkeleton"
 import Pagination from "@/shared/components/common/pagination"
+import { EmptyState } from "@/shared/components/common/EmptyState"
+import { getUserFriendlyError } from "@/shared/utils/userFriendlyErrors"
 
 export default function AdminCareersPage() {
   const [careers, setCareers] = useState([])
@@ -61,7 +63,7 @@ export default function AdminCareersPage() {
       setCareers(careersData)
     } catch (error) {
       console.error("Failed to fetch careers:", error)
-      toast.error("Failed to fetch careers. Please try again.")
+      toast.error(getUserFriendlyError(error, "Unable to load careers. Please refresh the page."))
       setCareers([])
     } finally {
       setLoading(false)
@@ -82,7 +84,7 @@ export default function AdminCareersPage() {
       toast.success("Career deleted successfully.")
     } catch (error) {
       console.error("Failed to delete career:", error)
-      toast.error("Failed to delete career. Please try again.")
+      toast.error(getUserFriendlyError(error, "Could not delete career. It may be in use elsewhere."))
     } finally {
       setIsDeleting(false)
       setDeleteDialogOpen(false)
@@ -108,7 +110,7 @@ export default function AdminCareersPage() {
       fetchCareers()
     } catch (error) {
       console.error("Failed to create career:", error)
-      toast.error(error.message || "Failed to create career. Please try again.")
+      toast.error(getUserFriendlyError(error, "Could not create career. Please check your input and try again."))
     } finally {
       setIsSubmitting(false)
     }
@@ -145,7 +147,7 @@ export default function AdminCareersPage() {
       fetchCareers()
     } catch (error) {
       console.error("Failed to update career:", error)
-      toast.error(error.message || "Failed to update career. Please try again.")
+      toast.error(getUserFriendlyError(error, "Could not update career. Please check your input and try again."))
     } finally {
       setIsSubmitting(false)
     }
@@ -232,8 +234,21 @@ export default function AdminCareersPage() {
                         ))
                       ) : filteredCareers.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="py-6 text-center text-muted-foreground">
-                            No careers found
+                          <td colSpan={4} className="p-0">
+                            <EmptyState
+                              icon={BookOpen}
+                              title="No Careers Found"
+                              description={searchTerm ? `No careers match "${searchTerm}". Try adjusting your search.` : "Get started by adding your first career."}
+                              action={searchTerm ? {
+                                label: "Clear Search",
+                                onClick: () => setSearchTerm(""),
+                                variant: "secondary"
+                              } : {
+                                label: "Add Career",
+                                onClick: () => setIsAddDialogOpen(true),
+                                variant: "default"
+                              }}
+                            />
                           </td>
                         </tr>
                       ) : (
@@ -242,7 +257,7 @@ export default function AdminCareersPage() {
                           return (
                             <tr
                               key={career.id}
-                              className={`border-b transition-opacity ${isRowDeleting ? "opacity-60" : "hover:bg-muted/50"}`}
+                              className={`border-b transition-colors ${isRowDeleting ? "opacity-60" : "hover:bg-muted/50 cursor-pointer"}`}
                               aria-busy={isRowDeleting}
                             >
                               <td className="py-3 px-4 font-medium">{career.name || career.title || "N/A"}</td>
@@ -255,8 +270,9 @@ export default function AdminCareersPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleEditClick(career)}
-                                  className="text-muted-foreground hover:text-foreground"
+                                  className="text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                   disabled={isDeleting}
+                                  aria-label={`Edit ${career.name || career.title || "career"}`}
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
@@ -264,8 +280,9 @@ export default function AdminCareersPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDeleteClick(career)}
-                                  className="text-destructive hover:text-destructive"
+                                  className="text-destructive hover:text-destructive focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2"
                                   disabled={isDeleting}
+                                  aria-label={`Delete ${career.name || career.title || "career"}`}
                                 >
                                   {isRowDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                 </Button>

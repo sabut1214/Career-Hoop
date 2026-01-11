@@ -45,7 +45,7 @@ export function Navbar() {
             <Link
               key={link.href}
               to={link.href}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
+              className={`text-sm font-medium transition-[color] duration-200 ease-out hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md px-2 py-1 ${
                 pathname === link.href ? "text-primary" : "text-muted-foreground"
               }`}
             >
@@ -64,11 +64,15 @@ export function Navbar() {
             />
             <Moon className="h-4 w-4 text-muted-foreground" />
           </div>
-          <Button variant="ghost" className="text-sm font-medium" onClick={() => handleAuthRedirect("/login")}>
+          <Button 
+            variant="ghost" 
+            className="text-sm font-medium transition-[color] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" 
+            onClick={() => handleAuthRedirect("/login")}
+          >
             Log In
           </Button>
           <Button
-            className="rounded-full bg-primary px-6 text-primary-foreground hover:bg-primary/90"
+            className="rounded-full bg-primary px-6 text-primary-foreground hover:bg-primary-hover transition-[background-color] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             onClick={() => handleAuthRedirect("/signup")}
           >
             Get Started
@@ -93,7 +97,7 @@ export function Navbar() {
               <Link
                 key={link.href}
                 to={link.href}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
+                className={`text-sm font-medium transition-[color] duration-200 ease-out hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md px-2 py-1 ${
                   pathname === link.href ? "text-primary" : "text-muted-foreground"
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
@@ -111,11 +115,15 @@ export function Navbar() {
                 />
                 <Moon className="h-4 w-4 text-muted-foreground" />
               </div>
-              <Button variant="ghost" className="w-full text-sm font-medium" onClick={() => handleAuthRedirect("/login")}>
+              <Button 
+                variant="ghost" 
+                className="w-full text-sm font-medium transition-[background-color,color] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" 
+                onClick={() => handleAuthRedirect("/login")}
+              >
                 Log In
               </Button>
               <Button
-                className="w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                className="w-full rounded-full bg-primary text-primary-foreground hover:bg-primary-hover transition-[background-color] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 onClick={() => handleAuthRedirect("/signup")}
               >
                 Get Started

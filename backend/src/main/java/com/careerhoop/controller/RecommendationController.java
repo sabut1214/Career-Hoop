@@ -88,7 +88,12 @@ public class RecommendationController {
     @PostMapping("/colleges")
     public ResponseEntity<List<Map<String, Object>>> getCollegeRecommendations(
             @RequestBody CollegeAIRecommendationRequest request,
-            @RequestParam(value = "limit", defaultValue = "5") Integer limit) {
+            @RequestParam(value = "limit", defaultValue = "10") Integer limit) {
+
+        // Ensure minimum of 10 recommendations
+        if (limit < 10) {
+            limit = 10;
+        }
 
         // Only use Python service - no fallback
         // First, fetch colleges from database
@@ -96,12 +101,15 @@ public class RecommendationController {
         
         // Limit to a reasonable number for scoring to avoid very large payloads to the Python service.
         // Too small a candidate set can lead to very few results after filtering on score.
-        final int candidateLimit = 250;
+        // Increased candidate limit to get better recommendations from 900 colleges
+        final int candidateLimit = 500;
         if (colleges.size() > candidateLimit) {
             colleges = colleges.subList(0, candidateLimit);
         }
 
-        // Call Python service
+        // Call Python service with increased limit to ensure we get at least 10 results
+        // Request more than needed in case some are filtered out
+        int requestLimit = Math.max(limit, 20);
         List<Map<String, Object>> pythonResponse = pythonRecommendationService.getCollegeRecommendations(
                 request.grade10(),
                 request.grade12(),
@@ -111,7 +119,7 @@ public class RecommendationController {
                 request.activities(),
                 request.workEnvironments(),
                 colleges,
-                limit
+                requestLimit
         );
 
         if (pythonResponse != null && !pythonResponse.isEmpty()) {

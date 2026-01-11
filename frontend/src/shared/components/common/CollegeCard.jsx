@@ -1,5 +1,5 @@
 import { memo, useState } from "react"
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
@@ -70,6 +70,7 @@ const parsePrograms = (programs) => {
 export const CollegeCard = memo(
   ({ college, index, isSaved, onToggleSaved, matchScore }) => {
     const { user } = useAuth()
+    const prefersReducedMotion = useReducedMotion()
     const hasDetailUrl = Boolean(college.detailUrl)
     const [isSaving, setIsSaving] = useState(false)
     const matchPercent = clampPercent(matchScore)
@@ -95,13 +96,13 @@ export const CollegeCard = memo(
 
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: index * 0.1 }}
-        whileHover={{ scale: 1.02 }}
+        transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: index * 0.1 }}
+        whileHover={prefersReducedMotion ? {} : { y: -2 }}
         className="group"
       >
-        <Card className="h-full min-h-[460px] flex flex-col border-2 hover:border-primary/20 hover:shadow-lg transition-all duration-300">
+        <Card className="h-full min-h-[460px] flex flex-col border-2 hover:border-primary/20 hover:shadow-lg transition-[box-shadow,border-color] duration-200 ease-out">
           <CardHeader className="space-y-4 pb-0">
             <div className="flex items-start space-x-4">
               <img
@@ -119,7 +120,7 @@ export const CollegeCard = memo(
               <div className="flex-1 space-y-2">
                 <div className="flex items-start justify-between">
                   <div>
-                    <CardTitle className="text-xl group-hover:text-primary transition-colors">{college.name}</CardTitle>
+                    <CardTitle className="text-xl group-hover:text-primary transition-[color] duration-200 ease-out">{college.name}</CardTitle>
                     <div className="flex items-center space-x-2 mt-1">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">
@@ -137,7 +138,7 @@ export const CollegeCard = memo(
                     type="button"
                     onClick={handleSaveClick}
                     disabled={!user?.id || !college?.id || isSaving}
-                    className="transition-colors disabled:opacity-50"
+                    className="transition-[color] duration-200 ease-out disabled:opacity-50"
                     title={!user?.id ? "Log in to save colleges" : isSaved ? "Remove from saved" : "Save college"}
                     aria-label={!user?.id ? "Log in to save colleges" : isSaved ? "Remove from saved" : "Save college"}
                     aria-pressed={isSaved}
@@ -146,11 +147,11 @@ export const CollegeCard = memo(
                       <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                     ) : (
                       <Star
-                        className={`h-5 w-5 transition-colors ${
+                        className={`h-5 w-5 shrink-0 transition-[color,fill] duration-200 ease-out ${
                           !user?.id || !college?.id
                             ? "text-muted-foreground cursor-not-allowed"
                             : isSaved
-                              ? "text-yellow-500 fill-yellow-500 cursor-pointer"
+                              ? "text-warning fill-warning cursor-pointer" /* Brand YellowGreen for saved state */
                               : "text-muted-foreground group-hover:text-accent cursor-pointer"
                         }`}
                       />
@@ -180,14 +181,14 @@ export const CollegeCard = memo(
               <div className="space-y-2">
                 <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
                   <div className="flex items-center space-x-1">
-                    <Users className="h-4 w-4 text-blue-600" />
+                    <Users className="h-4 w-4 text-primary" />
                     <span className="text-xs">Students</span>
                   </div>
                   <span className="text-xs font-medium">{college.students || "N/A"}</span>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
                   <div className="flex items-center space-x-1">
-                    <DollarSign className="h-4 w-4 text-green-600" />
+                    <DollarSign className="h-4 w-4 text-secondary" />
                     <span className="text-xs">Tuition</span>
                   </div>
                   <span className="text-xs font-medium">{college.tuition || "N/A"}</span>
@@ -196,14 +197,14 @@ export const CollegeCard = memo(
               <div className="space-y-2">
                 <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
                   <div className="flex items-center space-x-1">
-                    <GraduationCap className="h-4 w-4 text-purple-600" />
+                    <GraduationCap className="h-4 w-4 text-accent" />
                     <span className="text-xs">Acceptance</span>
                   </div>
                   <span className="text-xs font-medium">{college.acceptanceRate || college.acceptance || "N/A"}</span>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
                   <div className="flex items-center space-x-1">
-                    <Clock className="h-4 w-4 text-orange-600" />
+                    <Clock className="h-4 w-4 text-warning" />
                     <span className="text-xs">Founded</span>
                   </div>
                   <span className="text-xs font-medium">{college.establishedYear || college.established || "N/A"}</span>
