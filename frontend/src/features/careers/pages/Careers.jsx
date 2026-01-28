@@ -847,5 +847,6 @@ export default function CareersPage() {
 
           {/* Paywall Modal */}
           <ProPaywallModal open={paywallModalOpen} onOpenChange={setPaywallModalOpen} />
-  )
+        </div>
+      )
 }
