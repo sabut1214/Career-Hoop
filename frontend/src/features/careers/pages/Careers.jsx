@@ -33,6 +33,7 @@ import {
   Loader2,
 } from "lucide-react"
 import { CareerCardSkeletonGrid } from "@/shared/components/common/CareerCardSkeleton"
+import githubStats from "@/data/github-stats.json"
 
 const categoryIconMap = {
   Technology: Code,
@@ -679,6 +680,35 @@ export default function CareersPage() {
               ))}
             </motion.div>
           )}
+
+          {/* GitHub Stats */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+          >
+            <Card className="border-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">GitHub Stats</CardTitle>
+                <CardDescription className="text-sm">All-time totals for this project</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Total PRs</p>
+                  <p className="text-2xl font-bold">{githubStats?.totalPRs ?? 0}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Total Issues</p>
+                  <p className="text-2xl font-bold">{githubStats?.totalIssues ?? 0}</p>
+                </div>
+                {githubStats?.updatedAt && (
+                  <p className="text-xs text-muted-foreground sm:col-span-2">
+                    Updated {new Date(githubStats.updatedAt).toLocaleDateString()}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
 
           {/* Loading State */}
           {loading && <CareerCardSkeletonGrid count={9} />}
