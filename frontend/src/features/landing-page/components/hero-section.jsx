@@ -26,7 +26,7 @@ export function HeroSection() {
             </h1>
 
             <p className="mx-auto max-w-xl text-lg leading-relaxed text-foreground/90 lg:mx-0">
-              CareerHoop helps students discover their perfect career path through personalized guidance, skill
+              areerHoop helps students discover their perfect career path through personalized guidance, skill
               assessments, and college recommendations. Your dream future is just a few clicks away.
             </p>
 

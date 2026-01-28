@@ -16,6 +16,14 @@ export const ROUTES = {
   SIGNUP: "/signup",
   HEALTH: "/health",
   NOT_FOUND: "/404",
+  CHECKOUT_PRO: "/checkout/pro",
+  BILLING: "/billing",
+}
+
+// Plan types
+export const PLANS = {
+  FREE: "FREE",
+  PRO: "PRO",
 }
 
 // Entity types for admin dashboard
@@ -42,3 +50,11 @@ export const JOB_OUTLOOKS = ["Poor", "Fair", "Good", "Very Good", "Excellent"]
 
 // Status options
 export const STATUS_OPTIONS = ["Active", "Inactive", "Pending"]
+
+// Social Media Links
+export const SOCIAL_LINKS = {
+  TWITTER: "https://twitter.com/careerhoop",
+  GITHUB: "https://github.com/careerhoop",
+  LINKEDIN: "https://linkedin.com/company/careerhoop",
+  INSTAGRAM: "https://instagram.com/careerhoop",
+}

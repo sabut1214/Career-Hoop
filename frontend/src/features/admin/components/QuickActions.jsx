@@ -2,7 +2,6 @@ import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import {
-  UserPlus,
   BookOpen,
   Building2,
   Zap,
@@ -30,12 +29,6 @@ export function QuickActions() {
   }
 
   const actions = [
-    {
-      label: "Add Student",
-      icon: UserPlus,
-      onClick: () => navigate("/admin/students"),
-      color: "bg-primary/10 text-primary hover:bg-primary/20 focus-visible:ring-2 focus-visible:ring-primary"
-    },
     {
       label: "Add Career",
       icon: BookOpen,

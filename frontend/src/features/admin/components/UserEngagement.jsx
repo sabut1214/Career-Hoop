@@ -14,11 +14,13 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
 export function UserEngagement() {
   const [engagement, setEngagement] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState(null)
 
   const fetchEngagement = async () => {
     try {
       const data = await getEngagement()
       setEngagement(data)
+      setLastUpdated(new Date())
     } catch (error) {
       console.error("Failed to fetch engagement:", error)
       setEngagement(null)
@@ -29,7 +31,7 @@ export function UserEngagement() {
 
   useEffect(() => {
     fetchEngagement()
-    const interval = setInterval(fetchEngagement, 60000) // Refresh every minute
+    const interval = setInterval(fetchEngagement, 30000) // Refresh every 30 seconds for more real-time updates
     return () => clearInterval(interval)
   }, [])
 
@@ -83,14 +85,33 @@ export function UserEngagement() {
     },
   }
 
+  const formatTimeAgo = (date) => {
+    if (!date) return "Never"
+    const now = new Date()
+    const diff = Math.floor((now - date) / 1000) // seconds
+
+    if (diff < 10) return "Just now"
+    if (diff < 60) return `${diff} seconds ago`
+    if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`
+    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`
+    return date.toLocaleTimeString()
+  }
+
   return (
     <div className="space-y-6">
       <Card className="border-2">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            User Engagement
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              User Engagement
+            </CardTitle>
+            {lastUpdated && (
+              <span className="text-xs text-muted-foreground">
+                Updated {formatTimeAgo(lastUpdated)}
+              </span>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -139,72 +160,89 @@ export function UserEngagement() {
         </CardContent>
       </Card>
 
-      <Card className="border-2">
-        <CardHeader>
-          <CardTitle>Active Users Over Time</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {activeUsersData.length === 0 || activeUsersData.every(d => d.users === 0) ? (
-            <div className="flex flex-col items-center justify-center h-[200px] text-center space-y-2">
-              <BarChart3 className="h-12 w-12 text-muted-foreground" />
-              <p className="text-sm font-medium text-foreground">No active user data</p>
-              <p className="text-xs text-muted-foreground">User activity data will appear here once available</p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-2">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Active Users Over Time</CardTitle>
+              {lastUpdated && (
+                <span className="text-xs text-muted-foreground">
+                  Updated {formatTimeAgo(lastUpdated)}
+                </span>
+              )}
             </div>
-          ) : (
-            <ChartContainer config={chartConfig} className="h-[200px]">
-              <BarChart data={activeUsersData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="period" 
-                tick={{ fontSize: 12 }} 
-                label={{ value: "Time Period", position: "insideBottom", offset: -5, style: { textAnchor: "middle", fontSize: 12 } }}
-              />
-              <YAxis 
-                tick={{ fontSize: 12 }} 
-                label={{ value: "Active Users", angle: -90, position: "insideLeft", style: { textAnchor: "middle", fontSize: 12 } }}
-              />
-              <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="users" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-2">
-        <CardHeader>
-          <CardTitle>Top Features</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {topFeaturesData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-[250px] text-center space-y-2">
-              <BarChart3 className="h-12 w-12 text-muted-foreground" />
-              <p className="text-sm font-medium text-foreground">No feature usage data</p>
-              <p className="text-xs text-muted-foreground">Feature usage statistics will appear here once available</p>
-            </div>
-          ) : (
-            <ChartContainer config={chartConfig} className="h-[250px]">
-              <BarChart data={topFeaturesData} layout="vertical">
+          </CardHeader>
+          <CardContent>
+            {activeUsersData.length === 0 || activeUsersData.every(d => d.users === 0) ? (
+              <div className="flex flex-col items-center justify-center h-[200px] text-center space-y-2">
+                <BarChart3 className="h-12 w-12 text-muted-foreground" />
+                <p className="text-sm font-medium text-foreground">No active user data</p>
+                <p className="text-xs text-muted-foreground">User activity data will appear here once available</p>
+              </div>
+            ) : (
+              <ChartContainer config={chartConfig} className="h-[200px]">
+                <BarChart data={activeUsersData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
-                  type="number" 
+                  dataKey="period" 
                   tick={{ fontSize: 12 }} 
-                  label={{ value: "Usage Count", position: "insideBottom", offset: -5, style: { textAnchor: "middle", fontSize: 12 } }}
+                  label={{ value: "Time Period", position: "insideBottom", offset: -5, style: { textAnchor: "middle", fontSize: 12 } }}
                 />
                 <YAxis 
-                  dataKey="name" 
-                  type="category" 
                   tick={{ fontSize: 12 }} 
-                  width={120}
-                  label={{ value: "Feature", angle: -90, position: "insideLeft", style: { textAnchor: "middle", fontSize: 12 } }}
+                  label={{ value: "Active Users", angle: -90, position: "insideLeft", style: { textAnchor: "middle", fontSize: 12 } }}
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="count" fill="var(--chart-2)" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ChartContainer>
-          )}
-        </CardContent>
-      </Card>
+                  <Bar dataKey="users" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-2">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Top Features</CardTitle>
+              {lastUpdated && (
+                <span className="text-xs text-muted-foreground">
+                  Updated {formatTimeAgo(lastUpdated)}
+                </span>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {topFeaturesData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-[200px] text-center space-y-2">
+                <BarChart3 className="h-12 w-12 text-muted-foreground" />
+                <p className="text-sm font-medium text-foreground">No feature usage data</p>
+                <p className="text-xs text-muted-foreground">Feature usage statistics will appear here once available</p>
+              </div>
+            ) : (
+              <ChartContainer config={chartConfig} className="h-[200px]">
+                <BarChart data={topFeaturesData} layout="vertical" margin={{ left: 20, right: 10, top: 10, bottom: 40 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    type="number" 
+                    tick={{ fontSize: 12 }} 
+                    label={{ value: "Usage Count", position: "insideBottom", offset: -5, style: { textAnchor: "middle", fontSize: 12 } }}
+                  />
+                  <YAxis 
+                    dataKey="name" 
+                    type="category" 
+                    tick={{ fontSize: 11 }} 
+                    width={160}
+                    tickMargin={10}
+                    label={false}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="count" fill="var(--chart-2)" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

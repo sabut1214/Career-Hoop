@@ -29,9 +29,11 @@ import {
   AlertCircle,
   CheckCircle,
   Loader2,
+  Folder,
 } from "lucide-react"
 import api from "@/shared/services/api"
 import { useAuth } from "@/shared/context/AuthContext"
+import { useSubscription } from "@/shared/hooks/useSubscription"
 import { getUserStorageKey } from "@/shared/utils/utils"
 import { getCollegeRecommendations, getSavedColleges, saveCollege, unsaveCollege, saveCareer, unsaveCareer, getSavedCareers, getUserProfile } from "@/shared/lib/api"
 import recommendationService from "@/features/recommendations/services/recommendationService"
@@ -41,6 +43,8 @@ import { EmptyState } from "@/shared/components/common/EmptyState"
 import { CareerCardSkeletonGrid } from "@/shared/components/common/CareerCardSkeleton"
 import CollegeCard from "@/shared/components/common/CollegeCard"
 import { getRecommendationError } from "@/shared/utils/userFriendlyErrors"
+import { ProPaywallModal } from "@/features/payment/components/ProPaywallModal"
+import { Lock } from "lucide-react"
 
 const categoryIconMap = {
   Technology: Code,
@@ -157,6 +161,96 @@ const transformCareerToRecommendation = (career, matchReason = "") => {
     opportunities: [career.category || "Various"].filter(Boolean),
     category: career.category || "default",
   }
+}
+
+// Preview Card Component for Free Users
+const PreviewCard = ({ preview, index, onUnlock }) => {
+  const prefersReducedMotion = useReducedMotion()
+  const category = preview.category || "default"
+  const IconComponent = categoryIconMap[category] || categoryIconMap.default
+  const color = categoryColorMap[category] || categoryColorMap.default
+
+  return (
+    <motion.div
+      initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: index * 0.1 }}
+      className="group relative"
+    >
+      <Card className="h-full border-2 hover:border-primary/20 transition-all duration-200 overflow-hidden">
+        {/* Blurred Overlay */}
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-6 cursor-pointer"
+             onClick={onUnlock}>
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+              <Lock className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Upgrade to Unlock</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                See full recommendation details and unlock all features
+              </p>
+              <Button onClick={onUnlock} className="bg-primary hover:bg-primary-hover text-primary-foreground">
+                Upgrade to Pro
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Preview Content (blurred) */}
+        <CardHeader className="space-y-4 opacity-50 pointer-events-none">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-3">
+              <div className={`w-12 h-12 rounded-lg ${color} flex items-center justify-center shrink-0`}>
+                {IconComponent && <IconComponent className="h-6 w-6 text-white" />}
+              </div>
+              <div>
+                <CardTitle className="text-xl">••••••••</CardTitle>
+                <div className="flex items-center space-x-2 mt-1">
+                  <Badge className={`${getConfidenceColor(preview.matchLevel)} border-0`}>
+                    {preview.matchLevel || "Match"}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">{preview.matchScore || 0}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Match Confidence</span>
+              <span className="font-medium">{preview.matchScore || 0}%</span>
+            </div>
+            <Progress value={preview.matchScore || 0} className="h-2" />
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-6 opacity-50 pointer-events-none">
+          <div className="space-y-4">
+            {preview.category && (
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <span className="text-sm font-medium">Category</span>
+                <span className="text-sm font-semibold">{preview.category}</span>
+              </div>
+            )}
+            {preview.tuitionRange && (
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <span className="text-sm font-medium">Tuition Range</span>
+                <span className="text-sm font-semibold">{preview.tuitionRange}</span>
+              </div>
+            )}
+          </div>
+
+          {preview.genericMatchReasons && preview.genericMatchReasons.length > 0 && (
+            <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+              <p className="text-sm text-primary font-medium mb-1">Why this matches you:</p>
+              <p className="text-sm text-muted-foreground">{preview.genericMatchReasons[0]}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
 }
 
 const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
@@ -325,7 +419,9 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
         </CardHeader>
 
           <CardContent className="space-y-6">
-            <CardDescription className="text-base leading-relaxed">{career.description}</CardDescription>
+            {career.description && career.description !== "Career saved from recommendations" && (
+              <CardDescription className="text-base leading-relaxed">{career.description}</CardDescription>
+            )}
 
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
@@ -397,7 +493,11 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
               <DialogDescription>{career.category || "Career details"}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">{career.description || "No description available."}</p>
+              <p className="text-sm text-muted-foreground">
+                {career.description && career.description !== "Career saved from recommendations" 
+                  ? career.description 
+                  : "No description available."}
+              </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {career.salary && (
                   <div className="rounded-lg border p-3">
@@ -439,6 +539,7 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
 
 export default function RecommendationsPage() {
   const { user } = useAuth()
+  const { isPro, loading: subscriptionLoading } = useSubscription()
   const navigate = useNavigate()
   const prefersReducedMotion = useReducedMotion()
   const [activeTab, setActiveTab] = useState("grades")
@@ -458,6 +559,9 @@ export default function RecommendationsPage() {
   const [collegeRecs, setCollegeRecs] = useState([])
   const [loadingColleges, setLoadingColleges] = useState(false)
   const [collegeError, setCollegeError] = useState(null)
+  const [paywallModalOpen, setPaywallModalOpen] = useState(false)
+  const [previewRecs, setPreviewRecs] = useState([])
+  const [loadingPreview, setLoadingPreview] = useState(false)
 
   const uuidRegex = useMemo(() => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, [])
 
@@ -694,7 +798,7 @@ export default function RecommendationsPage() {
 
   // Load user data and fetch recommendations
   useEffect(() => {
-    if (!user?.id || loadingCareers || allCareers.length === 0) {
+    if (!user?.id || loadingCareers || allCareers.length === 0 || subscriptionLoading) {
       return
     }
 
@@ -797,7 +901,7 @@ export default function RecommendationsPage() {
     }
 
     loadInterests()
-  }, [user?.id, user?.email, loadingCareers, allCareers])
+  }, [user?.id, user?.email, loadingCareers, allCareers, isPro, subscriptionLoading])
 
   // Helper function to check if a career is saved
   const isCareerSaved = (career) => {
@@ -806,10 +910,27 @@ export default function RecommendationsPage() {
     return savedCareerIds.has(careerId) || (careerName && savedCareerIds.has(careerName))
   }
 
-  // Sort recommendations: saved ones first
+  // Helper function to check if career has sufficient details
+  const hasCareerDetails = (career) => {
+    const description = career.description || ""
+    const hasDescription = description.trim() && description !== "Career saved from recommendations"
+    const hasSalary = !!(career.salary || career.salaryRange || career.averageSalaryUSD)
+    const hasEducation = !!career.requiredEducation
+    const hasSkills = !!(career.skills && career.skills.length > 0) || !!(career.requiredSkills && career.requiredSkills.length > 0)
+    const hasJobOutlook = !!(career.growth || career.jobOutlook)
+    const hasMatchReason = !!(career.matchReason && career.matchReason.trim())
+    
+    // Career must have at least one of these details
+    return hasDescription || hasSalary || hasEducation || hasSkills || hasJobOutlook || hasMatchReason
+  }
+
+  // Sort recommendations: saved ones first, and filter out careers without details
   const sortRecommendations = (recommendations) => {
-    const saved = recommendations.filter(rec => isCareerSaved(rec))
-    const notSaved = recommendations.filter(rec => !isCareerSaved(rec))
+    // First filter out careers without details
+    const withDetails = recommendations.filter(rec => hasCareerDetails(rec))
+    // Then sort: saved ones first
+    const saved = withDetails.filter(rec => isCareerSaved(rec))
+    const notSaved = withDetails.filter(rec => !isCareerSaved(rec))
     return [...saved, ...notSaved]
   }
 
@@ -818,13 +939,53 @@ export default function RecommendationsPage() {
   const sortedInterestRecs = useMemo(() => sortRecommendations(interestRecs), [interestRecs, savedCareerIds])
 
   const stats = useMemo(() => {
-    const allRecs = [...gradeRecs, ...interestRecs]
+    // Use filtered recommendations (with details only) for stats
+    // For free users, include preview recommendations in stats
+    const allRecs = isPro 
+      ? [...sortedGradeRecs, ...sortedInterestRecs]
+      : [...previewRecs, ...sortedGradeRecs, ...sortedInterestRecs]
     const total = allRecs.length
-    const high = allRecs.filter((rec) => rec.confidenceLevel === "High").length
-    const medium = allRecs.filter((rec) => rec.confidenceLevel === "Medium").length
+    
+    // Calculate confidence level from confidence score if not set
+    const recsWithLevels = allRecs.map(rec => {
+      let level = rec.confidenceLevel || rec.matchLevel
+      // If no level but has confidence score, calculate it
+      if (!level && rec.confidence) {
+        if (rec.confidence >= 85) {
+          level = "High"
+        } else if (rec.confidence >= 70) {
+          level = "Medium"
+        } else {
+          level = "Low"
+        }
+      }
+      return { ...rec, confidenceLevel: level || "Medium" }
+    })
+    
+    const high = recsWithLevels.filter((rec) => {
+      const level = (rec.confidenceLevel || "").toString().toLowerCase()
+      return level === "high" || level === "strong match" || rec.confidence >= 85
+    }).length
+    
+    const medium = recsWithLevels.filter((rec) => {
+      const level = (rec.confidenceLevel || "").toString().toLowerCase()
+      return level === "medium" || level === "good match" || level === "moderate match" || 
+             (rec.confidence >= 70 && rec.confidence < 85)
+    }).length
+    
     const saved = savedCareersCount
-    return { total, high, medium, saved }
-  }, [gradeRecs, interestRecs, savedCareersCount])
+    
+    // Count unique categories
+    const uniqueCategories = new Set()
+    recsWithLevels.forEach(rec => {
+      if (rec.category && rec.category !== "default" && rec.category !== "General") {
+        uniqueCategories.add(rec.category)
+      }
+    })
+    const categories = uniqueCategories.size
+    
+    return { total, high, medium, saved, categories }
+  }, [sortedGradeRecs, sortedInterestRecs, savedCareersCount, previewRecs, isPro])
 
   const fetchGradeRecommendations = async (analysis) => {
     setLoadingGrades(true)
@@ -862,18 +1023,39 @@ export default function RecommendationsPage() {
         subjects: subjects,
       }
 
-      console.log("fetchGradeRecommendations: Request data:", requestData, "Original analysis:", analysis)
+      console.log("fetchGradeRecommendations: Request data:", requestData, "Original analysis:", analysis, "isPro:", isPro)
 
-      // Only use Python recommendation API - no fallback
+      // For Free users, fetch full recommendations but only show first 1-2, rest will be preview
+      // For Pro users, fetch full recommendations
       const response = await recommendationService.getByGrades(requestData)
 
       if (response?.data?.recommendations && response.data.recommendations.length > 0) {
         // Transform API response to match UI format
-        const recommendations = response.data.recommendations.map((rec) => {
+        const allRecommendations = response.data.recommendations.map((rec) => {
           // Find matching career from allCareers if possible
           const matchingCareer = allCareers.find(
             (c) => c.title === rec.title || c.careerName === rec.title || c.name === rec.title
           )
+
+          // Calculate confidence level from confidence score if not provided
+          const confidence = rec.confidence || 75
+          let confidenceLevel = rec.confidenceLevel
+          if (!confidenceLevel && confidence) {
+            if (confidence >= 85) {
+              confidenceLevel = "High"
+            } else if (confidence >= 70) {
+              confidenceLevel = "Medium"
+            } else {
+              confidenceLevel = "Low"
+            }
+          } else if (!confidenceLevel) {
+            confidenceLevel = "Medium"
+          }
+
+          // Get salary from various sources
+          const salaryValue = rec.salaryRange || matchingCareer?.salaryRange || matchingCareer?.averageSalaryUSD || "Not specified"
+          // Get job outlook/growth from various sources
+          const growthValue = rec.jobGrowth || rec.jobOutlook || matchingCareer?.jobOutlook || matchingCareer?.outlook || "Medium"
 
           return {
             id: rec.id || matchingCareer?.id || `rec-${Date.now()}-${Math.random()}`,
@@ -882,18 +1064,30 @@ export default function RecommendationsPage() {
             title: rec.title,
             description: rec.description || matchingCareer?.description || "",
             category: rec.category || matchingCareer?.category || "General",
-            confidence: rec.confidence || 75,
-            confidenceLevel: rec.confidenceLevel || "Medium",
+            confidence: confidence,
+            confidenceLevel: confidenceLevel,
             matchReason: rec.matchReason || "",
-            salaryRange: rec.salaryRange || matchingCareer?.salaryRange || "Not specified",
-            jobGrowth: rec.jobGrowth || matchingCareer?.jobGrowth || "Not specified",
+            salary: salaryValue,
+            salaryRange: salaryValue,
+            growth: growthValue,
+            jobGrowth: growthValue,
+            jobOutlook: growthValue,
             skills: rec.skills || matchingCareer?.requiredSkills || matchingCareer?.skills || [],
             opportunities: rec.opportunities || matchingCareer?.opportunities || [],
             requiredSkills: rec.skills || matchingCareer?.requiredSkills || [],
           }
         })
 
-        setGradeRecs(recommendations)
+        // For free users, they already get limited to 2 from backend
+        // Fetch preview for additional locked cards
+        if (!isPro) {
+          setGradeRecs(allRecommendations)
+          // Fetch preview recommendations to show as locked cards
+          await fetchPreviewRecommendations("grades", requestData)
+        } else {
+          // Pro users get all recommendations
+          setGradeRecs(allRecommendations)
+        }
       } else {
         // Python service returned empty recommendations
         setGradeRecs([])
@@ -901,7 +1095,38 @@ export default function RecommendationsPage() {
       }
     } catch (error) {
       console.error("Failed to fetch grade recommendations:", error)
-      setGradeError(getRecommendationError(error))
+      // Check if it's a PRO_REQUIRED error (shouldn't happen for Pro users, but handle gracefully)
+      if (error?.response?.status === 403 && error?.response?.data?.code === "PRO_REQUIRED") {
+        handleOpenPaywall("recommendations_unlock")
+        setGradeError("Upgrade to Pro to unlock full recommendations.")
+        // If somehow a Pro user got this error, try preview as fallback
+        if (!isPro && analysis) {
+          // Calculate request data for preview
+          let grade12 = analysis.grade12
+          if (!grade12 && analysis.subjects && Array.isArray(analysis.subjects) && analysis.subjects.length > 0) {
+            const marks = analysis.subjects
+              .map((s) => (typeof s === "object" && s !== null ? s.marks : null))
+              .filter((m) => m != null && !isNaN(m))
+            if (marks.length > 0) {
+              grade12 = marks.reduce((sum, m) => sum + m, 0) / marks.length
+            }
+          }
+          grade12 = grade12 ?? 70
+          const stream = (analysis.stream || "general").toLowerCase()
+          const subjects = Array.isArray(analysis.subjects)
+            ? analysis.subjects.map((s) => (typeof s === "string" ? s : s?.name || "")).filter(Boolean)
+            : []
+          const previewRequest = {
+            grade12: grade12,
+            grade10: analysis.grade10 || null,
+            stream: stream,
+            subjects: subjects,
+          }
+          await fetchPreviewRecommendations("grades", previewRequest)
+        }
+      } else {
+        setGradeError(getRecommendationError(error))
+      }
     } finally {
       setLoadingGrades(false)
     }
@@ -928,17 +1153,38 @@ export default function RecommendationsPage() {
         workEnvironments: workEnvironments,
       }
 
-      console.log("fetchInterestRecommendations: Request data:", requestData, "Original interests:", interests)
+      console.log("fetchInterestRecommendations: Request data:", requestData, "Original interests:", interests, "isPro:", isPro)
 
-      // Only use Python recommendation API - no fallback
+      // For Free users, fetch full recommendations but only show first 1-2, rest will be preview
+      // For Pro users, fetch full recommendations
       const response = await recommendationService.getByInterests(requestData)
 
       if (response?.data?.recommendations && response.data.recommendations.length > 0) {
         // Transform API response to match UI format
-        const recommendations = response.data.recommendations.map((rec) => {
+        const allRecommendations = response.data.recommendations.map((rec) => {
           const matchingCareer = allCareers.find(
             (c) => c.title === rec.title || c.careerName === rec.title || c.name === rec.title
           )
+
+          // Calculate confidence level from confidence score if not provided
+          const confidence = rec.confidence || 75
+          let confidenceLevel = rec.confidenceLevel
+          if (!confidenceLevel && confidence) {
+            if (confidence >= 85) {
+              confidenceLevel = "High"
+            } else if (confidence >= 70) {
+              confidenceLevel = "Medium"
+            } else {
+              confidenceLevel = "Low"
+            }
+          } else if (!confidenceLevel) {
+            confidenceLevel = "Medium"
+          }
+
+          // Get salary from various sources
+          const salaryValue = rec.salaryRange || matchingCareer?.salaryRange || matchingCareer?.averageSalaryUSD || "Not specified"
+          // Get job outlook/growth from various sources
+          const growthValue = rec.jobGrowth || rec.jobOutlook || matchingCareer?.jobOutlook || matchingCareer?.outlook || "Medium"
 
           return {
             id: rec.id || matchingCareer?.id || `rec-${Date.now()}-${Math.random()}`,
@@ -947,18 +1193,30 @@ export default function RecommendationsPage() {
             title: rec.title,
             description: rec.description || matchingCareer?.description || "",
             category: rec.category || matchingCareer?.category || "General",
-            confidence: rec.confidence || 75,
-            confidenceLevel: rec.confidenceLevel || "Medium",
+            confidence: confidence,
+            confidenceLevel: confidenceLevel,
             matchReason: rec.matchReason || "",
-            salaryRange: rec.salaryRange || matchingCareer?.salaryRange || "Not specified",
-            jobGrowth: rec.jobGrowth || matchingCareer?.jobGrowth || "Not specified",
+            salary: salaryValue,
+            salaryRange: salaryValue,
+            growth: growthValue,
+            jobGrowth: growthValue,
+            jobOutlook: growthValue,
             skills: rec.skills || matchingCareer?.requiredSkills || matchingCareer?.skills || [],
             opportunities: rec.opportunities || matchingCareer?.opportunities || [],
             requiredSkills: rec.skills || matchingCareer?.requiredSkills || [],
           }
         })
 
-        setInterestRecs(recommendations)
+        // For free users, they already get limited to 2 from backend
+        // Fetch preview for additional locked cards
+        if (!isPro) {
+          setInterestRecs(allRecommendations)
+          // Fetch preview recommendations to show as locked cards
+          await fetchPreviewRecommendations("interests", requestData)
+        } else {
+          // Pro users get all recommendations
+          setInterestRecs(allRecommendations)
+        }
       } else {
         // Python service returned empty recommendations
         setInterestRecs([])
@@ -966,7 +1224,22 @@ export default function RecommendationsPage() {
       }
     } catch (error) {
       console.error("Failed to fetch interest recommendations:", error)
-      setInterestError(getRecommendationError(error))
+      // Check if it's a PRO_REQUIRED error (shouldn't happen for Pro users, but handle gracefully)
+      if (error?.response?.status === 403 && error?.response?.data?.code === "PRO_REQUIRED") {
+        handleOpenPaywall("recommendations_unlock")
+        setInterestError("Upgrade to Pro to unlock full recommendations.")
+        // If somehow a Pro user got this error, try preview as fallback
+        if (!isPro && interests) {
+          const previewRequest = {
+            careerFields: interests.careerFields || [],
+            activities: interests.activities || [],
+            workEnvironments: interests.workEnvironments || [],
+          }
+          await fetchPreviewRecommendations("interests", previewRequest)
+        }
+      } else {
+        setInterestError(getRecommendationError(error))
+      }
     } finally {
       setLoadingInterests(false)
     }
@@ -976,6 +1249,11 @@ export default function RecommendationsPage() {
     if (!user?.id) return
     if (!analysis || !interests) {
       console.log("fetchCollegeRecommendations: Missing analysis or interests", { analysis, interests })
+      return
+    }
+
+    // If not Pro, don't call full API
+    if (!isPro) {
       return
     }
 
@@ -1034,8 +1312,14 @@ export default function RecommendationsPage() {
       setCollegeRecs(colleges)
     } catch (error) {
       console.error("Failed to fetch college recommendations:", error)
-      setCollegeRecs([])
-      setCollegeError(getRecommendationError(error))
+      // Check if it's a PRO_REQUIRED error
+      if (error?.response?.status === 403 && error?.response?.data?.code === "PRO_REQUIRED") {
+        handleOpenPaywall("recommendations_unlock")
+        setCollegeError("Upgrade to Pro to unlock full recommendations.")
+      } else {
+        setCollegeRecs([])
+        setCollegeError(getRecommendationError(error))
+      }
     } finally {
       setLoadingColleges(false)
     }
@@ -1146,6 +1430,49 @@ export default function RecommendationsPage() {
     }
   }
 
+  // Paywall handler
+  const handleOpenPaywall = (reason = "recommendations_unlock") => {
+    const currentPath = window.location.pathname + (window.location.search || "")
+    if (currentPath !== "/checkout/pro" && currentPath !== "/billing") {
+      const existingRedirect = sessionStorage.getItem("postUpgradeRedirect")
+      if (!existingRedirect || existingRedirect === "/checkout/pro" || existingRedirect === "/billing") {
+        sessionStorage.setItem("postUpgradeRedirect", currentPath)
+      }
+    }
+    setPaywallModalOpen(true)
+  }
+
+  // Fetch preview recommendations for Free users
+  const fetchPreviewRecommendations = async (type = "grades", requestData = null) => {
+    if (isPro) return // Don't fetch preview for Pro users
+    
+    setLoadingPreview(true)
+    // Clear previous preview data when fetching new preview
+    setPreviewRecs([])
+    try {
+      const response = await recommendationService.getPreview(type, requestData, 5)
+      setPreviewRecs(response?.data || [])
+    } catch (error) {
+      console.error("Failed to fetch preview recommendations:", error)
+      // Don't show error for preview - it's optional
+      setPreviewRecs([])
+    } finally {
+      setLoadingPreview(false)
+    }
+  }
+
+  // Show loading if subscription status is still loading
+  if (subscriptionLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center text-muted-foreground">
+          <Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin" />
+          <p className="text-sm">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
           {/* Header */}
@@ -1155,12 +1482,23 @@ export default function RecommendationsPage() {
             transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6 }}
             className="space-y-2"
           >
-            <div className="flex items-center space-x-2">
-              <BarChart3 className="h-8 w-8 text-accent" />
-              <h1 className="text-4xl font-bold">Career Recommendations</h1>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <BarChart3 className="h-8 w-8 text-accent" />
+                <h1 className="text-4xl font-bold">
+                  {isPro ? "Career Recommendations" : "Preview Recommendations"}
+                </h1>
+              </div>
+              {!isPro && (
+                <Button onClick={handleOpenPaywall} className="bg-primary hover:bg-primary-hover text-primary-foreground">
+                  Upgrade to Pro
+                </Button>
+              )}
             </div>
             <p className="text-xl text-muted-foreground">
-              Discover career paths tailored to your academic performance and personal interests
+              {isPro 
+                ? "Discover career paths tailored to your academic performance and personal interests"
+                : "Preview your personalized recommendations. Upgrade to Pro to unlock full details and access all features."}
             </p>
           </motion.div>
 
@@ -1169,12 +1507,13 @@ export default function RecommendationsPage() {
             initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: 0.1 }}
-            className="grid grid-cols-1 md:grid-cols-4 gap-4"
+            className="grid grid-cols-1 md:grid-cols-5 gap-4"
           >
             {[
               { label: "Total Matches", value: stats.total, icon: Target, color: "text-primary" },
               { label: "High Confidence", value: stats.high, icon: TrendingUp, color: "text-success" },
               { label: "Medium Confidence", value: stats.medium, icon: Clock, color: "text-warning" },
+              { label: "Categories", value: stats.categories, icon: Folder, color: "text-info" },
               { label: "Saved Careers", value: stats.saved, icon: Star, color: "text-accent" },
             ].map((stat) => (
               <Card key={stat.label} className="border-2">
@@ -1218,7 +1557,7 @@ export default function RecommendationsPage() {
                   <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold">Grade-Based Recommendations</h2>
                     <Badge variant="secondary" className="bg-primary/10 text-primary">
-                      {gradeRecs.length} matches found
+                      {sortedGradeRecs.length} matches found
                     </Badge>
                   </div>
                   <p className="text-muted-foreground">
@@ -1238,7 +1577,7 @@ export default function RecommendationsPage() {
                   )}
                 </div>
 
-                {loadingCareers || loadingGrades ? (
+                {loadingCareers || loadingGrades || loadingPreview ? (
                   <CareerCardSkeletonGrid count={6} />
                 ) : gradeError ? (
                   <EmptyState
@@ -1251,7 +1590,59 @@ export default function RecommendationsPage() {
                       variant: "secondary"
                     }}
                   />
-                ) : gradeRecs.length > 0 ? (
+                ) : !isPro ? (
+                  <>
+                    {(sortedGradeRecs.length > 0 || previewRecs.length > 0) ? (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {/* Show 1-2 full recommendations for free users */}
+                        {sortedGradeRecs.map((career, index) => (
+                          <CareerCard
+                            key={career.id || `career-${index}`}
+                            career={career}
+                            index={index}
+                            savedCareerIds={savedCareerIds}
+                            onSaveChange={handleSaveChange}
+                          />
+                        ))}
+                        {/* Show rest as locked preview cards */}
+                        {previewRecs.map((preview, index) => (
+                          <PreviewCard
+                            key={preview.previewId || `preview-${index}`}
+                            preview={preview}
+                            index={sortedGradeRecs.length + index}
+                            onUnlock={handleOpenPaywall}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <Card className="border-2 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5">
+                        <CardContent className="p-8 text-center space-y-4">
+                          <Lock className="h-12 w-12 text-primary mx-auto" />
+                          <h3 className="text-2xl font-bold">Preview Recommendations</h3>
+                          <p className="text-muted-foreground">
+                            Complete your assessment to see preview recommendations. Upgrade to Pro to unlock full details.
+                          </p>
+                          <Button onClick={handleOpenPaywall} size="lg" className="bg-primary hover:bg-primary-hover text-primary-foreground">
+                            Upgrade to Pro
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {(sortedGradeRecs.length > 0 || previewRecs.length > 0) && (
+                      <Card className="border-2 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5">
+                        <CardContent className="p-6 text-center space-y-4">
+                          <h3 className="text-xl font-bold">Unlock Full Recommendations</h3>
+                          <p className="text-muted-foreground">
+                            You're viewing {sortedGradeRecs.length} free recommendation{sortedGradeRecs.length !== 1 ? 's' : ''}. Upgrade to Pro to see all recommendations and unlock full details.
+                          </p>
+                          <Button onClick={handleOpenPaywall} size="lg" className="bg-primary hover:bg-primary-hover text-primary-foreground">
+                            Upgrade to Pro
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                ) : isPro && sortedGradeRecs.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     {sortedGradeRecs.map((career, index) => (
                       <CareerCard
@@ -1282,7 +1673,7 @@ export default function RecommendationsPage() {
                   <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold">Interest-Based Recommendations</h2>
                     <Badge variant="secondary" className="bg-secondary/10 text-secondary">
-                      {interestRecs.length} matches found
+                      {sortedInterestRecs.length} matches found
                     </Badge>
                   </div>
                   <p className="text-muted-foreground">
@@ -1310,7 +1701,7 @@ export default function RecommendationsPage() {
                   )}
                 </div>
 
-                {loadingCareers || loadingInterests ? (
+                {loadingCareers || loadingInterests || loadingPreview ? (
                   <CareerCardSkeletonGrid count={6} />
                 ) : interestError ? (
                   <EmptyState
@@ -1323,7 +1714,59 @@ export default function RecommendationsPage() {
                       variant: "secondary"
                     }}
                   />
-                ) : interestRecs.length > 0 ? (
+                ) : !isPro ? (
+                  <>
+                    {(sortedInterestRecs.length > 0 || previewRecs.length > 0) ? (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {/* Show 1-2 full recommendations for free users */}
+                        {sortedInterestRecs.map((career, index) => (
+                          <CareerCard
+                            key={career.id || `career-${index}`}
+                            career={career}
+                            index={index}
+                            savedCareerIds={savedCareerIds}
+                            onSaveChange={handleSaveChange}
+                          />
+                        ))}
+                        {/* Show rest as locked preview cards */}
+                        {previewRecs.map((preview, index) => (
+                          <PreviewCard
+                            key={preview.previewId || `preview-${index}`}
+                            preview={preview}
+                            index={sortedInterestRecs.length + index}
+                            onUnlock={handleOpenPaywall}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <Card className="border-2 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5">
+                        <CardContent className="p-8 text-center space-y-4">
+                          <Lock className="h-12 w-12 text-primary mx-auto" />
+                          <h3 className="text-2xl font-bold">Preview Recommendations</h3>
+                          <p className="text-muted-foreground">
+                            Complete your assessment to see preview recommendations. Upgrade to Pro to unlock full details.
+                          </p>
+                          <Button onClick={handleOpenPaywall} size="lg" className="bg-primary hover:bg-primary-hover text-primary-foreground">
+                            Upgrade to Pro
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {(sortedInterestRecs.length > 0 || previewRecs.length > 0) && (
+                      <Card className="border-2 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5">
+                        <CardContent className="p-6 text-center space-y-4">
+                          <h3 className="text-xl font-bold">Unlock Full Recommendations</h3>
+                          <p className="text-muted-foreground">
+                            You're viewing {sortedInterestRecs.length} free recommendation{sortedInterestRecs.length !== 1 ? 's' : ''}. Upgrade to Pro to see all recommendations and unlock full details.
+                          </p>
+                          <Button onClick={handleOpenPaywall} size="lg" className="bg-primary hover:bg-primary-hover text-primary-foreground">
+                            Upgrade to Pro
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                ) : isPro && sortedInterestRecs.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     {sortedInterestRecs.map((career, index) => (
                       <CareerCard
@@ -1374,7 +1817,20 @@ export default function RecommendationsPage() {
                   )}
                 </div>
 
-                {loadingColleges ? (
+                {!isPro ? (
+                  <Card className="border-2 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5">
+                    <CardContent className="p-8 text-center space-y-4">
+                      <Lock className="h-12 w-12 text-primary mx-auto" />
+                      <h3 className="text-2xl font-bold">College Recommendations</h3>
+                      <p className="text-muted-foreground">
+                        Upgrade to Pro to unlock personalized college recommendations based on your grades and interests.
+                      </p>
+                      <Button onClick={handleOpenPaywall} size="lg" className="bg-primary hover:bg-primary-hover text-primary-foreground">
+                        Upgrade to Pro
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : loadingColleges ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Loading colleges...
@@ -1453,6 +1909,9 @@ export default function RecommendationsPage() {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Paywall Modal */}
+          <ProPaywallModal open={paywallModalOpen} onOpenChange={setPaywallModalOpen} />
     </div>
   )
 }

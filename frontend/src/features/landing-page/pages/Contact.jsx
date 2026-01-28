@@ -21,14 +21,14 @@ const contactMethods = [
     icon: Phone,
     title: "Call Us",
     description: "Mon-Fri from 9am to 6pm EST",
-    value: "+1 (555) 123-4567",
-    link: "tel:+15551234567",
+    value: "+977 9845632100",
+    link: "tel:+9779845632100",
   },
   {
     icon: MapPin,
     title: "Visit Us",
     description: "Come say hello at our HQ",
-    value: "123 Innovation Way, San Francisco, CA 94105",
+    value: "Kathmandu, Nepal",
     link: "#",
   },
   {
@@ -42,9 +42,9 @@ const contactMethods = [
 
 const faqs = [
   {
-    question: "Is CareerHoop free for students?",
+    question: "Is areerHoop free for students?",
     answer:
-      "Yes! CareerHoop is completely free for students. We believe every student deserves access to quality career guidance regardless of their financial situation.",
+      "Yes! areerHoop is completely free for students. We believe every student deserves access to quality career guidance regardless of their financial situation.",
   },
   {
     question: "How does the AI recommendation system work?",
@@ -97,7 +97,7 @@ export default function Contact() {
             We'd Love to <span className="text-primary">Hear From You</span>
           </h1>
           <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted-foreground">
-            Have questions about CareerHoop? Want to partner with us? Or just want to say hi? We're here to help and
+            Have questions about areerHoop? Want to partner with us? Or just want to say hi? We're here to help and
             would love to connect with you.
           </p>
         </div>
@@ -240,7 +240,7 @@ export default function Contact() {
                     <div>
                       <h3 className="mb-2 font-semibold text-foreground">Interested in Partnership?</h3>
                       <p className="mb-4 text-sm text-muted-foreground">
-                        We partner with schools, colleges, and organizations to bring CareerHoop to more students.
+                        We partner with schools, colleges, and organizations to bring areerHoop to more students.
                       </p>
                       <Button variant="outline" size="sm" className="transition-all duration-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                         Learn About Partnerships

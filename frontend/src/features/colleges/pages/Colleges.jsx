@@ -14,10 +14,15 @@ import {
 import { getCollegeRecommendations, getSavedColleges, saveCollege, unsaveCollege } from "@/shared/lib/api"
 import Pagination from "@/shared/components/common/pagination"
 import { useAuth } from "@/shared/context/AuthContext"
+import { useSubscription } from "@/shared/hooks/useSubscription"
 import { toast } from "react-toastify"
 import { collegeService } from "../services/collegeService"
 import { logger } from "@/shared/lib/utils/logger"
 import { CollegeCardListSkeleton } from "@/shared/components/common/LoadingSkeleton"
+import { ProPaywallModal } from "@/features/payment/components/ProPaywallModal"
+import { Lock } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card"
+import { Button } from "@/shared/components/ui/button"
 import { extractErrorMessage } from "@/shared/utils/errorMessages"
 import { EmptySearchState, EmptyErrorState } from "@/shared/components/common/EmptyState"
 import { getUserStorageKey } from "@/shared/utils/utils"
@@ -165,6 +170,8 @@ export default function CollegesPage() {
     sortOrder: "asc"
   })
   const { user } = useAuth()
+  const { isPro } = useSubscription()
+  const [paywallModalOpen, setPaywallModalOpen] = useState(false)
 
   const refreshSavedColleges = async (signal) => {
     if (!user?.id) {
@@ -480,14 +487,38 @@ export default function CollegesPage() {
 
   const combinedColleges = [...filteredSavedColleges, ...regularColleges]
 
+  // For free users, limit to 2 free colleges, rest are locked
+  const FREE_LIMIT = 2
+  let visibleColleges = combinedColleges
+  let lockedColleges = []
+  
+  if (!isPro && combinedColleges.length > FREE_LIMIT) {
+    visibleColleges = combinedColleges.slice(0, FREE_LIMIT)
+    lockedColleges = combinedColleges.slice(FREE_LIMIT)
+  }
+
   let paginatedColleges
   if (debouncedSearchTerm.trim()) {
-    paginatedColleges = combinedColleges.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    paginatedColleges = visibleColleges.slice((currentPage - 1) * pageSize, currentPage * pageSize)
   } else if (currentPage === 1) {
     const remainingSlots = Math.max(0, pageSize - filteredSavedColleges.length)
-    paginatedColleges = [...filteredSavedColleges, ...regularColleges.slice(0, remainingSlots)]
+    let tempColleges = [...filteredSavedColleges, ...regularColleges.slice(0, remainingSlots)]
+    // Limit to FREE_LIMIT for free users
+    if (!isPro && tempColleges.length > FREE_LIMIT) {
+      paginatedColleges = tempColleges.slice(0, FREE_LIMIT)
+      lockedColleges = tempColleges.slice(FREE_LIMIT)
+    } else {
+      paginatedColleges = tempColleges
+    }
   } else {
-    paginatedColleges = regularColleges
+    let tempColleges = regularColleges
+    // Limit to FREE_LIMIT for free users
+    if (!isPro && tempColleges.length > FREE_LIMIT) {
+      paginatedColleges = tempColleges.slice(0, FREE_LIMIT)
+      lockedColleges = tempColleges.slice(FREE_LIMIT)
+    } else {
+      paginatedColleges = tempColleges
+    }
   }
 
   // Update pagination metadata
@@ -649,17 +680,131 @@ export default function CollegesPage() {
 
           {/* Colleges Grid */}
           {!loading && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {paginatedColleges.map((college, index) => (
-                <CollegeCard 
-                  key={college.id || index} 
-                  college={college} 
-                  index={index}
-                  isSaved={savedCollegeIds.has(String(college.id))}
-                  onToggleSaved={handleToggleSaved}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {paginatedColleges.map((college, index) => (
+                  <CollegeCard 
+                    key={college.id || index} 
+                    college={college} 
+                    index={index}
+                    isSaved={savedCollegeIds.has(String(college.id))}
+                    onToggleSaved={handleToggleSaved}
+                  />
+                ))}
+                {/* Show locked cards for free users */}
+                {!isPro && lockedColleges.length > 0 && (
+                  <>
+                    {lockedColleges.slice(0, Math.min(2, pageSize - paginatedColleges.length)).map((college, index) => (
+                      <motion.div
+                        key={`locked-${college.id || index}`}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: (paginatedColleges.length + index) * 0.1 }}
+                        className="group relative"
+                      >
+                        <Card className="h-full min-h-[460px] flex flex-col border-2 hover:border-primary/20 transition-all duration-200 overflow-hidden">
+                          {/* Blurred Overlay */}
+                          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-6 cursor-pointer"
+                               onClick={() => setPaywallModalOpen(true)}>
+                            <div className="text-center space-y-4">
+                              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                                <Lock className="h-8 w-8 text-primary" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-semibold text-foreground mb-2">Upgrade to Unlock</h3>
+                                <p className="text-sm text-muted-foreground mb-4">
+                                  See full college details and unlock all features
+                                </p>
+                                <Button onClick={() => setPaywallModalOpen(true)} className="bg-primary hover:bg-primary-hover text-primary-foreground">
+                                  Upgrade to Pro
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Preview Content (blurred) - matches CollegeCard structure */}
+                          <CardHeader className="space-y-4 opacity-50 pointer-events-none">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <CardTitle className="text-xl">{college.name || "College"}</CardTitle>
+                                {college.location && (
+                                  <p className="text-sm text-muted-foreground mt-1">{college.location}</p>
+                                )}
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="flex-1 flex flex-col space-y-6 pt-6 opacity-50 pointer-events-none">
+                            <p className="text-base leading-relaxed line-clamp-4">
+                              {college.description || college.overview || "No description available"}
+                            </p>
+                            <div className="grid grid-cols-2 gap-4 flex-shrink-0">
+                              <div className="space-y-2">
+                                {college.students && college.students !== "N/A" && (
+                                  <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                                    <span className="text-xs">Students</span>
+                                    <span className="text-xs font-medium">{college.students}</span>
+                                  </div>
+                                )}
+                                {college.tuition && college.tuition !== "N/A" && (
+                                  <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                                    <span className="text-xs">Tuition</span>
+                                    <span className="text-xs font-medium">{college.tuition}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="space-y-2">
+                                {(college.acceptanceRate || college.acceptance) && college.acceptanceRate !== "N/A" && college.acceptance !== "N/A" && (
+                                  <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                                    <span className="text-xs">Acceptance</span>
+                                    <span className="text-xs font-medium">{college.acceptanceRate || college.acceptance}</span>
+                                  </div>
+                                )}
+                                {(college.establishedYear || college.established) && college.establishedYear !== "N/A" && college.established !== "N/A" && (
+                                  <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                                    <span className="text-xs">Founded</span>
+                                    <span className="text-xs font-medium">{college.establishedYear || college.established}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            {college.programs && college.programs.length > 0 && (
+                              <div className="space-y-3">
+                                <h4 className="text-sm font-medium mb-2">Popular Programs</h4>
+                                <div className="flex flex-wrap gap-1">
+                                  {college.programs.slice(0, 4).map((program, idx) => (
+                                    <Badge key={`${college.id || idx}-${program}`} variant="secondary" className="text-xs">
+                                      {program}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            <div className="flex flex-col space-y-2 mt-auto">
+                              <Button className="w-full" disabled>
+                                View Details
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </>
+                )}
+              </div>
+              {!isPro && lockedColleges.length > 0 && (
+                <Card className="border-2 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5">
+                  <CardContent className="p-6 text-center space-y-4">
+                    <h3 className="text-xl font-bold">Unlock All Colleges</h3>
+                    <p className="text-muted-foreground">
+                      You're viewing {paginatedColleges.length} free college{paginatedColleges.length !== 1 ? 's' : ''}. Upgrade to Pro to see all {combinedColleges.length} colleges and unlock full details.
+                    </p>
+                    <Button onClick={() => setPaywallModalOpen(true)} size="lg" className="bg-primary hover:bg-primary-hover text-primary-foreground">
+                      Upgrade to Pro
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
 
           {/* Empty State */}
@@ -683,6 +828,9 @@ export default function CollegesPage() {
               isLoading={loading}
             />
           )}
+
+          {/* Paywall Modal */}
+          <ProPaywallModal open={paywallModalOpen} onOpenChange={setPaywallModalOpen} />
     </div>
   )
 }

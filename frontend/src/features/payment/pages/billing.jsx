@@ -1,55 +1,57 @@
 import { useMemo, useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { PlanCard } from "@/features/payment/componenets/plan"
-import { OrderSummary } from "@/features/payment/componenets/order"
 import { Button } from "@/shared/components/ui/button"
 import { Card } from "@/shared/components/ui/card"
-import { Smartphone } from "lucide-react"
 import { useAuth } from "@/shared/context/AuthContext"
 import { Skeleton } from "@/shared/components/ui/skeleton"
-import { EsewaPayButton } from "@/features/payment/components/EsewaPayButton"
 
 const plans = [
   {
-    id: "BASIC",
-    name: "Basic",
-    price: 5000,
+    id: "FREE",
+    name: "Free",
+    price: 0,
     description: "Get started with your career journey",
-    features: ["Career recommendations", "Interest assessment", "Basic college search"],
+    features: [
+      "Basic career recommendations",
+      "Interest assessment",
+      "Basic college search",
+      "Limited training modules",
+    ],
   },
   {
-    id: "PREMIUM",
-    name: "Premium",
-    price: 11000,
-    description: "Full access to all features",
+    id: "PRO",
+    name: "Pro",
+    price: 500,
+    description: "Full access to all premium features",
     features: [
-      "All Basic features",
+      "All Free features",
       "Advanced career matching",
-      "Skill training modules",
+      "Unlimited training modules",
       "Priority support",
       "Personalized guidance",
+      "Advanced analytics",
     ],
   },
 ]
 
 export default function BillingPage() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, getPlan, isPro } = useAuth()
   const [selectedPlan, setSelectedPlan] = useState(null)
-  const [currentPlan, setCurrentPlan] = useState("FREE") // Default to FREE, can be updated from user data
+  const currentPlan = getPlan()
   const [isInitialLoading, setIsInitialLoading] = useState(false)
 
-  // Fetch user's current plan if available
-  useEffect(() => {
-    // TODO: Fetch user's subscription/plan from API when available
-    // For now, defaulting to FREE
-    if (user?.plan || user?.subscription) {
-      setCurrentPlan(user.plan || user.subscription || "FREE")
-    }
-  }, [user])
-
   const selectedPlanData = useMemo(() => plans.find((p) => p.id === selectedPlan) || null, [selectedPlan])
-  const upgradeAmount = null
+
+  const handlePlanSelect = (planId) => {
+    if (planId === "PRO" && !isPro()) {
+      setSelectedPlan(planId)
+      navigate("/checkout/pro")
+    } else if (planId === "FREE") {
+      setSelectedPlan(planId)
+    }
+  }
 
   return (
     <div className="p-8">
@@ -61,10 +63,10 @@ export default function BillingPage() {
         </div>
 
         {/* Current Plan Card */}
-        {currentPlan !== "FREE" && (
-          <Card className="p-6 mb-8 bg-success/10 dark:bg-success/20 border-success/30 dark:border-success/40">
+        {currentPlan === "PRO" && (
+          <Card className="p-6 mb-8 bg-primary/10 dark:bg-primary/20 border-primary/30 dark:border-primary/40">
             <h2 className="font-semibold text-foreground mb-1">Current Plan</h2>
-            <p className="text-success dark:text-success text-lg font-bold">{currentPlan}</p>
+            <p className="text-primary dark:text-primary text-lg font-bold">Pro</p>
           </Card>
         )}
 
@@ -82,77 +84,58 @@ export default function BillingPage() {
           </div>
         )}
 
-        <div className="grid lg:grid-cols-3 gap-6 mb-8">
-          {/* Plan Cards */}
-          <div className="lg:col-span-2">
-            <div className="grid md:grid-cols-2 gap-6">
-              {plans.map((plan) => (
+        {/* Plan Cards */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          {plans.map((plan) => {
+            const isCurrent = currentPlan === plan.id
+            const isProPlan = plan.id === "PRO"
+            const showUpgrade = isProPlan && !isPro()
+            
+            return (
+              <div key={plan.id} className="relative">
+                {isProPlan && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full z-10">
+                    RECOMMENDED
+                  </div>
+                )}
                 <PlanCard
-                  key={plan.id}
                   name={plan.name}
                   price={plan.price}
+                  currency="NPR"
                   description={plan.description}
                   features={plan.features}
                   isSelected={selectedPlan === plan.id}
-                  isCurrentPlan={currentPlan === plan.id}
-                  onSelect={() => setSelectedPlan(plan.id)}
-                  buttonText={currentPlan === plan.id ? "Current Plan" : "Select Plan"}
+                  isCurrentPlan={isCurrent}
+                  onSelect={() => handlePlanSelect(plan.id)}
+                  buttonText={
+                    isCurrent
+                      ? "Current Plan"
+                      : isProPlan
+                      ? "Upgrade"
+                      : "Continue"
+                  }
                 />
-              ))}
-            </div>
-          </div>
-
-          {/* Order Summary */}
-          <div>
-            {selectedPlanData ? (
-              <OrderSummary
-                selectedPlan={selectedPlanData.name}
-                selectedPrice={selectedPlanData.price}
-                currentPlan={currentPlan}
-                upgradeAmount={upgradeAmount || undefined}
-              />
-            ) : (
-              <Card className="p-6 text-center text-muted-foreground">
-                <p>Select a plan to see the summary</p>
-              </Card>
-            )}
-          </div>
+              </div>
+            )
+          })}
         </div>
 
-        {/* Payment Method */}
-        <Card className="p-6 mb-8">
-          <h3 className="text-lg font-bold text-foreground mb-4">Payment Method</h3>
-          <div className="flex items-center gap-4 p-4 border border-border rounded-lg bg-muted/30">
-            <div className="w-12 h-12 rounded bg-success flex items-center justify-center text-success-foreground">
-              <Smartphone size={24} />
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold text-foreground">eSewa</p>
-              <p className="text-sm text-muted-foreground">
-                You will be redirected to eSewa to complete the payment securely
-              </p>
-            </div>
-          </div>
+        {/* Info Card */}
+        <Card className="p-6 mb-8 bg-muted/30">
+          <h3 className="text-lg font-bold text-foreground mb-2">Payment Information</h3>
+          <p className="text-sm text-muted-foreground">
+            Pro plan payments are processed securely through eSewa. You will be redirected to eSewa's secure payment page to complete your purchase.
+          </p>
         </Card>
 
-        {/* Payment Button */}
+        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row justify-end gap-3">
-          {selectedPlanData ? (
-            <EsewaPayButton
-              amount={selectedPlanData.price}
-              orderId={selectedPlanData.id}
-              className="bg-success hover:bg-success/90 text-success-foreground px-8 flex-1 sm:flex-none"
-            />
-          ) : (
-            <Button
-              disabled
-              className="bg-success hover:bg-success/90 text-success-foreground px-8 flex-1 sm:flex-none"
-              size="lg"
-            >
-              Pay with eSewa
-            </Button>
-          )}
-          <Button variant="outline" className="bg-transparent px-8 flex-1 sm:flex-none" size="lg" onClick={() => navigate("/dashboard")}>
+          <Button
+            variant="outline"
+            className="bg-transparent px-8 flex-1 sm:flex-none"
+            size="lg"
+            onClick={() => navigate("/dashboard")}
+          >
             Back to Dashboard
           </Button>
         </div>

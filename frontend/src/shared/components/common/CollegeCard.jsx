@@ -179,36 +179,44 @@ export const CollegeCard = memo(
 
             <div className="grid grid-cols-2 gap-4 flex-shrink-0">
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                  <div className="flex items-center space-x-1">
-                    <Users className="h-4 w-4 text-primary" />
-                    <span className="text-xs">Students</span>
+                {college.students && college.students !== "N/A" && (
+                  <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                    <div className="flex items-center space-x-1">
+                      <Users className="h-4 w-4 text-primary" />
+                      <span className="text-xs">Students</span>
+                    </div>
+                    <span className="text-xs font-medium">{college.students}</span>
                   </div>
-                  <span className="text-xs font-medium">{college.students || "N/A"}</span>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                  <div className="flex items-center space-x-1">
-                    <DollarSign className="h-4 w-4 text-secondary" />
-                    <span className="text-xs">Tuition</span>
+                )}
+                {college.tuition && college.tuition !== "N/A" && (
+                  <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                    <div className="flex items-center space-x-1">
+                      <DollarSign className="h-4 w-4 text-secondary" />
+                      <span className="text-xs">Tuition</span>
+                    </div>
+                    <span className="text-xs font-medium">{college.tuition}</span>
                   </div>
-                  <span className="text-xs font-medium">{college.tuition || "N/A"}</span>
-                </div>
+                )}
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                  <div className="flex items-center space-x-1">
-                    <GraduationCap className="h-4 w-4 text-accent" />
-                    <span className="text-xs">Acceptance</span>
+                {(college.acceptanceRate || college.acceptance) && college.acceptanceRate !== "N/A" && college.acceptance !== "N/A" && (
+                  <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                    <div className="flex items-center space-x-1">
+                      <GraduationCap className="h-4 w-4 text-accent" />
+                      <span className="text-xs">Acceptance</span>
+                    </div>
+                    <span className="text-xs font-medium">{college.acceptanceRate || college.acceptance}</span>
                   </div>
-                  <span className="text-xs font-medium">{college.acceptanceRate || college.acceptance || "N/A"}</span>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                  <div className="flex items-center space-x-1">
-                    <Clock className="h-4 w-4 text-warning" />
-                    <span className="text-xs">Founded</span>
+                )}
+                {(college.establishedYear || college.established) && college.establishedYear !== "N/A" && college.established !== "N/A" && (
+                  <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                    <div className="flex items-center space-x-1">
+                      <Clock className="h-4 w-4 text-warning" />
+                      <span className="text-xs">Founded</span>
+                    </div>
+                    <span className="text-xs font-medium">{college.establishedYear || college.established}</span>
                   </div>
-                  <span className="text-xs font-medium">{college.establishedYear || college.established || "N/A"}</span>
-                </div>
+                )}
               </div>
             </div>
 

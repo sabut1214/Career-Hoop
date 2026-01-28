@@ -4,19 +4,20 @@ import { Card } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Skeleton } from "@/shared/components/ui/skeleton"
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react"
-import { verifyEsewaV2Payment } from "@/shared/lib/api"
+import { verifyEsewaV2Payment, getUserProfile } from "@/shared/lib/api"
 import { useAuth } from "@/shared/context/AuthContext"
 import { toast } from "react-toastify"
 
 export default function EsewaSuccessPage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const data = searchParams.get("data")
 
   const [loading, setLoading] = useState(Boolean(data))
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
+  const [userRefreshed, setUserRefreshed] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -36,6 +37,55 @@ export default function EsewaSuccessPage() {
         if (cancelled) return
 
         setResult(response)
+
+        // If payment is successful, refresh user data to get updated subscription
+        if (response?.ok === true && response?.status === "COMPLETE") {
+          try {
+            // Use getUserProfile to get full user data including subscription info
+            if (user?.id) {
+              const updatedUser = await getUserProfile(user.id)
+              if (updatedUser && !cancelled) {
+                updateUser(updatedUser)
+                setUserRefreshed(true)
+                
+                // Redirect to intended destination or recommendations after a short delay
+                setTimeout(() => {
+                  const postUpgradeRedirect = sessionStorage.getItem("postUpgradeRedirect")
+                  if (postUpgradeRedirect && postUpgradeRedirect !== "/checkout/pro" && postUpgradeRedirect !== "/billing") {
+                    sessionStorage.removeItem("postUpgradeRedirect")
+                    navigate(postUpgradeRedirect, { replace: true })
+                  } else {
+                    // Default to recommendations page (user likely wanted to access it)
+                    navigate("/recommendations", { replace: true })
+                  }
+                }, 2000)
+              }
+            } else {
+              // Fallback: redirect even if user refresh fails
+              setTimeout(() => {
+                const postUpgradeRedirect = sessionStorage.getItem("postUpgradeRedirect")
+                if (postUpgradeRedirect && postUpgradeRedirect !== "/checkout/pro" && postUpgradeRedirect !== "/billing") {
+                  sessionStorage.removeItem("postUpgradeRedirect")
+                  navigate(postUpgradeRedirect, { replace: true })
+                } else {
+                  navigate("/recommendations", { replace: true })
+                }
+              }, 2000)
+            }
+          } catch (refreshError) {
+            console.error("Failed to refresh user data:", refreshError)
+            // Still redirect even if refresh fails
+            setTimeout(() => {
+              const postUpgradeRedirect = sessionStorage.getItem("postUpgradeRedirect")
+              if (postUpgradeRedirect && postUpgradeRedirect !== "/checkout/pro" && postUpgradeRedirect !== "/billing") {
+                sessionStorage.removeItem("postUpgradeRedirect")
+                navigate(postUpgradeRedirect, { replace: true })
+              } else {
+                navigate("/recommendations", { replace: true })
+              }
+            }, 2000)
+          }
+        }
       } catch (e) {
         if (cancelled) return
         const errorMessage = e?.message || "Failed to verify payment"
@@ -85,7 +135,12 @@ export default function EsewaSuccessPage() {
         {loading ? (
           <p className="text-muted-foreground mb-6">Please wait while we verify your payment.</p>
         ) : isSuccess ? (
-          <p className="text-muted-foreground mb-6">Your payment has been processed successfully.</p>
+          <div className="space-y-2 mb-6">
+            <p className="text-muted-foreground">Your payment has been processed successfully.</p>
+            {userRefreshed && (
+              <p className="text-primary font-semibold">Pro plan activated! Redirecting...</p>
+            )}
+          </div>
         ) : isPending ? (
           <p className="text-muted-foreground mb-6">
             Your payment is being processed. Please check back later.
@@ -133,29 +188,45 @@ export default function EsewaSuccessPage() {
 
         <div className="flex gap-3">
           {isSuccess ? (
-            <Link to="/billing" className="flex-1">
-              <Button className="w-full bg-success hover:bg-success/90 text-success-foreground">
-                View Plans
-              </Button>
-            </Link>
+            <>
+              <Link to="/billing" className="flex-1">
+                <Button className="w-full bg-primary hover:bg-primary-hover text-primary-foreground">
+                  View Plans
+                </Button>
+              </Link>
+              <Link to="/dashboard" className="flex-1">
+                <Button variant="outline" className="w-full bg-transparent">
+                  Dashboard
+                </Button>
+              </Link>
+            </>
           ) : isFailed ? (
-            <Link to="/billing" className="flex-1">
-              <Button className="w-full bg-success hover:bg-success/90 text-success-foreground">
-                Retry Payment
-              </Button>
-            </Link>
+            <>
+              <Link to="/checkout/pro" className="flex-1">
+                <Button className="w-full bg-primary hover:bg-primary-hover text-primary-foreground">
+                  Retry Payment
+                </Button>
+              </Link>
+              <Link to="/dashboard" className="flex-1">
+                <Button variant="outline" className="w-full bg-transparent">
+                  Dashboard
+                </Button>
+              </Link>
+            </>
           ) : (
-            <Link to="/billing" className="flex-1">
-              <Button className="w-full bg-success hover:bg-success/90 text-success-foreground">
-                Back to Billing
-              </Button>
-            </Link>
+            <>
+              <Link to="/checkout/pro" className="flex-1">
+                <Button className="w-full bg-primary hover:bg-primary-hover text-primary-foreground">
+                  Back to Checkout
+                </Button>
+              </Link>
+              <Link to={user ? "/dashboard" : "/login"} className="flex-1">
+                <Button variant="outline" className="w-full bg-transparent">
+                  {user ? "Dashboard" : "Login"}
+                </Button>
+              </Link>
+            </>
           )}
-          <Link to={user ? "/dashboard" : "/login"} className="flex-1">
-            <Button variant="outline" className="w-full bg-transparent">
-              {user ? "Dashboard" : "Login"}
-            </Button>
-          </Link>
         </div>
       </Card>
     </div>

@@ -158,7 +158,7 @@ export default function Dashboard() {
           // Add account creation (if no other activities)
           if (activities.length === 0) {
             activities.push({
-              action: "Joined CareerHoop",
+              action: "Joined areerHoop",
               time: "Recently",
               icon: User,
             })

@@ -18,7 +18,7 @@ export function AboutSection() {
 
         <div className="order-1 space-y-6 lg:order-2">
           <Badge variant="default">
-            About CareerHoop
+            About areerHoop
           </Badge>
 
             <h2 className="font-sans text-3xl font-bold leading-tight text-foreground md:text-4xl text-balance">
@@ -26,7 +26,7 @@ export function AboutSection() {
             </h2>
 
             <p className="text-lg leading-relaxed text-foreground/90">
-              CareerHoop is your personal career companion designed specifically for students. We combine smart
+              areerHoop is your personal career companion designed specifically for students. We combine smart
               technology with expert guidance to help you discover career paths that match your interests, skills, and
               aspirations.
             </p>

@@ -6,7 +6,6 @@ import { getStudents, getCareers, getColleges, getTrainings, getGrowthMetrics, g
 import { logger } from "@/shared/lib/utils/logger"
 import { cn } from "@/shared/lib/utils"
 import { RecentActivityFeed } from "@/features/admin/components/RecentActivityFeed"
-import { QuickActions } from "@/features/admin/components/QuickActions"
 import { PendingItemsCounter } from "@/features/admin/components/PendingItemsCounter"
 import { TrendCharts } from "@/features/admin/components/TrendCharts"
 import { SystemHealth } from "@/features/admin/components/SystemHealth"
@@ -354,9 +353,8 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               <PendingItemsCounter />
-              <QuickActions />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

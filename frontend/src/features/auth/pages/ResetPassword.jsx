@@ -88,10 +88,10 @@ export default function ResetPassword() {
       >
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
+          <div className="flex items-center justify-center mb-4 gap-0">
+            <img src={logoImg} alt="areerHoop Logo" className="h-8 w-8 object-contain" />
             <span className="text-2xl font-bold text-foreground">
-              Career<span className="text-primary">Hoop</span>
+              areer<span className="text-primary">Hoop</span>
             </span>
           </div>
           <h1 className="text-3xl font-bold mb-2">Reset Password</h1>

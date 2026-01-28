@@ -39,22 +39,28 @@ const values = [
 
 const team = [
   {
-    name: "Dr. Maya Chen",
+    name: "sabut",
     role: "Founder & CEO",
     bio: "Former education researcher at Stanford with 15+ years in career counseling.",
-    avatar: "/professional-ceo-portrait.png",
+    avatar: "/placeholder-user.jpg",
   },
   {
-    name: "James Wilson",
+    name: "sijan",
     role: "CTO",
     bio: "AI/ML expert who previously built recommendation systems at leading tech companies.",
-    avatar: "/professional-cto-portrait.png",
+    avatar: "/placeholder-user.jpg",
   },
   {
-    name: "Marcus Johnson",
+    name: "tribibek",
     role: "Head of Content",
     bio: "Former career counselor with a passion for making career education accessible.",
-    avatar: "/professional-black-man-portrait.png",
+    avatar: "/placeholder-user.jpg",
+  },
+  {
+    name: "bisheh",
+    role: "Head of Mentorship",
+    bio: "Passionate about connecting students with mentors and building strong professional networks.",
+    avatar: "/placeholder-user.jpg",
   },
 ]
 
@@ -73,7 +79,7 @@ export default function About() {
             Empowering the Next Generation of <span className="text-primary">Career Leaders</span>
           </h1>
           <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted-foreground">
-            CareerHoop was founded with a simple mission: to ensure every student has access to personalized career
+            areerHoop was founded with a simple mission: to ensure every student has access to personalized career
             guidance that was once only available to the privileged few.
           </p>
         </div>
@@ -87,13 +93,13 @@ export default function About() {
               <h2 className="mb-6 font-sans text-3xl font-bold text-foreground md:text-4xl">Our Story</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
-                  CareerHoop started in 2021 when our founder, Dr. Maya Chen, noticed a troubling pattern: students from
+                  areerHoop started in 2021 when our founder, sabut, noticed a troubling pattern: students from
                   underserved communities were making career decisions with little to no guidance, often leading to
                   unfulfilling paths or missed opportunities.
                 </p>
                 <p>
                   Having spent 15 years as a career counselor, she knew that personalized guidance could be
-                  transformative. But traditional counseling couldn't scale. That's when the idea for CareerHoop was
+                  transformative. But traditional counseling couldn't scale. That's when the idea for areerHoop was
                   born.
                 </p>
                 <p>
@@ -141,7 +147,7 @@ export default function About() {
           <div className="mb-12 text-center">
             <h2 className="mb-4 font-sans text-3xl font-bold text-foreground md:text-4xl">Our Values</h2>
             <p className="mx-auto max-w-2xl text-muted-foreground">
-              These core principles guide everything we do at CareerHoop
+              These core principles guide everything we do at areerHoop
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

@@ -246,9 +246,22 @@ export default function Assessment() {
         throw new Error("Could not extract academic data from the marksheet. Please ensure the document is clear and contains grade information.");
       }
     } catch (error) {
-      const errorMsg = error.message || "Error analyzing marksheet. Please try again.";
-      setError(errorMsg);
-      toast.error(errorMsg);
+      // Check for specific error messages about non-marksheet images
+      const errorMessage = error.message || error.response?.data?.message || "Error analyzing marksheet. Please try again."
+      let userFriendlyError = errorMessage
+      
+      // Provide more helpful error messages
+      if (errorMessage.toLowerCase().includes("does not appear to be a marksheet") || 
+          errorMessage.toLowerCase().includes("not a marksheet") ||
+          errorMessage.toLowerCase().includes("does not contain valid marksheet")) {
+        userFriendlyError = "The uploaded image does not appear to be a marksheet. Please upload a clear image of your academic marksheet or grade sheet containing subject names and grades."
+      } else if (errorMessage.toLowerCase().includes("no subject") || 
+                 errorMessage.toLowerCase().includes("could not extract")) {
+        userFriendlyError = "Could not extract grade information from the image. Please ensure the marksheet is clear, well-lit, and contains visible subject names and grades/marks."
+      }
+      
+      setError(userFriendlyError)
+      toast.error(userFriendlyError)
     }
 
     setIsAnalyzing(false);

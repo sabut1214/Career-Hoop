@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog"
-import { getCareers, deleteCareer, createCareer, updateCareer } from "@/shared/lib/api"
+import { getCareers, getCareer, deleteCareer, createCareer, updateCareer } from "@/shared/lib/api"
 import { Trash2, Plus, Pencil, Loader2, BookOpen } from "lucide-react"
 import { toast } from "react-toastify"
 import { TableRowSkeleton } from "@/shared/components/common/LoadingSkeleton"
@@ -48,6 +48,7 @@ export default function AdminCareersPage() {
     salaryRange: "",
     requiredSkills: "",
   })
+  const [formErrors, setFormErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -92,21 +93,107 @@ export default function AdminCareersPage() {
     }
   }
 
+  const validateCareerForm = () => {
+    const errors = {}
+    
+    // Validate name - must be meaningful (at least 2 characters, contain letters)
+    const nameTrimmed = formData.name?.trim() || ""
+    if (!nameTrimmed) {
+      errors.name = "Career name is required"
+    } else if (nameTrimmed.length < 2) {
+      errors.name = "Career name must be at least 2 characters"
+    } else if (nameTrimmed.length > 200) {
+      errors.name = "Career name must be less than 200 characters"
+    } else if (!/[a-zA-Z]/.test(nameTrimmed)) {
+      errors.name = "Career name must contain at least one letter"
+    } else if (/^[^a-zA-Z0-9]+$/.test(nameTrimmed)) {
+      errors.name = "Career name cannot be only special characters"
+    }
+    
+    // Validate description if provided
+    if (formData.description && formData.description.trim()) {
+      const descTrimmed = formData.description.trim()
+      if (descTrimmed.length < 10) {
+        errors.description = "Description must be at least 10 characters"
+      } else if (descTrimmed.length > 2000) {
+        errors.description = "Description must be less than 2000 characters"
+      }
+    }
+    
+    // Validate outlook if provided
+    if (formData.outlook && formData.outlook.trim()) {
+      const outlookTrimmed = formData.outlook.trim()
+      if (outlookTrimmed.length < 10) {
+        errors.outlook = "Career outlook must be at least 10 characters"
+      } else if (outlookTrimmed.length > 2000) {
+        errors.outlook = "Career outlook must be less than 2000 characters"
+      }
+    }
+    
+    // Validate salary range if provided
+    if (formData.salaryRange && formData.salaryRange.trim()) {
+      const salaryTrimmed = formData.salaryRange.trim()
+      if (salaryTrimmed.length > 100) {
+        errors.salaryRange = "Salary range must be less than 100 characters"
+      } else if (!/^[\d\s,\-$.€£¥₹NPR]+$/.test(salaryTrimmed)) {
+        errors.salaryRange = "Salary range contains invalid characters"
+      }
+    }
+    
+    // Validate required skills if provided
+    if (formData.requiredSkills && formData.requiredSkills.trim()) {
+      const skillsTrimmed = formData.requiredSkills.trim()
+      const skillsArray = skillsTrimmed.split(",").map(s => s.trim()).filter(s => s)
+      if (skillsArray.length === 0) {
+        errors.requiredSkills = "Please enter at least one skill"
+      } else if (skillsArray.length > 20) {
+        errors.requiredSkills = "Maximum 20 skills allowed"
+      } else {
+        // Validate each skill
+        for (const skill of skillsArray) {
+          if (skill.length < 2) {
+            errors.requiredSkills = "Each skill must be at least 2 characters"
+            break
+          } else if (skill.length > 50) {
+            errors.requiredSkills = "Each skill must be less than 50 characters"
+            break
+          } else if (!/^[a-zA-Z0-9\s\-_&]+$/.test(skill)) {
+            errors.requiredSkills = "Skills can only contain letters, numbers, spaces, hyphens, underscores, and ampersands"
+            break
+          }
+        }
+      }
+    }
+    
+    return errors
+  }
+
   const handleAddCareer = async (e) => {
     e.preventDefault()
+    
+    const errors = validateCareerForm()
+    setFormErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      // Show first error in toast
+      const firstError = Object.values(errors)[0]
+      toast.error(firstError)
+      return
+    }
+    
     setIsSubmitting(true)
     try {
       const careerData = {
-        name: formData.name,
-        description: formData.description || null,
-        outlook: formData.outlook || null,
-        salaryRange: formData.salaryRange || null,
+        name: formData.name.trim(),
+        description: formData.description?.trim() || null,
+        outlook: formData.outlook?.trim() || null,
+        salaryRange: formData.salaryRange?.trim() || null,
         requiredSkills: formData.requiredSkills ? formData.requiredSkills.split(",").map(s => s.trim()).filter(s => s) : null,
       }
       await createCareer(careerData)
       toast.success("Career created successfully.")
       setIsAddDialogOpen(false)
       resetForm()
+      setFormErrors({})
       fetchCareers()
     } catch (error) {
       console.error("Failed to create career:", error)
@@ -116,34 +203,62 @@ export default function AdminCareersPage() {
     }
   }
 
-  const handleEditClick = (career) => {
-    setEditingCareer(career)
-    setFormData({
-      name: career.name || career.title || "",
-      description: career.description || "",
-      outlook: career.outlook || "",
-      salaryRange: career.salaryRange || career.salary_range || "",
-      requiredSkills: Array.isArray(career.requiredSkills) ? career.requiredSkills.join(", ") : (career.requiredSkills || ""),
-    })
-    setIsEditDialogOpen(true)
+  const handleEditClick = async (career) => {
+    try {
+      // Fetch full career data by ID to ensure all fields are populated
+      const fullCareer = await getCareer(career.id)
+      setEditingCareer(fullCareer)
+      setFormData({
+        name: fullCareer.name || fullCareer.title || "",
+        description: fullCareer.description || "",
+        outlook: fullCareer.outlook || "",
+        salaryRange: fullCareer.salaryRange || fullCareer.salary_range || "",
+        requiredSkills: Array.isArray(fullCareer.requiredSkills) ? fullCareer.requiredSkills.join(", ") : (fullCareer.requiredSkills || ""),
+      })
+      setIsEditDialogOpen(true)
+    } catch (error) {
+      console.error("Failed to fetch career details:", error)
+      toast.error(getUserFriendlyError(error, "Could not load career details. Please try again."))
+      // Fallback to using the career from the list
+      setEditingCareer(career)
+      setFormData({
+        name: career.name || career.title || "",
+        description: career.description || "",
+        outlook: career.outlook || "",
+        salaryRange: career.salaryRange || career.salary_range || "",
+        requiredSkills: Array.isArray(career.requiredSkills) ? career.requiredSkills.join(", ") : (career.requiredSkills || ""),
+      })
+      setIsEditDialogOpen(true)
+    }
   }
 
   const handleEditCareer = async (e) => {
     e.preventDefault()
     if (!editingCareer) return
+    
+    const errors = validateCareerForm()
+    setFormErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      // Show first error in toast
+      const firstError = Object.values(errors)[0]
+      toast.error(firstError)
+      return
+    }
+    
     setIsSubmitting(true)
     try {
       const careerData = {
-        name: formData.name,
-        description: formData.description || null,
-        outlook: formData.outlook || null,
-        salaryRange: formData.salaryRange || null,
+        name: formData.name.trim(),
+        description: formData.description?.trim() || null,
+        outlook: formData.outlook?.trim() || null,
+        salaryRange: formData.salaryRange?.trim() || null,
         requiredSkills: formData.requiredSkills ? formData.requiredSkills.split(",").map(s => s.trim()).filter(s => s) : null,
       }
       await updateCareer(editingCareer.id, careerData)
       toast.success("Career updated successfully.")
       setIsEditDialogOpen(false)
       resetForm()
+      setFormErrors({})
       fetchCareers()
     } catch (error) {
       console.error("Failed to update career:", error)
@@ -161,6 +276,7 @@ export default function AdminCareersPage() {
       salaryRange: "",
       requiredSkills: "",
     })
+    setFormErrors({})
     setEditingCareer(null)
   }
 
@@ -320,48 +436,73 @@ export default function AdminCareersPage() {
                     <Input
                       id="name"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, name: e.target.value })
+                        if (formErrors.name) setFormErrors({ ...formErrors, name: "" })
+                      }}
+                      className={formErrors.name ? "border-destructive" : ""}
                       required
                       placeholder="Enter career name"
                     />
+                    {formErrors.name && <p className="text-sm text-destructive">{formErrors.name}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="description">Description</Label>
                     <Textarea
                       id="description"
                       value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="Enter career description"
+                      onChange={(e) => {
+                        setFormData({ ...formData, description: e.target.value })
+                        if (formErrors.description) setFormErrors({ ...formErrors, description: "" })
+                      }}
+                      className={formErrors.description ? "border-destructive" : ""}
+                      placeholder="Enter career description (10-2000 characters)"
                       rows={4}
                     />
+                    {formErrors.description && <p className="text-sm text-destructive">{formErrors.description}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="outlook">Career Outlook</Label>
                     <Textarea
                       id="outlook"
                       value={formData.outlook}
-                      onChange={(e) => setFormData({ ...formData, outlook: e.target.value })}
-                      placeholder="Enter career outlook and future prospects"
+                      onChange={(e) => {
+                        setFormData({ ...formData, outlook: e.target.value })
+                        if (formErrors.outlook) setFormErrors({ ...formErrors, outlook: "" })
+                      }}
+                      className={formErrors.outlook ? "border-destructive" : ""}
+                      placeholder="Enter career outlook and future prospects (10-2000 characters)"
                       rows={3}
                     />
+                    {formErrors.outlook && <p className="text-sm text-destructive">{formErrors.outlook}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="salaryRange">Salary Range</Label>
                     <Input
                       id="salaryRange"
                       value={formData.salaryRange}
-                      onChange={(e) => setFormData({ ...formData, salaryRange: e.target.value })}
-                      placeholder="e.g., $50,000 - $100,000"
+                      onChange={(e) => {
+                        setFormData({ ...formData, salaryRange: e.target.value })
+                        if (formErrors.salaryRange) setFormErrors({ ...formErrors, salaryRange: "" })
+                      }}
+                      className={formErrors.salaryRange ? "border-destructive" : ""}
+                      placeholder="e.g., $50,000 - $100,000 or NPR 50,000 - NPR 100,000"
                     />
+                    {formErrors.salaryRange && <p className="text-sm text-destructive">{formErrors.salaryRange}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="requiredSkills">Required Skills</Label>
                     <Input
                       id="requiredSkills"
                       value={formData.requiredSkills}
-                      onChange={(e) => setFormData({ ...formData, requiredSkills: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, requiredSkills: e.target.value })
+                        if (formErrors.requiredSkills) setFormErrors({ ...formErrors, requiredSkills: "" })
+                      }}
+                      className={formErrors.requiredSkills ? "border-destructive" : ""}
                       placeholder="Comma-separated (e.g., Python, JavaScript, Communication)"
                     />
+                    {formErrors.requiredSkills && <p className="text-sm text-destructive">{formErrors.requiredSkills}</p>}
                   </div>
                   <DialogFooter>
                     <Button
@@ -395,48 +536,73 @@ export default function AdminCareersPage() {
                     <Input
                       id="edit-name"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, name: e.target.value })
+                        if (formErrors.name) setFormErrors({ ...formErrors, name: "" })
+                      }}
+                      className={formErrors.name ? "border-destructive" : ""}
                       required
                       placeholder="Enter career name"
                     />
+                    {formErrors.name && <p className="text-sm text-destructive">{formErrors.name}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-description">Description</Label>
                     <Textarea
                       id="edit-description"
                       value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="Enter career description"
+                      onChange={(e) => {
+                        setFormData({ ...formData, description: e.target.value })
+                        if (formErrors.description) setFormErrors({ ...formErrors, description: "" })
+                      }}
+                      className={formErrors.description ? "border-destructive" : ""}
+                      placeholder="Enter career description (10-2000 characters)"
                       rows={4}
                     />
+                    {formErrors.description && <p className="text-sm text-destructive">{formErrors.description}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-outlook">Career Outlook</Label>
                     <Textarea
                       id="edit-outlook"
                       value={formData.outlook}
-                      onChange={(e) => setFormData({ ...formData, outlook: e.target.value })}
-                      placeholder="Enter career outlook and future prospects"
+                      onChange={(e) => {
+                        setFormData({ ...formData, outlook: e.target.value })
+                        if (formErrors.outlook) setFormErrors({ ...formErrors, outlook: "" })
+                      }}
+                      className={formErrors.outlook ? "border-destructive" : ""}
+                      placeholder="Enter career outlook and future prospects (10-2000 characters)"
                       rows={3}
                     />
+                    {formErrors.outlook && <p className="text-sm text-destructive">{formErrors.outlook}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-salaryRange">Salary Range</Label>
                     <Input
                       id="edit-salaryRange"
                       value={formData.salaryRange}
-                      onChange={(e) => setFormData({ ...formData, salaryRange: e.target.value })}
-                      placeholder="e.g., $50,000 - $100,000"
+                      onChange={(e) => {
+                        setFormData({ ...formData, salaryRange: e.target.value })
+                        if (formErrors.salaryRange) setFormErrors({ ...formErrors, salaryRange: "" })
+                      }}
+                      className={formErrors.salaryRange ? "border-destructive" : ""}
+                      placeholder="e.g., $50,000 - $100,000 or NPR 50,000 - NPR 100,000"
                     />
+                    {formErrors.salaryRange && <p className="text-sm text-destructive">{formErrors.salaryRange}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-requiredSkills">Required Skills</Label>
                     <Input
                       id="edit-requiredSkills"
                       value={formData.requiredSkills}
-                      onChange={(e) => setFormData({ ...formData, requiredSkills: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, requiredSkills: e.target.value })
+                        if (formErrors.requiredSkills) setFormErrors({ ...formErrors, requiredSkills: "" })
+                      }}
+                      className={formErrors.requiredSkills ? "border-destructive" : ""}
                       placeholder="Comma-separated (e.g., Python, JavaScript, Communication)"
                     />
+                    {formErrors.requiredSkills && <p className="text-sm text-destructive">{formErrors.requiredSkills}</p>}
                   </div>
                   <DialogFooter>
                     <Button

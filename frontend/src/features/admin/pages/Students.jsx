@@ -21,16 +21,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog"
-import { getStudents, deleteStudent, createStudent, updateStudent } from "@/shared/lib/api"
-import { Trash2, Plus, Pencil, Loader2, Users } from "lucide-react"
+import { getStudents, getStudent, deleteStudent, createStudent, updateStudent, getUsers } from "@/shared/lib/api"
+import { Trash2, Pencil, Loader2, Users } from "lucide-react"
 import { toast } from "react-toastify"
 import { TableRowSkeleton } from "@/shared/components/common/LoadingSkeleton"
 import Pagination from "@/shared/components/common/pagination"
 import { EmptyState } from "@/shared/components/common/EmptyState"
 import { getUserFriendlyError } from "@/shared/utils/userFriendlyErrors"
 import { Checkbox as UICheckbox } from "@/shared/components/ui/checkbox"
-import { exportToCSV, exportToJSON } from "@/shared/utils/export"
-import { Download } from "lucide-react"
 
 export default function StudentsPage() {
   const [students, setStudents] = useState([])
@@ -64,12 +62,20 @@ export default function StudentsPage() {
   const fetchStudents = async () => {
     setLoading(true)
     try {
-      const response = await getStudents()
-      const studentsData = Array.isArray(response) ? response : (response.data || [])
-      setStudents(studentsData)
+      // Fetch Users instead of Students since registration creates Users
+      const response = await getUsers()
+      const usersData = Array.isArray(response) ? response : (response.data || [])
+      // Sort by createdAt DESC to ensure newest appear first (backend should already sort, but this is a safety measure)
+      const sortedUsers = [...usersData].sort((a, b) => {
+        if (!a.createdAt && !b.createdAt) return 0
+        if (!a.createdAt) return 1
+        if (!b.createdAt) return -1
+        return new Date(b.createdAt) - new Date(a.createdAt)
+      })
+      setStudents(sortedUsers)
     } catch (error) {
-      console.error("Failed to fetch students:", error)
-      toast.error(getUserFriendlyError(error, "Unable to load students. Please refresh the page."))
+      console.error("Failed to fetch users:", error)
+      toast.error(getUserFriendlyError(error, "Unable to load users. Please refresh the page."))
       setStudents([])
     } finally {
       setLoading(false)
@@ -126,17 +132,35 @@ export default function StudentsPage() {
     }
   }
 
-  const handleEditClick = (student) => {
-    setEditingStudent(student)
-    setFormData({
-      name: student.name || "",
-      email: student.email || "",
-      grade: student.grade || "",
-      careerFields: Array.isArray(student.careerFields) ? student.careerFields.join(", ") : "",
-      activities: Array.isArray(student.activities) ? student.activities.join(", ") : "",
-      workEnvironments: Array.isArray(student.workEnvironments) ? student.workEnvironments.join(", ") : "",
-    })
-    setIsEditDialogOpen(true)
+  const handleEditClick = async (student) => {
+    try {
+      // Fetch full student data by ID to ensure all fields are populated
+      const fullStudent = await getStudent(student.id)
+      setEditingStudent(fullStudent)
+      setFormData({
+        name: fullStudent.name || "",
+        email: fullStudent.email || "",
+        grade: fullStudent.grade || "",
+        careerFields: Array.isArray(fullStudent.careerFields) ? fullStudent.careerFields.join(", ") : (fullStudent.careerFields || ""),
+        activities: Array.isArray(fullStudent.activities) ? fullStudent.activities.join(", ") : (fullStudent.activities || ""),
+        workEnvironments: Array.isArray(fullStudent.workEnvironments) ? fullStudent.workEnvironments.join(", ") : (fullStudent.workEnvironments || ""),
+      })
+      setIsEditDialogOpen(true)
+    } catch (error) {
+      console.error("Failed to fetch student details:", error)
+      toast.error(getUserFriendlyError(error, "Could not load student details. Please try again."))
+      // Fallback to using the student from the list
+      setEditingStudent(student)
+      setFormData({
+        name: student.name || "",
+        email: student.email || "",
+        grade: student.grade || "",
+        careerFields: Array.isArray(student.careerFields) ? student.careerFields.join(", ") : "",
+        activities: Array.isArray(student.activities) ? student.activities.join(", ") : "",
+        workEnvironments: Array.isArray(student.workEnvironments) ? student.workEnvironments.join(", ") : "",
+      })
+      setIsEditDialogOpen(true)
+    }
   }
 
   const handleEditStudent = async (e) => {
@@ -183,14 +207,26 @@ export default function StudentsPage() {
 
   const validateForm = () => {
     const errors = {}
-    if (!formData.name.trim()) {
+    
+    // Validate name - must be meaningful (at least 2 characters, contain letters)
+    const nameTrimmed = formData.name?.trim() || ""
+    if (!nameTrimmed) {
       errors.name = "Name is required"
+    } else if (nameTrimmed.length < 2) {
+      errors.name = "Name must be at least 2 characters"
+    } else if (!/[a-zA-Z]/.test(nameTrimmed)) {
+      errors.name = "Name must contain at least one letter"
+    } else if (/^[^a-zA-Z0-9]+$/.test(nameTrimmed)) {
+      errors.name = "Name cannot be only special characters"
     }
+    
+    // Validate email
     if (!formData.email.trim()) {
       errors.email = "Email is required"
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
       errors.email = "Please enter a valid email address"
     }
+    
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -282,36 +318,6 @@ export default function StudentsPage() {
                 <h1 className="text-3xl font-bold">Students</h1>
                 <p className="text-muted-foreground mt-1">Manage student accounts</p>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={() => {
-                    try {
-                      const dataToExport = searchTerm ? filteredStudents : students
-                      exportToCSV(
-                        dataToExport,
-                        `students_${new Date().toISOString().split("T")[0]}.csv`,
-                        [
-                          { key: "name", label: "Name" },
-                          { key: "email", label: "Email" },
-                          { key: "grade", label: "Grade" },
-                        ]
-                      )
-                      toast.success("Students exported successfully.")
-                    } catch (error) {
-                      toast.error("Failed to export students.")
-                    }
-                  }}
-                >
-                  <Download className="h-4 w-4" />
-                  Export CSV
-                </Button>
-                <Button className="gap-2" onClick={() => setIsAddDialogOpen(true)}>
-                  <Plus className="h-4 w-4" />
-                  Add Student
-                </Button>
-              </div>
             </div>
 
             <Card className="border-2">
@@ -388,11 +394,7 @@ export default function StudentsPage() {
                                 label: "Clear Search",
                                 onClick: () => setSearchTerm(""),
                                 variant: "secondary"
-                              } : {
-                                label: "Add Student",
-                                onClick: () => setIsAddDialogOpen(true),
-                                variant: "default"
-                              }}
+                              } : undefined}
                             />
                           </td>
                         </tr>
@@ -446,12 +448,14 @@ export default function StudentsPage() {
                   </table>
                 </div>
                 {!loading && totalPages > 1 && (
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                    isLoading={loading}
-                  />
+                  <div className="mt-4">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                      isLoading={loading}
+                    />
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -663,17 +667,18 @@ export default function StudentsPage() {
                   <AlertDialogTitle>Delete Student</AlertDialogTitle>
                   <AlertDialogDescription>
                     Are you sure you want to delete <strong>{studentToDelete?.name}</strong> ({studentToDelete?.email})?
-                    <br />
-                    <br />
+                  </AlertDialogDescription>
+                  <div className="text-muted-foreground text-sm mt-2">
                     This will permanently delete the student account and all associated data including:
                     <ul className="list-disc list-inside mt-2 space-y-1">
                       <li>Academic records</li>
                       <li>Assessment results</li>
                       <li>Quiz history</li>
                     </ul>
-                    <br />
-                    <strong>This action cannot be undone.</strong>
-                  </AlertDialogDescription>
+                    <p className="mt-2">
+                      <strong>This action cannot be undone.</strong>
+                    </p>
+                  </div>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>

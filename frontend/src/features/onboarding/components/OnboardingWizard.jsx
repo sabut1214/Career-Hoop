@@ -10,7 +10,7 @@ import { useOnboarding } from "../hooks/useOnboarding"
 const TOTAL_STEPS = 3
 
 export function OnboardingWizard() {
-  const { completeOnboarding, skipOnboarding } = useOnboarding()
+  const { completeOnboarding } = useOnboarding()
   const [currentStep, setCurrentStep] = useState(1)
   const [isOpen, setIsOpen] = useState(true)
 
@@ -28,11 +28,6 @@ export function OnboardingWizard() {
     }
   }
 
-  const handleSkip = () => {
-    skipOnboarding()
-    setIsOpen(false)
-  }
-
   const handleComplete = () => {
     completeOnboarding()
     setIsOpen(false)
@@ -46,10 +41,10 @@ export function OnboardingWizard() {
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
         <DialogTitle className="sr-only">
-          CareerHoop Onboarding
+          areerHoop Onboarding
         </DialogTitle>
         <DialogDescription className="sr-only">
-          Onboarding wizard to help you get started with CareerHoop
+          Onboarding wizard to help you get started with areerHoop
         </DialogDescription>
         <div className="relative">
           {/* Progress Bar */}
@@ -72,7 +67,6 @@ export function OnboardingWizard() {
                 <WelcomeStep
                   key="welcome"
                   onNext={handleNext}
-                  onSkip={handleSkip}
                 />
               )}
               {currentStep === 2 && (
@@ -80,7 +74,6 @@ export function OnboardingWizard() {
                   key="tour"
                   onNext={handleNext}
                   onPrev={handlePrev}
-                  onSkip={handleSkip}
                 />
               )}
               {currentStep === 3 && (

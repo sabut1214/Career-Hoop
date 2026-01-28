@@ -7,11 +7,13 @@ import { cn } from "@/shared/lib/utils"
 export function SystemHealth() {
   const [health, setHealth] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState(null)
 
   const fetchHealth = async () => {
     try {
       const data = await getSystemHealth()
       setHealth(data)
+      setLastUpdated(new Date())
     } catch (error) {
       console.error("Failed to fetch system health:", error)
       setHealth(null)
@@ -22,7 +24,7 @@ export function SystemHealth() {
 
   useEffect(() => {
     fetchHealth()
-    const interval = setInterval(fetchHealth, 60000) // Refresh every minute
+    const interval = setInterval(fetchHealth, 30000) // Refresh every 30 seconds for real-time updates
     return () => clearInterval(interval)
   }, [])
 
@@ -50,6 +52,18 @@ export function SystemHealth() {
       default:
         return "text-muted-foreground bg-muted"
     }
+  }
+
+  const formatTimeAgo = (date) => {
+    if (!date) return "Never"
+    const now = new Date()
+    const diff = Math.floor((now - date) / 1000) // seconds
+
+    if (diff < 10) return "Just now"
+    if (diff < 60) return `${diff} seconds ago`
+    if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`
+    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`
+    return date.toLocaleTimeString()
   }
 
   if (loading) {
@@ -84,12 +98,19 @@ export function SystemHealth() {
   return (
     <Card className="border-2">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <div className={cn("p-2 rounded-lg", statusColor)}>
-            <StatusIcon className="h-5 w-5" />
-          </div>
-          System Health
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <div className={cn("p-2 rounded-lg", statusColor)}>
+              <StatusIcon className="h-5 w-5" />
+            </div>
+            System Health
+          </CardTitle>
+          {lastUpdated && (
+            <span className="text-xs text-muted-foreground">
+              Updated {formatTimeAgo(lastUpdated)}
+            </span>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">

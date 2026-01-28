@@ -15,24 +15,24 @@ export const designTokens = {
     brandHighlightLime: 'var(--brand-highlight-lime)', // Legacy - use warning
     brandMutedSlate: 'var(--brand-muted-slate)', // Legacy - use muted colors
     
-    // Brand Scale (50-900 based on #2596be)
+    // Brand Scale (50-900 based on #008100 - Green)
     brand50: 'var(--brand-50)',
     brand100: 'var(--brand-100)',
     brand200: 'var(--brand-200)',
     brand300: 'var(--brand-300)',
     brand400: 'var(--brand-400)',
-    brand500: 'var(--brand-500)', // Base brand #2596be
+    brand500: 'var(--brand-500)', // Base brand #008100 (Green)
     brand600: 'var(--brand-600)',
     brand700: 'var(--brand-700)',
     brand800: 'var(--brand-800)',
     brand900: 'var(--brand-900)',
     
     // Semantic Colors (mapped to brand palette)
-    primary: 'var(--primary)', // primary-700 #196784 for buttons with white text
+    primary: 'var(--primary)', // #008100 (Green) for buttons with white text
     primaryHover: 'var(--primary-hover)',
     primaryActive: 'var(--primary-active)',
     primaryForeground: 'var(--primary-foreground)', // White text
-    secondary: 'var(--secondary)', // primary-500 #2596be for accents
+    secondary: 'var(--secondary)', // Green tint for accents
     secondaryHover: 'var(--secondary-hover)',
     secondaryActive: 'var(--secondary-active)',
     secondaryForeground: 'var(--secondary-foreground)', // Dark text (NOT white)
@@ -42,7 +42,7 @@ export const designTokens = {
     warningForeground: 'var(--warning-foreground)', // White text
     error: 'var(--error)',
     errorForeground: 'var(--error-foreground)',
-    info: 'var(--info)', // Brand primary-500 #2596be
+    info: 'var(--info)', // Brand green #008100
     infoForeground: 'var(--info-foreground)', // White text
     background: 'var(--background)', // Light background #f9fbfc
     surface: 'var(--surface)', // Pure white

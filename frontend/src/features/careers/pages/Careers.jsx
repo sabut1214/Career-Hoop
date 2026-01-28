@@ -10,7 +10,9 @@ import Pagination from "@/shared/components/common/pagination"
 import api from "@/shared/services/api"
 import { saveCareer, unsaveCareer, checkCareerSaved, getSavedCareers } from "@/shared/lib/api"
 import { useAuth } from "@/shared/context/AuthContext"
+import { useSubscription } from "@/shared/hooks/useSubscription"
 import { toast } from "react-toastify"
+import { ProPaywallModal } from "@/features/payment/components/ProPaywallModal"
 import {
   Briefcase,
   ArrowRight,
@@ -20,6 +22,7 @@ import {
   TrendingUp,
   Target,
   Code,
+  Lock,
   Stethoscope,
   Palette,
   Wrench,
@@ -212,9 +215,11 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <CardDescription className="text-base leading-relaxed">
-              {career.description}
-            </CardDescription>
+            {career.description && career.description !== "Career saved from recommendations" && (
+              <CardDescription className="text-base leading-relaxed">
+                {career.description}
+              </CardDescription>
+            )}
 
             <div className="space-y-4">
               {(career.averageSalaryUSD || career.salaryRange) && (
@@ -289,7 +294,11 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
               <DialogDescription>{career.category || "Career details"}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">{career.description || "No description available."}</p>
+              <p className="text-sm text-muted-foreground">
+                {career.description && career.description !== "Career saved from recommendations" 
+                  ? career.description 
+                  : "No description available."}
+              </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {(career.averageSalaryUSD || career.salaryRange) && (
                   <div className="rounded-lg border p-3">
@@ -337,7 +346,9 @@ const CareerCard = ({ career, index, savedCareerIds, onSaveChange }) => {
 
 export default function CareersPage() {
   const { user } = useAuth()
+  const { isPro } = useSubscription()
   const prefersReducedMotion = useReducedMotion()
+  const [paywallModalOpen, setPaywallModalOpen] = useState(false)
   const [allCareers, setAllCareers] = useState([])
   const [careers, setCareers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -464,8 +475,27 @@ export default function CareersPage() {
     setCurrentPage(1)
   }, [searchTerm])
 
-  // Filter careers based on search term
+  // Helper function to check if career has sufficient details
+  const hasCareerDetails = (career) => {
+    const description = career.description || ""
+    const hasDescription = description.trim() && description !== "Career saved from recommendations"
+    const hasSalary = !!(career.averageSalaryUSD || career.salaryRange)
+    const hasEducation = !!career.requiredEducation
+    const hasSkills = !!(career.skills && career.skills.length > 0) || !!(career.requiredSkills && career.requiredSkills.length > 0)
+    const hasJobOutlook = !!career.jobOutlook
+    
+    // Career must have at least one of these details
+    return hasDescription || hasSalary || hasEducation || hasSkills || hasJobOutlook
+  }
+
+  // Filter careers based on search term and details
   const filteredCareers = allCareers.filter((career) => {
+    // First filter: must have details
+    if (!hasCareerDetails(career)) {
+      return false
+    }
+    
+    // Second filter: search term if provided
     if (searchTerm.trim()) {
       const name = (career.careerName || career.name || career.title || "").toLowerCase()
       const description = (career.description || "").toLowerCase()
@@ -476,8 +506,14 @@ export default function CareersPage() {
     return true
   })
 
-  // Filter saved careers
+  // Filter saved careers (also filter by details)
   const filteredSavedCareers = savedCareersFullData.filter((career) => {
+    // First filter: must have details
+    if (!hasCareerDetails(career)) {
+      return false
+    }
+    
+    // Second filter: search term if provided
     if (searchTerm.trim()) {
       const name = (career.careerName || career.name || career.title || "").toLowerCase()
       const description = (career.description || "").toLowerCase()
@@ -506,16 +542,26 @@ export default function CareersPage() {
   // Combine: saved careers first, then regular careers
   const combinedCareers = [...filteredSavedCareers, ...regularCareers]
 
+  // For free users, limit to 2 free careers, rest are locked
+  const FREE_LIMIT = 2
+  let visibleCareers = combinedCareers
+  let lockedCareers = []
+  
+  if (!isPro && combinedCareers.length > FREE_LIMIT) {
+    visibleCareers = combinedCareers.slice(0, FREE_LIMIT)
+    lockedCareers = combinedCareers.slice(FREE_LIMIT)
+  }
+
   // Calculate start and end indices for display
   let startIndex, endIndex
   
   // Paginate combined results
   let paginatedCareers
   if (searchTerm.trim()) {
-    // When searching, paginate the combined list normally
+    // When searching, paginate the visible list (limited for free users)
     startIndex = (currentPage - 1) * pageSize
     endIndex = startIndex + pageSize
-    paginatedCareers = combinedCareers.slice(startIndex, endIndex)
+    paginatedCareers = visibleCareers.slice(startIndex, endIndex)
   } else {
     // When not searching, show saved careers on page 1, then regular careers
     if (currentPage === 1) {
@@ -523,6 +569,10 @@ export default function CareersPage() {
       const remainingSlots = Math.max(0, pageSize - filteredSavedCareers.length)
       const regularCareersFromPage = regularCareers.slice(0, remainingSlots)
       paginatedCareers = [...filteredSavedCareers, ...regularCareersFromPage]
+      // Limit to FREE_LIMIT for free users
+      if (!isPro && paginatedCareers.length > FREE_LIMIT) {
+        paginatedCareers = paginatedCareers.slice(0, FREE_LIMIT)
+      }
       startIndex = 0
       endIndex = paginatedCareers.length
     } else {
@@ -535,6 +585,10 @@ export default function CareersPage() {
       startIndex = regularCareersStartOnPage1 + (currentPage - 2) * pageSize
       endIndex = startIndex + pageSize
       paginatedCareers = regularCareers.slice(startIndex, endIndex)
+      // Limit to FREE_LIMIT for free users
+      if (!isPro && paginatedCareers.length > FREE_LIMIT) {
+        paginatedCareers = paginatedCareers.slice(0, FREE_LIMIT)
+      }
     }
   }
 
@@ -666,7 +720,106 @@ export default function CareersPage() {
                     onSaveChange={handleSaveChange}
                   />
                 ))}
+                {/* Show locked cards for free users */}
+                {!isPro && lockedCareers.length > 0 && paginatedCareers.length >= FREE_LIMIT && (
+                  <>
+                    {lockedCareers.slice(0, Math.min(3, pageSize - paginatedCareers.length)).map((career, index) => (
+                      <motion.div
+                        key={`locked-${career.id || index}`}
+                        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={prefersReducedMotion ? { duration: 0.15 } : { duration: 0.6, delay: (paginatedCareers.length + index) * 0.1 }}
+                        whileHover={prefersReducedMotion ? {} : { y: -2 }}
+                        className="group"
+                      >
+                        <Card className="h-full border-2 hover:border-primary/20 hover:shadow-lg transition-[box-shadow,border-color] duration-200 ease-out relative overflow-hidden">
+                          {/* Blurred Overlay */}
+                          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-6 cursor-pointer"
+                               onClick={() => setPaywallModalOpen(true)}>
+                            <div className="text-center space-y-4">
+                              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                                <Lock className="h-8 w-8 text-primary" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-semibold text-foreground mb-2">Upgrade to Unlock</h3>
+                                <p className="text-sm text-muted-foreground mb-4">
+                                  See full career details and unlock all features
+                                </p>
+                                <Button onClick={() => setPaywallModalOpen(true)} className="bg-primary hover:bg-primary-hover text-primary-foreground">
+                                  Upgrade to Pro
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Preview Content (blurred) - matches CareerCard structure */}
+                          <CardHeader className="space-y-4 opacity-50 pointer-events-none">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-12 h-12 rounded-lg bg-muted-foreground flex items-center justify-center shrink-0">
+                                  <Target className="h-6 w-6 text-white" />
+                                </div>
+                                <div>
+                                  <CardTitle className="text-xl">{career.careerName || career.name || career.title || "Career"}</CardTitle>
+                                  {career.category && (
+                                    <Badge variant="outline" className="mt-1">
+                                      {career.category}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-6 opacity-50 pointer-events-none">
+                            {career.description && career.description !== "Career saved from recommendations" && (
+                              <CardDescription className="text-base leading-relaxed">
+                                {career.description}
+                              </CardDescription>
+                            )}
+                            <div className="space-y-4">
+                              {(career.averageSalaryUSD || career.salaryRange) && (
+                                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                  <span className="text-sm font-medium">Salary Range</span>
+                                  <span className="text-sm font-semibold">
+                                    {career.averageSalaryUSD || career.salaryRange}
+                                  </span>
+                                </div>
+                              )}
+                              {career.requiredEducation && (
+                                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                  <span className="text-sm font-medium">Education</span>
+                                  <span className="text-sm font-semibold text-right max-w-[60%]">
+                                    {career.requiredEducation}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex space-x-2">
+                              <Button className="flex-1" disabled>View Details</Button>
+                              <Button variant="outline" className="flex-1 bg-transparent" disabled>
+                                Save Career
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </>
+                )}
               </div>
+              {!isPro && lockedCareers.length > 0 && (
+                <Card className="border-2 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5 mt-6">
+                  <CardContent className="p-6 text-center space-y-4">
+                    <h3 className="text-xl font-bold">Unlock All Careers</h3>
+                    <p className="text-muted-foreground">
+                      You're viewing {paginatedCareers.length} free career{paginatedCareers.length !== 1 ? 's' : ''}. Upgrade to Pro to see all {combinedCareers.length} careers and unlock full details.
+                    </p>
+                    <Button onClick={() => setPaywallModalOpen(true)} size="lg" className="bg-primary hover:bg-primary-hover text-primary-foreground">
+                      Upgrade to Pro
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </motion.div>
           )}
 
@@ -691,6 +844,8 @@ export default function CareersPage() {
               isLoading={loading}
             />
           )}
-    </div>
+
+          {/* Paywall Modal */}
+          <ProPaywallModal open={paywallModalOpen} onOpenChange={setPaywallModalOpen} />
   )
 }

@@ -176,6 +176,22 @@ api.interceptors.response.use(
         navigate('/login');
       }
     } else if (status === 403) {
+      // Check for PRO_REQUIRED error code
+      const errorCode = error.response?.data?.code;
+      if (errorCode === "PRO_REQUIRED") {
+        console.warn('API Error: Pro subscription required');
+        // Store intended destination
+        const currentPath = window.location.pathname + (window.location.search || "");
+        if (currentPath !== "/checkout/pro" && currentPath !== "/billing" && currentPath !== "/recommendations") {
+          sessionStorage.setItem("postUpgradeRedirect", currentPath);
+        }
+        // Navigate to recommendations page which will show locked page + modal
+        if (!window.location.pathname.includes('/recommendations')) {
+          navigate('/recommendations');
+        }
+        return Promise.reject(error);
+      }
+      
       console.error('API Error: Forbidden - Token may be missing or invalid');
       
       // For public endpoints, don't try to refresh token - just return the error

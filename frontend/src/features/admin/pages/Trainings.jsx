@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog"
-import { getTrainings, deleteTraining, createTraining, updateTraining } from "@/shared/lib/api"
+import { getTrainings, getTraining, deleteTraining, createTraining, updateTraining } from "@/shared/lib/api"
 import { Trash2, Plus, Pencil, Loader2, Zap } from "lucide-react"
 import { toast } from "react-toastify"
 import { TableRowSkeleton } from "@/shared/components/common/LoadingSkeleton"
@@ -49,6 +49,7 @@ export default function AdminTrainingsPage() {
     level: "",
     skills: "",
   })
+  const [formErrors, setFormErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -93,22 +94,120 @@ export default function AdminTrainingsPage() {
     }
   }
 
+  const validateTrainingForm = () => {
+    const errors = {}
+    
+    // Validate title - must be meaningful (at least 2 characters, contain letters)
+    const titleTrimmed = formData.title?.trim() || ""
+    if (!titleTrimmed) {
+      errors.title = "Training title is required"
+    } else if (titleTrimmed.length < 2) {
+      errors.title = "Training title must be at least 2 characters"
+    } else if (titleTrimmed.length > 200) {
+      errors.title = "Training title must be less than 200 characters"
+    } else if (!/[a-zA-Z]/.test(titleTrimmed)) {
+      errors.title = "Training title must contain at least one letter"
+    } else if (/^[^a-zA-Z0-9]+$/.test(titleTrimmed)) {
+      errors.title = "Training title cannot be only special characters"
+    }
+    
+    // Validate description if provided
+    if (formData.description && formData.description.trim()) {
+      const descTrimmed = formData.description.trim()
+      if (descTrimmed.length < 10) {
+        errors.description = "Description must be at least 10 characters"
+      } else if (descTrimmed.length > 2000) {
+        errors.description = "Description must be less than 2000 characters"
+      }
+    }
+    
+    // Validate provider if provided
+    if (formData.provider && formData.provider.trim()) {
+      const providerTrimmed = formData.provider.trim()
+      if (providerTrimmed.length < 2) {
+        errors.provider = "Provider name must be at least 2 characters"
+      } else if (providerTrimmed.length > 200) {
+        errors.provider = "Provider name must be less than 200 characters"
+      } else if (!/[a-zA-Z]/.test(providerTrimmed)) {
+        errors.provider = "Provider name must contain at least one letter"
+      }
+    }
+    
+    // Validate duration if provided
+    if (formData.duration && formData.duration.trim()) {
+      const durationTrimmed = formData.duration.trim()
+      if (durationTrimmed.length > 100) {
+        errors.duration = "Duration must be less than 100 characters"
+      }
+    }
+    
+    // Validate level if provided
+    if (formData.level && formData.level.trim()) {
+      const levelTrimmed = formData.level.trim()
+      const validLevels = ["beginner", "intermediate", "advanced", "expert", "all levels"]
+      const levelLower = levelTrimmed.toLowerCase()
+      if (levelTrimmed.length > 50) {
+        errors.level = "Level must be less than 50 characters"
+      } else if (!validLevels.some(v => levelLower.includes(v)) && levelTrimmed.length < 3) {
+        errors.level = "Level must be at least 3 characters or use: Beginner, Intermediate, Advanced, Expert, All Levels"
+      }
+    }
+    
+    // Validate skills if provided
+    if (formData.skills && formData.skills.trim()) {
+      const skillsTrimmed = formData.skills.trim()
+      const skillsArray = skillsTrimmed.split(",").map(s => s.trim()).filter(s => s)
+      if (skillsArray.length === 0) {
+        errors.skills = "Please enter at least one skill"
+      } else if (skillsArray.length > 20) {
+        errors.skills = "Maximum 20 skills allowed"
+      } else {
+        // Validate each skill
+        for (const skill of skillsArray) {
+          if (skill.length < 2) {
+            errors.skills = "Each skill must be at least 2 characters"
+            break
+          } else if (skill.length > 50) {
+            errors.skills = "Each skill must be less than 50 characters"
+            break
+          } else if (!/^[a-zA-Z0-9\s\-_&]+$/.test(skill)) {
+            errors.skills = "Skills can only contain letters, numbers, spaces, hyphens, underscores, and ampersands"
+            break
+          }
+        }
+      }
+    }
+    
+    return errors
+  }
+
   const handleAddTraining = async (e) => {
     e.preventDefault()
+    
+    const errors = validateTrainingForm()
+    setFormErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      // Show first error in toast
+      const firstError = Object.values(errors)[0]
+      toast.error(firstError)
+      return
+    }
+    
     setIsSubmitting(true)
     try {
       const trainingData = {
-        title: formData.title,
-        description: formData.description || null,
-        provider: formData.provider || null,
-        duration: formData.duration || null,
-        level: formData.level || null,
+        title: formData.title.trim(),
+        description: formData.description?.trim() || null,
+        provider: formData.provider?.trim() || null,
+        duration: formData.duration?.trim() || null,
+        level: formData.level?.trim() || null,
         skills: formData.skills ? formData.skills.split(",").map(s => s.trim()).filter(s => s) : null,
       }
       await createTraining(trainingData)
       toast.success("Training created successfully.")
       setIsAddDialogOpen(false)
       resetForm()
+      setFormErrors({})
       fetchTrainings()
     } catch (error) {
       console.error("Failed to create training:", error)
@@ -118,36 +217,65 @@ export default function AdminTrainingsPage() {
     }
   }
 
-  const handleEditClick = (training) => {
-    setEditingTraining(training)
-    setFormData({
-      title: training.title || "",
-      description: training.description || "",
-      provider: training.provider || "",
-      duration: training.duration || "",
-      level: training.level || "",
-      skills: Array.isArray(training.skills) ? training.skills.join(", ") : (training.skills || ""),
-    })
-    setIsEditDialogOpen(true)
+  const handleEditClick = async (training) => {
+    try {
+      // Fetch full training data by ID to ensure all fields are populated
+      const fullTraining = await getTraining(training.id)
+      setEditingTraining(fullTraining)
+      setFormData({
+        title: fullTraining.title || "",
+        description: fullTraining.description || "",
+        provider: fullTraining.provider || "",
+        duration: fullTraining.duration || "",
+        level: fullTraining.level || "",
+        skills: Array.isArray(fullTraining.skills) ? fullTraining.skills.join(", ") : (fullTraining.skills || ""),
+      })
+      setIsEditDialogOpen(true)
+    } catch (error) {
+      console.error("Failed to fetch training details:", error)
+      toast.error(getUserFriendlyError(error, "Could not load training details. Please try again."))
+      // Fallback to using the training from the list
+      setEditingTraining(training)
+      setFormData({
+        title: training.title || "",
+        description: training.description || "",
+        provider: training.provider || "",
+        duration: training.duration || "",
+        level: training.level || "",
+        skills: Array.isArray(training.skills) ? training.skills.join(", ") : (training.skills || ""),
+      })
+      setIsEditDialogOpen(true)
+    }
   }
 
   const handleEditTraining = async (e) => {
     e.preventDefault()
     if (!editingTraining) return
+    
+    const errors = validateTrainingForm()
+    setFormErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      // Show first error in toast
+      const firstError = Object.values(errors)[0]
+      toast.error(firstError)
+      return
+    }
+    
     setIsSubmitting(true)
     try {
       const trainingData = {
-        title: formData.title,
-        description: formData.description || null,
-        provider: formData.provider || null,
-        duration: formData.duration || null,
-        level: formData.level || null,
+        title: formData.title.trim(),
+        description: formData.description?.trim() || null,
+        provider: formData.provider?.trim() || null,
+        duration: formData.duration?.trim() || null,
+        level: formData.level?.trim() || null,
         skills: formData.skills ? formData.skills.split(",").map(s => s.trim()).filter(s => s) : null,
       }
       await updateTraining(editingTraining.id, trainingData)
       toast.success("Training updated successfully.")
       setIsEditDialogOpen(false)
       resetForm()
+      setFormErrors({})
       fetchTrainings()
     } catch (error) {
       console.error("Failed to update training:", error)
@@ -166,6 +294,7 @@ export default function AdminTrainingsPage() {
       level: "",
       skills: "",
     })
+    setFormErrors({})
     setEditingTraining(null)
   }
 
@@ -325,20 +454,30 @@ export default function AdminTrainingsPage() {
                     <Input
                       id="title"
                       value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, title: e.target.value })
+                        if (formErrors.title) setFormErrors({ ...formErrors, title: "" })
+                      }}
+                      className={formErrors.title ? "border-destructive" : ""}
                       required
                       placeholder="Enter training title"
                     />
+                    {formErrors.title && <p className="text-sm text-destructive">{formErrors.title}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="description">Description</Label>
                     <Textarea
                       id="description"
                       value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="Enter training description"
+                      onChange={(e) => {
+                        setFormData({ ...formData, description: e.target.value })
+                        if (formErrors.description) setFormErrors({ ...formErrors, description: "" })
+                      }}
+                      className={formErrors.description ? "border-destructive" : ""}
+                      placeholder="Enter training description (10-2000 characters)"
                       rows={4}
                     />
+                    {formErrors.description && <p className="text-sm text-destructive">{formErrors.description}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -346,18 +485,28 @@ export default function AdminTrainingsPage() {
                       <Input
                         id="provider"
                         value={formData.provider}
-                        onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, provider: e.target.value })
+                          if (formErrors.provider) setFormErrors({ ...formErrors, provider: "" })
+                        }}
+                        className={formErrors.provider ? "border-destructive" : ""}
                         placeholder="Enter provider name"
                       />
+                      {formErrors.provider && <p className="text-sm text-destructive">{formErrors.provider}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="duration">Duration</Label>
                       <Input
                         id="duration"
                         value={formData.duration}
-                        onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, duration: e.target.value })
+                          if (formErrors.duration) setFormErrors({ ...formErrors, duration: "" })
+                        }}
+                        className={formErrors.duration ? "border-destructive" : ""}
                         placeholder="e.g., 4 weeks, 8 hours"
                       />
+                      {formErrors.duration && <p className="text-sm text-destructive">{formErrors.duration}</p>}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -366,18 +515,28 @@ export default function AdminTrainingsPage() {
                       <Input
                         id="level"
                         value={formData.level}
-                        onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, level: e.target.value })
+                          if (formErrors.level) setFormErrors({ ...formErrors, level: "" })
+                        }}
+                        className={formErrors.level ? "border-destructive" : ""}
                         placeholder="e.g., Beginner, Intermediate, Advanced"
                       />
+                      {formErrors.level && <p className="text-sm text-destructive">{formErrors.level}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="skills">Skills</Label>
                       <Input
                         id="skills"
                         value={formData.skills}
-                        onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, skills: e.target.value })
+                          if (formErrors.skills) setFormErrors({ ...formErrors, skills: "" })
+                        }}
+                        className={formErrors.skills ? "border-destructive" : ""}
                         placeholder="Comma-separated (e.g., Python, JavaScript)"
                       />
+                      {formErrors.skills && <p className="text-sm text-destructive">{formErrors.skills}</p>}
                     </div>
                   </div>
                   <DialogFooter>
@@ -412,20 +571,30 @@ export default function AdminTrainingsPage() {
                     <Input
                       id="edit-title"
                       value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, title: e.target.value })
+                        if (formErrors.title) setFormErrors({ ...formErrors, title: "" })
+                      }}
+                      className={formErrors.title ? "border-destructive" : ""}
                       required
                       placeholder="Enter training title"
                     />
+                    {formErrors.title && <p className="text-sm text-destructive">{formErrors.title}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-description">Description</Label>
                     <Textarea
                       id="edit-description"
                       value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="Enter training description"
+                      onChange={(e) => {
+                        setFormData({ ...formData, description: e.target.value })
+                        if (formErrors.description) setFormErrors({ ...formErrors, description: "" })
+                      }}
+                      className={formErrors.description ? "border-destructive" : ""}
+                      placeholder="Enter training description (10-2000 characters)"
                       rows={4}
                     />
+                    {formErrors.description && <p className="text-sm text-destructive">{formErrors.description}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -433,18 +602,28 @@ export default function AdminTrainingsPage() {
                       <Input
                         id="edit-provider"
                         value={formData.provider}
-                        onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, provider: e.target.value })
+                          if (formErrors.provider) setFormErrors({ ...formErrors, provider: "" })
+                        }}
+                        className={formErrors.provider ? "border-destructive" : ""}
                         placeholder="Enter provider name"
                       />
+                      {formErrors.provider && <p className="text-sm text-destructive">{formErrors.provider}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-duration">Duration</Label>
                       <Input
                         id="edit-duration"
                         value={formData.duration}
-                        onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, duration: e.target.value })
+                          if (formErrors.duration) setFormErrors({ ...formErrors, duration: "" })
+                        }}
+                        className={formErrors.duration ? "border-destructive" : ""}
                         placeholder="e.g., 4 weeks, 8 hours"
                       />
+                      {formErrors.duration && <p className="text-sm text-destructive">{formErrors.duration}</p>}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -453,18 +632,28 @@ export default function AdminTrainingsPage() {
                       <Input
                         id="edit-level"
                         value={formData.level}
-                        onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, level: e.target.value })
+                          if (formErrors.level) setFormErrors({ ...formErrors, level: "" })
+                        }}
+                        className={formErrors.level ? "border-destructive" : ""}
                         placeholder="e.g., Beginner, Intermediate, Advanced"
                       />
+                      {formErrors.level && <p className="text-sm text-destructive">{formErrors.level}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-skills">Skills</Label>
                       <Input
                         id="edit-skills"
                         value={formData.skills}
-                        onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, skills: e.target.value })
+                          if (formErrors.skills) setFormErrors({ ...formErrors, skills: "" })
+                        }}
+                        className={formErrors.skills ? "border-destructive" : ""}
                         placeholder="Comma-separated (e.g., Python, JavaScript)"
                       />
+                      {formErrors.skills && <p className="text-sm text-destructive">{formErrors.skills}</p>}
                     </div>
                   </div>
                   <DialogFooter>

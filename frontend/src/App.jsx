@@ -15,6 +15,7 @@ import PublicLayout from "@/shared/components/layout/PublicLayout"
 import StudentLayout from "@/shared/components/layout/StudentLayout"
 import AdminLayout from "@/shared/components/layout/AdminLayout"
 import ScrollToTop from "@/shared/components/common/ScrollToTop"
+import { RequirePro } from "@/shared/components/RequirePro"
 
 // Lazy load components for code splitting
 const Landing = lazy(() => import("@/features/landing-page/components/landing").then(m => ({ default: m.Landing })))
@@ -38,6 +39,7 @@ const AdminCareers = lazy(() => import("@/features/admin/pages/Careers"))
 const AdminColleges = lazy(() => import("@/features/admin/pages/Colleges"))
 const AdminTrainings = lazy(() => import("@/features/admin/pages/Trainings"))
 const AcademicRecords = lazy(() => import("@/features/admin/pages/AcademicRecords"))
+const DevTools = lazy(() => import("@/features/admin/pages/DevTools"))
 const Login = lazy(() => import("@/features/auth/pages/Login"))
 const Signup = lazy(() => import("@/features/auth/pages/Signup"))
 const ForgotPassword = lazy(() => import("@/features/auth/pages/ForgotPassword"))
@@ -46,8 +48,12 @@ const About = lazy(() => import("@/features/landing-page/pages/About"))
 const Features = lazy(() => import("@/features/landing-page/pages/Features"))
 const WhyChooseUs = lazy(() => import("@/features/landing-page/pages/WhyChooseUs"))
 const Contact = lazy(() => import("@/features/landing-page/pages/Contact"))
+const PrivacyPolicy = lazy(() => import("@/features/landing-page/pages/PrivacyPolicy"))
+const TermsOfService = lazy(() => import("@/features/landing-page/pages/TermsOfService"))
+const Cookies = lazy(() => import("@/features/landing-page/pages/Cookies"))
 const NotFound = lazy(() => import("@/shared/components/views/NotFound"))
 const BillingPage = lazy(() => import("@/features/payment/pages/billing"))
+const CheckoutPro = lazy(() => import("@/features/payment/pages/CheckoutPro"))
 const EsewaReturnPage = lazy(() => import("@/features/payment/pages/EsewaReturn"))
 const EsewaSuccessPage = lazy(() => import("@/features/payment/pages/EsewaSuccess"))
 const EsewaFailurePage = lazy(() => import("@/features/payment/pages/EsewaFailure"))
@@ -82,6 +88,9 @@ function AppContent() {
                 <Route path="/features" element={<Features />} />
                 <Route path="/why-choose-us" element={<WhyChooseUs />} />
                 <Route path="/contact" element={<Contact />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/terms-of-service" element={<TermsOfService />} />
+                  <Route path="/cookies" element={<Cookies />} />
                   <Route path="/onboarding" element={<Onboarding />} />
                   <Route path="/payment/esewa/return" element={<EsewaReturnPage />} />
                   <Route path="/payment/esewa/success" element={<EsewaSuccessPage />} />
@@ -119,6 +128,7 @@ function AppContent() {
                   <Route path="/colleges" element={<Colleges />} />
                   <Route path="/trainings" element={<Trainings />} />
                   <Route path="/billing" element={<BillingPage />} />
+                  <Route path="/checkout/pro" element={<CheckoutPro />} />
                   <Route path="/quiz/start/:trainingId" element={<QuizStart />} />
                   <Route path="/quiz/session/:quizSessionId" element={<QuizPage />} />
                   <Route path="/quiz/result/:quizSessionId" element={<QuizResult />} />
@@ -133,8 +143,8 @@ function AppContent() {
                   <Route path="/admin/careers" element={<AdminCareers />} />
                   <Route path="/admin/colleges" element={<AdminColleges />} />
                   <Route path="/admin/trainings" element={<AdminTrainings />} />
-                  <Route path="/admin/assessments" element={<AcademicRecords />} />
                   <Route path="/admin/academic-records" element={<AcademicRecords />} />
+                  <Route path="/admin/dev-tools" element={<DevTools />} />
                 </Route>
 
               </Routes>

@@ -173,7 +173,30 @@ export const deleteStudent = async (id) => {
     const errorText = await response.text()
     throw new Error(errorText || "Failed to delete student")
   }
-  return response.json()
+  // Handle empty response (204 No Content or 200 OK with no body)
+  const text = await response.text()
+  return text ? JSON.parse(text) : {}
+}
+
+// Users (for admin)
+export const getUsers = async () => {
+  if (USE_MOCK_DATA) return { data: [] }
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/users`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Failed to fetch users: ${response.status} ${errorText}`)
+    }
+    const data = await response.json()
+    return { data }
+  } catch (error) {
+    throw error
+  }
 }
 
 // Careers
@@ -195,7 +218,10 @@ export const getCareers = async () => {
 }
 
 export const getCareer = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/careers/${id}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/careers/${id}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  })
   if (!response.ok) throw new Error("Failed to fetch career")
   return response.json()
 }
@@ -234,7 +260,9 @@ export const deleteCareer = async (id) => {
     const errorText = await response.text()
     throw new Error(errorText || "Failed to delete career")
   }
-  return response.json()
+  // Handle empty response (204 No Content or 200 OK with no body)
+  const text = await response.text()
+  return text ? JSON.parse(text) : {}
 }
 
 // Colleges
@@ -287,7 +315,10 @@ export const getColleges = async (options = {}) => {
 }
 
 export const getCollege = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/colleges/${id}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/colleges/${id}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  })
   if (!response.ok) throw new Error("Failed to fetch college")
   return response.json()
 }
@@ -326,7 +357,9 @@ export const deleteCollege = async (id) => {
     const errorText = await response.text()
     throw new Error(errorText || "Failed to delete college")
   }
-  return response.json()
+  // Handle empty response (204 No Content or 200 OK with no body)
+  const text = await response.text()
+  return text ? JSON.parse(text) : {}
 }
 
 // Trainings
@@ -353,7 +386,10 @@ export const getAvailableTrainings = async () => {
 }
 
 export const getTraining = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/trainings/${id}`)
+  const response = await fetchWithAuth(`${API_BASE_URL}/trainings/${id}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  })
   if (!response.ok) throw new Error("Failed to fetch training")
   return response.json()
 }
@@ -392,7 +428,9 @@ export const deleteTraining = async (id) => {
     const errorText = await response.text()
     throw new Error(errorText || "Failed to delete training")
   }
-  return response.json()
+  // Handle empty response (204 No Content or 200 OK with no body)
+  const text = await response.text()
+  return text ? JSON.parse(text) : {}
 }
 
 export const startQuiz = async (trainingId, userId) => {
@@ -1315,12 +1353,18 @@ export const fetchWithAuth = async (url, options = {}) => {
         return response
       }
       
-      logger.log(`Token may be expired (${response.status}), attempting refresh...`)
+      // Only log if refresh is not already in progress (to reduce noise)
+      if (!window._refreshInProgress) {
+        logger.log(`Token may be expired (${response.status}), attempting refresh...`)
+      }
       
       // Check if refresh is already in progress by checking for a pending refresh promise
       // This prevents multiple simultaneous refresh attempts
       if (window._refreshInProgress) {
-        logger.warn('Token refresh already in progress, waiting...')
+        // Only log warning in debug mode to reduce console noise
+        if (import.meta.env.DEV) {
+          logger.warn('Token refresh already in progress, waiting...')
+        }
         try {
           await window._refreshInProgress
         } catch (e) {
@@ -1921,6 +1965,25 @@ export const getPendingCounts = async () => {
   }
 }
 
+export const grantProPlan = async (email, expiresAt = null) => {
+  try {
+    const response = await fetchWithAuth(`${API_BASE_URL}/admin/dashboard/dev-tools/grant-pro-plan`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, expiresAt }),
+    })
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Failed to grant pro plan: ${response.status} ${errorText}`)
+    }
+    return await response.json()
+  } catch (error) {
+    throw error
+  }
+}
+
 export const initiateEsewaPayment = async (payload) => {
   const response = await fetchWithAuth(`${API_BASE_URL}/payments/esewa/initiate`, {
     method: "POST",
@@ -1948,14 +2011,27 @@ export const getEsewaPaymentStatus = async (pid) => {
 
 // eSewa ePay V2 API functions
 export const initiateEsewaV2Payment = async (payload) => {
-  const response = await fetchWithAuth(`${API_BASE_URL}/payments/esewa/v2/initiate`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/payments/esewa/create`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   })
   if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Failed to initiate eSewa V2 payment: ${response.status} ${errorText}`)
+    let errorMessage = "Failed to initiate payment"
+    try {
+      const errorData = await response.json()
+      if (errorData.message) {
+        errorMessage = errorData.message
+      } else if (errorData.error) {
+        errorMessage = errorData.error
+      }
+    } catch {
+      const errorText = await response.text()
+      if (errorText) {
+        errorMessage = errorText
+      }
+    }
+    throw new Error(errorMessage)
   }
   return await response.json()
 }
@@ -1969,6 +2045,22 @@ export const verifyEsewaV2Payment = async (data) => {
   if (!response.ok) {
     const errorText = await response.text()
     throw new Error(`Failed to verify eSewa V2 payment: ${response.status} ${errorText}`)
+  }
+  return await response.json()
+}
+
+export const checkEsewaV2PaymentStatus = async (transactionUuid, totalAmount) => {
+  const response = await fetch(`${API_BASE_URL}/payments/esewa/v2/status`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      transaction_uuid: transactionUuid,
+      total_amount: totalAmount,
+    }),
+  })
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Failed to check eSewa V2 payment status: ${response.status} ${errorText}`)
   }
   return await response.json()
 }

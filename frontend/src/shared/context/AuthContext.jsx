@@ -89,7 +89,26 @@ export function AuthProvider({ children }) {
     localStorage.setItem("user", JSON.stringify(userData))
   }
 
-  return <AuthContext.Provider value={{ user, loading, logout, updateUser, login }}>{children}</AuthContext.Provider>
+  // Subscription helpers
+  const isPro = () => {
+    if (!user) return false
+    const isPremium = user.is_premium === true || user.isPremium === true
+    if (!isPremium) return false
+    
+    // Check if premium hasn't expired
+    const expiresAt = user.premium_expires_at || user.premiumExpiresAt
+    if (!expiresAt) return isPremium // If no expiry date, assume active if premium flag is true
+    
+    const expiryDate = new Date(expiresAt)
+    const now = new Date()
+    return expiryDate > now
+  }
+
+  const getPlan = () => {
+    return isPro() ? "PRO" : "FREE"
+  }
+
+  return <AuthContext.Provider value={{ user, loading, logout, updateUser, login, isPro, getPlan }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

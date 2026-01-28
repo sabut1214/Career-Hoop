@@ -198,7 +198,7 @@ export default function Features() {
             Ready to Explore All Features?
           </h2>
           <p className="mb-8 text-lg text-muted-foreground">
-            Join thousands of students who are already using CareerHoop to shape their future.
+            Join thousands of students who are already using areerHoop to shape their future.
           </p>
           <Button size="lg" className="rounded-full bg-primary px-8 text-primary-foreground hover:bg-primary-hover transition-all duration-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" asChild>
             <Link to="/signup">

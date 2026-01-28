@@ -34,7 +34,7 @@ const features = [
   },
 ]
 
-export function QuickTourStep({ onNext, onPrev, onSkip }) {
+export function QuickTourStep({ onNext, onPrev }) {
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -44,7 +44,7 @@ export function QuickTourStep({ onNext, onPrev, onSkip }) {
     >
       <div className="text-center space-y-2 mb-8">
         <h2 className="text-3xl font-bold text-foreground">
-          How CareerHoop Works
+          How areerHoop Works
         </h2>
         <p className="text-muted-foreground">
           Here's what you can do to discover your perfect career path
@@ -96,13 +96,6 @@ export function QuickTourStep({ onNext, onPrev, onSkip }) {
         >
           Continue
           <ArrowRight className="h-4 w-4" />
-        </Button>
-        <Button
-          onClick={onSkip}
-          variant="ghost"
-          size="lg"
-        >
-          Skip Tour
         </Button>
       </div>
     </motion.div>

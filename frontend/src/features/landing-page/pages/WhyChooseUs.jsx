@@ -58,7 +58,7 @@ const testimonials = [
     name: "Sarah M.",
     role: "Engineering Student, MIT",
     quote:
-      "CareerHoop helped me discover my passion for data science when I was torn between multiple paths. The AI recommendations were spot-on, and my mentor helped me land an amazing internship!",
+      "areerHoop helped me discover my passion for data science when I was torn between multiple paths. The AI recommendations were spot-on, and my mentor helped me land an amazing internship!",
     avatar: "/young-female-student-portrait-smiling.jpg",
     rating: 5,
   },
@@ -66,7 +66,7 @@ const testimonials = [
     name: "James K.",
     role: "High School Senior",
     quote:
-      "I was completely lost about what to study in college. CareerHoop's assessment showed me careers I never considered but perfectly match my interests. Now I'm excited about my future!",
+      "I was completely lost about what to study in college. areerHoop's assessment showed me careers I never considered but perfectly match my interests. Now I'm excited about my future!",
     avatar: "/young-male-student-portrait-friendly.jpg",
     rating: 5,
   },
@@ -74,7 +74,7 @@ const testimonials = [
     name: "Priya R.",
     role: "College Freshman, UC Berkeley",
     quote:
-      "The career matching feature is incredible. CareerHoop showed me paths I never considered that perfectly match my interests and skills. This platform is a game-changer.",
+      "The career matching feature is incredible. areerHoop showed me paths I never considered that perfectly match my interests and skills. This platform is a game-changer.",
     avatar: "/young-indian-female-student-portrait-happy.jpg",
     rating: 5,
   },
@@ -82,7 +82,7 @@ const testimonials = [
     name: "Marcus T.",
     role: "Community College Student",
     quote:
-      "Coming from a low-income background, I never had access to career counseling. CareerHoop gave me the same quality guidance my wealthier peers get from expensive consultants.",
+      "Coming from a low-income background, I never had access to career counseling. areerHoop gave me the same quality guidance my wealthier peers get from expensive consultants.",
     avatar: "/young-black-male-student-portrait-confident.jpg",
     rating: 5,
   },
@@ -90,7 +90,7 @@ const testimonials = [
     name: "Emily Chen",
     role: "Graduate Student, Stanford",
     quote:
-      "I used CareerHoop to pivot from medicine to health tech. The skill gap analysis and course recommendations helped me make a smooth transition. Highly recommend!",
+      "I used areerHoop to pivot from medicine to health tech. The skill gap analysis and course recommendations helped me make a smooth transition. Highly recommend!",
     avatar: "/young-asian-female-graduate-student-portrait.jpg",
     rating: 5,
   },
@@ -98,7 +98,7 @@ const testimonials = [
     name: "David O.",
     role: "High School Junior",
     quote:
-      "My school counselor is overloaded with students. CareerHoop gives me personalized attention 24/7. It's like having a career coach in my pocket.",
+      "My school counselor is overloaded with students. areerHoop gives me personalized attention 24/7. It's like having a career coach in my pocket.",
     avatar: "/teenage-male-student-portrait.jpg",
     rating: 5,
   },
@@ -152,7 +152,7 @@ export default function WhyChooseUs() {
             The Smarter Way to Plan <span className="text-primary">Your Career</span>
           </h1>
           <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted-foreground">
-            See why over 50,000 students trust CareerHoop to guide their career decisions and why we're the #1 rated
+            See why over 50,000 students trust areerHoop to guide their career decisions and why we're the #1 rated
             career guidance platform for students.
           </p>
         </div>
@@ -249,7 +249,7 @@ export default function WhyChooseUs() {
               Loved by Students Everywhere
             </h2>
             <p className="mx-auto max-w-2xl text-muted-foreground">
-              Real stories from students whose lives were changed by CareerHoop
+              Real stories from students whose lives were changed by areerHoop
             </p>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

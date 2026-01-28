@@ -17,7 +17,7 @@ const benefits = [
   {
     icon: Award,
     title: "Proven Results",
-    description: "Join thousands of students who found their dream careers through CareerHoop.",
+    description: "Join thousands of students who found their dream careers through areerHoop.",
   },
   {
     icon: Shield,
@@ -30,7 +30,7 @@ const testimonials = [
   {
     name: "Sarah M.",
     role: "Engineering Student",
-    quote: "CareerHoop helped me discover my passion for data science. I never knew it was the perfect fit!",
+    quote: "areerHoop helped me discover my passion for data science. I never knew it was the perfect fit!",
     avatar: "/young-female-student-avatar-smiling.jpg",
   },
   {
@@ -52,7 +52,7 @@ export function WhyChooseSection() {
     <SectionContainer>
       <div className="mb-16 text-center">
         <Badge variant="default" className="mb-4">
-          Why CareerHoop
+          Why areerHoop
         </Badge>
           <h2 className="mb-4 font-sans text-3xl font-bold text-foreground md:text-4xl text-balance">
             Why Students <span className="text-primary">Choose Us</span>
@@ -81,7 +81,7 @@ export function WhyChooseSection() {
             <div>
               <h3 className="mb-4 text-2xl font-bold text-foreground">Student Confidence Meter</h3>
               <p className="text-foreground/90">
-                Our students report a significant boost in career confidence after using CareerHoop for just 30 days.
+                Our students report a significant boost in career confidence after using areerHoop for just 30 days.
               </p>
             </div>
             <div className="space-y-4">

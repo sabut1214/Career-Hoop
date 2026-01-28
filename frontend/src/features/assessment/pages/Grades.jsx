@@ -397,9 +397,22 @@ export default function GradesPage() {
       setCurrentPage(1) // Reset to first page when new analysis is done
       toast.success("Marksheet analyzed and saved successfully!")
     } catch (err) {
-      const errorMsg = err.message || "Failed to analyze the marksheet. Please try again."
-      setError(errorMsg)
-      toast.error(errorMsg)
+      // Check for specific error messages about non-marksheet images
+      const errorMessage = err.message || err.response?.data?.message || "Failed to analyze the marksheet. Please try again."
+      let userFriendlyError = errorMessage
+      
+      // Provide more helpful error messages
+      if (errorMessage.toLowerCase().includes("does not appear to be a marksheet") || 
+          errorMessage.toLowerCase().includes("not a marksheet") ||
+          errorMessage.toLowerCase().includes("does not contain valid marksheet")) {
+        userFriendlyError = "The uploaded image does not appear to be a marksheet. Please upload a clear image of your academic marksheet or grade sheet containing subject names and grades."
+      } else if (errorMessage.toLowerCase().includes("no subject") || 
+                 errorMessage.toLowerCase().includes("could not extract")) {
+        userFriendlyError = "Could not extract grade information from the image. Please ensure the marksheet is clear, well-lit, and contains visible subject names and grades/marks."
+      }
+      
+      setError(userFriendlyError)
+      toast.error(userFriendlyError)
       setAnalysis(null)
       setAcademicProfile(null)
       setRecommendations([])

@@ -33,10 +33,10 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
       <div className="container mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        <Link to="/landing" className="flex items-center">
-          <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain" />
+        <Link to="/landing" className="flex items-center gap-0">
+          <img src={logoImg} alt="areerHoop Logo" className="h-10 w-10 object-contain" />
           <span className="text-xl font-bold text-foreground">
-            Career<span className="text-primary">Hoop</span>
+            areer<span className="text-primary">Hoop</span>
           </span>
         </Link>
 

@@ -21,11 +21,12 @@ import {
   PanelLeft,
   Sun,
   Moon,
-  CreditCard,
 } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@/shared/context/AuthContext"
 import { useTheme } from "@/shared/context/ThemeContext"
+import { useSubscription } from "@/shared/hooks/useSubscription"
+import { ProPaywallModal } from "@/features/payment/components/ProPaywallModal"
 import { Switch } from "@/shared/components/ui/switch"
 import {
   DropdownMenu,
@@ -52,7 +53,6 @@ const navigationItems = [
   { icon: Briefcase, label: "Careers", href: "/careers", tooltip: "Browse career options" },
   { icon: BookOpen, label: "Training", href: "/trainings", tooltip: "Access skill training programs" },
   { icon: Activity, label: "My Quizzes", href: "/quiz/analytics", tooltip: "View your quiz results and analytics" },
-  { icon: CreditCard, label: "Billing", href: "/billing", tooltip: "Manage plans and payments" },
 ]
 
 export function Sidebar() {
@@ -60,11 +60,13 @@ export function Sidebar() {
   const navigate = useNavigate()
   const { logout, user } = useAuth()
   const { isDarkMode, setTheme } = useTheme()
+  const { isPro } = useSubscription()
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem("sidebarCollapsed")
     return saved ? JSON.parse(saved) : false
   })
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [paywallModalOpen, setPaywallModalOpen] = useState(false)
   const hasAnimatedRef = useRef(false)
 
   const handleThemeChange = (checked) => {
@@ -117,6 +119,24 @@ export function Sidebar() {
   const getUserDisplayName = () => {
     if (!user) return "User"
     return user.name || user.fullName || user.email?.split("@")[0] || "User"
+  }
+
+  // Handle Recommendations link click with Pro check
+  const handleRecommendationsClick = (e) => {
+    if (!isPro) {
+      e.preventDefault()
+      // Store intended destination
+      const currentPath = location.pathname + (location.search || "")
+      if (currentPath !== "/checkout/pro" && currentPath !== "/billing") {
+        sessionStorage.setItem("postUpgradeRedirect", "/recommendations")
+      }
+      // Open modal and navigate to recommendations (which will show locked page)
+      setPaywallModalOpen(true)
+      navigate("/recommendations")
+      if (window.innerWidth < 1024) setIsMobileOpen(false)
+    } else {
+      if (window.innerWidth < 1024) setIsMobileOpen(false)
+    }
   }
 
   return (
@@ -192,7 +212,7 @@ export function Sidebar() {
           {isCollapsed ? (
             /* Collapsed: Logo only */
             <div className="flex items-center justify-center w-full">
-              <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain" />
+              <img src={logoImg} alt="areerHoop Logo" className="h-10 w-10 object-contain" />
             </div>
           ) : (
             /* Expanded: Logo + Brand Name */
@@ -200,9 +220,9 @@ export function Sidebar() {
               to="/" 
               className="flex items-center gap-0"
             >
-              <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain shrink-0" />
+              <img src={logoImg} alt="areerHoop Logo" className="h-10 w-10 object-contain shrink-0" />
               <span className="text-2xl font-bold text-foreground whitespace-nowrap">
-                Career<span className="text-primary">Hoop</span>
+                areer<span className="text-primary">Hoop</span>
               </span>
             </Link>
           )}
@@ -219,9 +239,13 @@ export function Sidebar() {
               )}
               {navigationItems.map((item) => {
                 const isActive = location.pathname === item.href
+                const isRecommendations = item.href === "/recommendations"
                 const navItem = (
                   <div key={item.label}>
-                    <Link to={item.href}>
+                    <Link 
+                      to={item.href}
+                      onClick={isRecommendations ? handleRecommendationsClick : undefined}
+                    >
                       <Button
                         variant="ghost"
                         className={cn(
@@ -232,7 +256,7 @@ export function Sidebar() {
                             : "hover:bg-[var(--primary-soft)]/50 hover:text-foreground text-muted-foreground"
                         )}
                         onClick={() => {
-                          if (window.innerWidth < 1024) setIsMobileOpen(false)
+                          if (!isRecommendations && window.innerWidth < 1024) setIsMobileOpen(false)
                         }}
                       >
                         <item.icon className={cn("shrink-0", isCollapsed ? "h-5 w-5" : "h-4 w-4")} />
@@ -419,6 +443,9 @@ export function Sidebar() {
           )}
         </div>
       </aside>
+
+      {/* Pro Paywall Modal */}
+      <ProPaywallModal open={paywallModalOpen} onOpenChange={setPaywallModalOpen} />
     </>
   )
 }

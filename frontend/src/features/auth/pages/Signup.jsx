@@ -123,14 +123,14 @@ export default function Signup() {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <img src={logoImg} alt="CareerHoop Logo" className="h-8 w-8 object-contain" />
+          <div className="flex items-center justify-center mb-4 gap-0">
+            <img src={logoImg} alt="areerHoop Logo" className="h-8 w-8 object-contain" />
             <span className="text-2xl font-bold text-foreground">
-              Career<span className="text-primary">Hoop</span>
+              areer<span className="text-primary">Hoop</span>
             </span>
           </div>
           <h1 className="text-3xl font-bold mb-2">Create an Account</h1>
-          <p className="text-muted-foreground">Join CareerHoop to start your personalized journey</p>
+          <p className="text-muted-foreground">Join areerHoop to start your personalized journey</p>
         </div>
 
         <Card className="border-2">

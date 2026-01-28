@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import { LayoutDashboard, Users, BookOpen, Building2, Zap, FileText, LogOut, ChevronLeft, ChevronRight, Menu, X, Sun, Moon } from "lucide-react"
+import { LayoutDashboard, Users, BookOpen, Building2, Zap, LogOut, ChevronLeft, ChevronRight, Menu, X, Sun, Moon, Wrench } from "lucide-react"
 import { Button } from "@/shared/components/ui/button"
 import { Switch } from "@/shared/components/ui/switch"
 import { useAuth } from "@/shared/context/AuthContext"
@@ -29,7 +29,7 @@ const menuItems = [
   { href: "/admin/careers", label: "Careers", icon: BookOpen },
   { href: "/admin/colleges", label: "Colleges", icon: Building2 },
   { href: "/admin/trainings", label: "Trainings", icon: Zap },
-  { href: "/admin/assessments", label: "Assessments", icon: FileText },
+  { href: "/admin/dev-tools", label: "Dev Tools", icon: Wrench },
 ]
 
 export function AdminSidebar() {
@@ -166,7 +166,7 @@ export function AdminSidebar() {
           {isCollapsed ? (
             /* Collapsed: Logo only */
             <div className="flex items-center justify-center w-full">
-              <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain" />
+              <img src={logoImg} alt="areerHoop Logo" className="h-10 w-10 object-contain" />
             </div>
           ) : (
             /* Expanded: Logo + Brand Name */
@@ -175,9 +175,9 @@ export function AdminSidebar() {
                 to="/admin"
                 className="flex items-center gap-0"
               >
-                <img src={logoImg} alt="CareerHoop Logo" className="h-10 w-10 object-contain shrink-0" />
+                <img src={logoImg} alt="areerHoop Logo" className="h-10 w-10 object-contain shrink-0" />
                 <span className="text-2xl font-bold text-foreground whitespace-nowrap">
-                  Career<span className="text-primary">Hoop</span>
+                  areer<span className="text-primary">Hoop</span>
                 </span>
               </Link>
               <span className="text-xs text-muted-foreground ml-[2.5rem] mt-0.5">

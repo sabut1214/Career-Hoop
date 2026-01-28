@@ -5,11 +5,14 @@ import { Badge } from "@/shared/components/ui/badge"
 import { Alert, AlertDescription } from "@/shared/components/ui/alert"
 import { Button } from "@/shared/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
-import { Loader2, Activity, TrendingUp, TrendingDown, Sparkles, Target, Clock, BookOpen, ArrowRight } from "lucide-react"
+import { Loader2, Activity, TrendingUp, TrendingDown, Sparkles, Target, Clock, BookOpen, ArrowRight, Lock } from "lucide-react"
 import { getUserQuizStats, getUserQuizHistory, getRecommendedTrainings, getAIFeedback } from "@/shared/lib/api"
+import { useSubscription } from "@/shared/hooks/useSubscription"
+import { ProPaywallModal } from "@/features/payment/components/ProPaywallModal"
 
 export default function QuizAnalytics() {
   const navigate = useNavigate()
+  const { isPro } = useSubscription()
   const [viewMode, setViewMode] = useState("user")
   const [data, setData] = useState({ trainingStats: [], weakAreas: [] })
   const [history, setHistory] = useState([])
@@ -18,6 +21,7 @@ export default function QuizAnalytics() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [timeRange, setTimeRange] = useState("all")
+  const [paywallModalOpen, setPaywallModalOpen] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -58,6 +62,16 @@ export default function QuizAnalytics() {
     const daysAgo = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : 90
     return (now - itemDate) / (1000 * 60 * 60 * 24) <= daysAgo
   })
+
+  // For free users, limit to 2 free quizzes, rest are locked
+  const FREE_LIMIT = 2
+  let visibleHistory = filteredHistory
+  let lockedHistory = []
+  
+  if (!isPro && filteredHistory.length > FREE_LIMIT) {
+    visibleHistory = filteredHistory.slice(0, FREE_LIMIT)
+    lockedHistory = filteredHistory.slice(FREE_LIMIT)
+  }
 
   const calculateTrend = () => {
     if (filteredHistory.length < 2) return null
@@ -185,7 +199,7 @@ export default function QuizAnalytics() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {filteredHistory.slice(0, 10).map((item) => (
+                    {visibleHistory.map((item) => (
                       <div key={item.sessionId} className="flex items-center justify-between p-3 rounded-lg border">
                         <div className="flex-1">
                           <p className="font-medium">{item.trainingTitle}</p>
@@ -207,7 +221,64 @@ export default function QuizAnalytics() {
                         </div>
                       </div>
                     ))}
+                    {/* Show locked quizzes for free users */}
+                    {!isPro && lockedHistory.length > 0 && (
+                      <>
+                        {lockedHistory.slice(0, 3).map((item) => (
+                          <div key={`locked-${item.sessionId}`} className="flex items-center justify-between p-3 rounded-lg border relative overflow-hidden">
+                            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center cursor-pointer"
+                                 onClick={() => setPaywallModalOpen(true)}>
+                              <div className="text-center space-y-3">
+                                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                                  <Lock className="h-6 w-6 text-primary" />
+                                </div>
+                                <div>
+                                  <h3 className="text-sm font-semibold text-foreground mb-1">Upgrade to Unlock</h3>
+                                  <p className="text-xs text-muted-foreground mb-3">
+                                    See full quiz details
+                                  </p>
+                                  <Button onClick={() => setPaywallModalOpen(true)} size="sm" className="bg-primary hover:bg-primary-hover text-primary-foreground">
+                                    Upgrade to Pro
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex-1 opacity-50 pointer-events-none">
+                              <p className="font-medium">{item.trainingTitle}</p>
+                              <p className="text-xs text-muted-foreground flex items-center space-x-2">
+                                <Clock className="h-3 w-3" />
+                                <span>{new Date(item.completedAt).toLocaleString()}</span>
+                              </p>
+                            </div>
+                            <div className="text-right opacity-50 pointer-events-none">
+                              <p className="font-semibold">
+                                {item.score}/{item.totalQuestions} ({item.percentage.toFixed(1)}%)
+                              </p>
+                              <Badge
+                                variant={item.percentage >= 80 ? "default" : item.percentage >= 60 ? "secondary" : "destructive"}
+                                className="text-xs mt-1"
+                              >
+                                {item.percentage >= 80 ? "Excellent" : item.percentage >= 60 ? "Good" : "Needs Work"}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
                   </div>
+                </CardContent>
+              </Card>
+            )}
+            {!isPro && lockedHistory.length > 0 && (
+              <Card className="border-2 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5">
+                <CardContent className="p-6 text-center space-y-4">
+                  <h3 className="text-xl font-bold">Unlock All Quiz History</h3>
+                  <p className="text-muted-foreground">
+                    You're viewing {visibleHistory.length} free quiz{visibleHistory.length !== 1 ? 'es' : ''}. Upgrade to Pro to see all {filteredHistory.length} quiz results.
+                  </p>
+                  <Button onClick={() => setPaywallModalOpen(true)} size="lg" className="bg-primary hover:bg-primary-hover text-primary-foreground">
+                    Upgrade to Pro
+                  </Button>
                 </CardContent>
               </Card>
             )}
@@ -317,8 +388,11 @@ export default function QuizAnalytics() {
                 ))}
               </CardContent>
             </Card>
-          </div>
-        )}
+        </div>
+      )}
+
+      {/* Paywall Modal */}
+      <ProPaywallModal open={paywallModalOpen} onOpenChange={setPaywallModalOpen} />
     </div>
   )
 }
